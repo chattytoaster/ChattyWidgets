@@ -17,6 +17,8 @@ public class ChattyBridge
     private readonly Action<double>? _opacityAction;
     private readonly Action? _dragMoveAction;
     private readonly Action? _contextMenuAction;
+    private readonly Action<double, double>? _moveByAction;
+    private readonly Action? _snapAction;
     private readonly string _storageFilePath;
 
     public ChattyBridge(
@@ -26,7 +28,9 @@ public class ChattyBridge
         Action<bool>? clickThroughAction = null,
         Action<double>? opacityAction = null,
         Action? dragMoveAction = null,
-        Action? contextMenuAction = null)
+        Action? contextMenuAction = null,
+        Action<double, double>? moveByAction = null,
+        Action? snapAction = null)
     {
         _widgetId = widgetId;
         _closeAction = closeAction;
@@ -35,6 +39,8 @@ public class ChattyBridge
         _opacityAction = opacityAction;
         _dragMoveAction = dragMoveAction;
         _contextMenuAction = contextMenuAction;
+        _moveByAction = moveByAction;
+        _snapAction = snapAction;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -159,12 +165,22 @@ public class ChattyBridge
 
     public void dragMove()
     {
-        Application.Current.Dispatcher.Invoke(() => _dragMoveAction?.Invoke());
+        Application.Current.Dispatcher.BeginInvoke(new Action(() => _dragMoveAction?.Invoke()));
+    }
+
+    public void moveBy(double deltaX, double deltaY)
+    {
+        Application.Current.Dispatcher.BeginInvoke(new Action(() => _moveByAction?.Invoke(deltaX, deltaY)));
+    }
+
+    public void snapToScreen()
+    {
+        Application.Current.Dispatcher.BeginInvoke(new Action(() => _snapAction?.Invoke()));
     }
 
     public void showContextMenu()
     {
-        Application.Current.Dispatcher.Invoke(() => _contextMenuAction?.Invoke());
+        Application.Current.Dispatcher.BeginInvoke(new Action(() => _contextMenuAction?.Invoke()));
     }
 
     public void log(string message)

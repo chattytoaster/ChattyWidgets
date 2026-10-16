@@ -129,6 +129,9 @@ public partial class WidgetWindow : Window
     {
         try
         {
+            // Web widgets host an HWND, so hide the WPF AnchorDot and inject an HTML control dot instead
+            AnchorDot.Visibility = Visibility.Collapsed;
+
             TxtLoadingTitle.Text = $"✦ Загрузка {Manifest.Name}...";
             LoadingIndicator.Visibility = Visibility.Visible;
 
@@ -162,31 +165,97 @@ public partial class WidgetWindow : Window
                 clickThroughAction: (ct) => SetClickThrough(ct),
                 opacityAction: (op) => SetWidgetOpacity(op),
                 dragMoveAction: () => StartDragMove(),
-                contextMenuAction: () => ShowWidgetContextMenu()
+                contextMenuAction: () => ShowWidgetContextMenu(),
+                moveByAction: (dx, dy) => MoveBy(dx, dy),
+                snapAction: () => SnapToScreen()
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
 
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
-                console.log('ChattyWidgets Bridge Initialized');
 
+                // Open ChattyWidgets context menu on right click
                 window.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
                     try { window.chatty.showContextMenu(); } catch(ex) {}
                 });
 
+                // Smooth non-blocking window dragging on empty surfaces
+                var isCardDragging = false;
+                var dragStartX = 0, dragStartY = 0;
+
                 window.addEventListener('mousedown', function(e) {
                     if (e.button === 0) {
                         var target = e.target;
                         var tag = target && target.tagName ? target.tagName.toLowerCase() : '';
-                        var interactive = ['button', 'input', 'textarea', 'a', 'select'];
-                        if (interactive.indexOf(tag) !== -1 || (target.closest && target.closest('button, input, textarea, a, select'))) {
+                        if (tag === 'button' || tag === 'input' || tag === 'textarea' || tag === 'a' || tag === 'select' || (target.closest && target.closest('button, input, textarea, a, select, [contenteditable=""true""]'))) {
                             return;
                         }
-                        try { window.chatty.dragMove(); } catch(ex) {}
+                        isCardDragging = true;
+                        dragStartX = e.screenX;
+                        dragStartY = e.screenY;
                     }
                 });
+
+                window.addEventListener('mousemove', function(e) {
+                    if (isCardDragging) {
+                        var dx = e.screenX - dragStartX;
+                        var dy = e.screenY - dragStartY;
+                        if (dx !== 0 || dy !== 0) {
+                            dragStartX = e.screenX;
+                            dragStartY = e.screenY;
+                            try { window.chatty.moveBy(dx, dy); } catch(ex) {}
+                        }
+                    }
+                });
+
+                window.addEventListener('mouseup', function(e) {
+                    if (isCardDragging) {
+                        isCardDragging = false;
+                        try { window.chatty.snapToScreen(); } catch(ex) {}
+                    }
+                });
+
+                // Inject guaranteed visible blue control dot in top-right corner
+                function injectChattyControlDot() {
+                    if (document.getElementById('chatty-control-dot')) return;
+                    var dot = document.createElement('div');
+                    dot.id = 'chatty-control-dot';
+                    dot.title = 'ChattyWidgets: ЛКМ — переместить, ПКМ — меню';
+                    dot.style.cssText = 'position:fixed!important;top:12px!important;right:12px!important;width:12px!important;height:12px!important;background:#3B82F6!important;border-radius:50%!important;box-shadow:0 0 8px #60A5FA!important;cursor:grab!important;z-index:2147483647!important;display:block!important;pointer-events:auto!important;box-sizing:border-box!important;';
+                    
+                    var inner = document.createElement('div');
+                    inner.style.cssText = 'position:absolute!important;top:4px!important;left:4px!important;width:4px!important;height:4px!important;background:#FFFFFF!important;border-radius:50%!important;pointer-events:none!important;';
+                    dot.appendChild(inner);
+
+                    dot.addEventListener('mousedown', function(e) {
+                        if (e.button === 0) {
+                            isCardDragging = true;
+                            dragStartX = e.screenX;
+                            dragStartY = e.screenY;
+                            dot.style.cursor = 'grabbing';
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    });
+
+                    dot.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try { window.chatty.showContextMenu(); } catch(ex) {}
+                    });
+
+                    if (document.body) {
+                        document.body.appendChild(dot);
+                    }
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', injectChattyControlDot);
+                } else {
+                    injectChattyControlDot();
+                }
             ";
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(initScript);
 
@@ -214,6 +283,7 @@ public partial class WidgetWindow : Window
 
     private void LoadNativeWidget()
     {
+        AnchorDot.Visibility = Visibility.Visible;
         try
         {
             string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
@@ -331,6 +401,16 @@ public partial class WidgetWindow : Window
             WidgetContextMenu.PlacementTarget = AnchorDot != null && AnchorDot.IsVisible ? AnchorDot : this;
             WidgetContextMenu.IsOpen = true;
         });
+    }
+
+    public void MoveBy(double deltaX, double deltaY)
+    {
+        if (Settings.IsClickThrough) return;
+        Left += deltaX;
+        Top += deltaY;
+        Settings.Left = Left;
+        Settings.Top = Top;
+        SettingsChanged?.Invoke(this);
     }
 
     private void SnapToScreen()
