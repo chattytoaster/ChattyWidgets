@@ -315,20 +315,7 @@ public partial class WidgetWindow : Window
                 return (IntPtr)Win32Native.HTTRANSPARENT;
             }
         }
-        else if (msg == Win32Native.WM_MOVING)
-        {
-            var rect = System.Runtime.InteropServices.Marshal.PtrToStructure<Win32Native.RECT>(lParam);
-            int w = rect.Right - rect.Left;
-            int h = rect.Bottom - rect.Top;
-            var pt = DesktopHostManager.ClampToScreen(rect.Left, rect.Top, w, h);
-            rect.Left = (int)pt.X;
-            rect.Top = (int)pt.Y;
-            rect.Right = rect.Left + w;
-            rect.Bottom = rect.Top + h;
-            System.Runtime.InteropServices.Marshal.StructureToPtr(rect, lParam, true);
-            handled = true;
-            return (IntPtr)1;
-        }
+
         else if (msg == Win32Native.WM_RBUTTONUP)
         {
             ShowWidgetContextMenu();
@@ -804,7 +791,8 @@ public partial class WidgetWindow : Window
 
     private void SnapToScreen()
     {
-        var pt = DesktopHostManager.SnapToScreenAndGrid(Left, Top, Width, Height, snapDistance: 15, gridStep: 10);
+        bool snap = WidgetManager.Instance.Settings.SnapToGrid;
+        var pt = DesktopHostManager.SnapToScreenAndGrid(Left, Top, Width, Height, snapDistance: snap ? 15 : 0, gridStep: snap ? 10 : 1);
         Left = pt.X;
         Top = pt.Y;
         Settings.Left = Left;

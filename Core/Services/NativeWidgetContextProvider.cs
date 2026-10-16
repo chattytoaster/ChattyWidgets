@@ -278,30 +278,41 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
 
     public string PlayPauseIcon => IsPlaying ? "⏸" : "▶";
 
-    private string _trackTitle = "Chatty Lounge";
+    private string _trackTitle = "Ожидание медиа...";
     public string TrackTitle
     {
         get => _trackTitle;
         set { _trackTitle = value; OnPropertyChanged(); }
     }
 
-    private string _artist = "Lo-Fi Desktop Chill";
+    private string _artist = "Запустите Spotify, Браузер...";
     public string Artist
     {
         get => _artist;
         set { _artist = value; OnPropertyChanged(); }
     }
 
-    private double _progressPercent = 35;
+    private double _progressPercent = 40;
     public double ProgressPercent
     {
         get => _progressPercent;
         set { _progressPercent = value; OnPropertyChanged(); }
     }
 
+    private System.Windows.Media.ImageSource? _coverBitmap;
+    public System.Windows.Media.ImageSource? CoverBitmap
+    {
+        get => _coverBitmap;
+        set { _coverBitmap = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasCover)); }
+    }
+
+    public bool HasCover => _coverBitmap != null;
+
     public ICommand PlayPauseCommand { get; }
     public ICommand NextCommand { get; }
     public ICommand PrevCommand { get; }
+    public ICommand VolumeUpCommand { get; }
+    public ICommand VolumeDownCommand { get; }
 
     public MusicPlayerWidgetViewModel()
     {
@@ -310,14 +321,10 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
             MediaMonitorService.Instance.PlayPause();
             IsPlaying = !IsPlaying;
         });
-        NextCommand = new NativeRelayCommand(() =>
-        {
-            MediaMonitorService.Instance.Next();
-        });
-        PrevCommand = new NativeRelayCommand(() =>
-        {
-            MediaMonitorService.Instance.Previous();
-        });
+        NextCommand = new NativeRelayCommand(() => MediaMonitorService.Instance.Next());
+        PrevCommand = new NativeRelayCommand(() => MediaMonitorService.Instance.Previous());
+        VolumeUpCommand = new NativeRelayCommand(() => MediaMonitorService.Instance.VolumeUp());
+        VolumeDownCommand = new NativeRelayCommand(() => MediaMonitorService.Instance.VolumeDown());
 
         // Subscribe to live media sessions if available
         try
@@ -329,6 +336,14 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
                     if (!string.IsNullOrEmpty(info.Title)) TrackTitle = info.Title;
                     if (!string.IsNullOrEmpty(info.Artist)) Artist = info.Artist;
                     IsPlaying = info.IsPlaying;
+                    if (!string.IsNullOrEmpty(info.ThumbnailBase64))
+                    {
+                        CoverBitmap = LoadBitmapFromBase64(info.ThumbnailBase64);
+                    }
+                    else
+                    {
+                        CoverBitmap = null;
+                    }
                 });
             };
             var cur = MediaMonitorService.Instance.CurrentMedia;
@@ -337,9 +352,33 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
                 if (!string.IsNullOrEmpty(cur.Title)) TrackTitle = cur.Title;
                 if (!string.IsNullOrEmpty(cur.Artist)) Artist = cur.Artist;
                 IsPlaying = cur.IsPlaying;
+                if (!string.IsNullOrEmpty(cur.ThumbnailBase64))
+                {
+                    CoverBitmap = LoadBitmapFromBase64(cur.ThumbnailBase64);
+                }
             }
         }
         catch { }
+    }
+
+    private static System.Windows.Media.ImageSource? LoadBitmapFromBase64(string base64)
+    {
+        if (string.IsNullOrEmpty(base64) || base64.Length < 20) return null;
+        try
+        {
+            int comma = base64.IndexOf(',');
+            if (comma >= 0) base64 = base64.Substring(comma + 1);
+            byte[] bytes = Convert.FromBase64String(base64);
+            using var ms = new MemoryStream(bytes);
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch { return null; }
     }
 }
 
@@ -476,15 +515,23 @@ public class RssArticleItem
 
 public class RssWidgetViewModel : NativeViewModelBase
 {
-    public string FeedTitle => "Лента Новостей & IT";
+    public string FeedTitle => "НОВОСТИ И IT";
     public ObservableCollection<RssArticleItem> Articles { get; } = new();
+
+    private int _currentIndex = 0;
+    public RssArticleItem? CurrentArticle => Articles.Count > 0 ? Articles[_currentIndex] : null;
+    public string CounterText => Articles.Count > 0 ? $"{_currentIndex + 1} / {Articles.Count}" : "0 / 0";
+
+    public ICommand NextSlideCommand { get; }
+    public ICommand PrevSlideCommand { get; }
+    public ICommand RefreshCommand { get; }
 
     public RssWidgetViewModel()
     {
-        Articles.Add(new RssArticleItem { Title = "Релиз ChattyWidgets 2.0: Полный переход на нативный стек и сверхбыстрые виджеты", Source = "ChattyWidgets News", Time = "10 мин назад", Url = "https://github.com/chattytoaster/ChattyWidgets" });
-        Articles.Add(new RssArticleItem { Title = "Новый стандарт производительности рабочего стола без нагрузки на CPU", Source = "Habr", Time = "25 мин назад", Url = "https://habr.com" });
-        Articles.Add(new RssArticleItem { Title = "WPF и Windows 11: Создание красивых стеклянных интерфейсов следующего поколения", Source = "Microsoft Dev", Time = "1 час назад", Url = "https://learn.microsoft.com" });
-        Articles.Add(new RssArticleItem { Title = "Открытый каталог .chw виджетов: расширяй свой рабочий стол в 1 клик", Source = "GitHub Community", Time = "2 часа назад", Url = "https://github.com/chattytoaster/ChattyWidgetsLibrary" });
+        Articles.Add(new RssArticleItem { Title = "OpenAI и DeepMind анонсировали новые мультимодальные модели следующего поколения", Source = "AI & TECH", Time = "10 мин назад", Url = "https://news.ycombinator.com" });
+        Articles.Add(new RssArticleItem { Title = "Microsoft представила новые визуальные API для Windows 11 с нативной поддержкой Mica", Source = "WINDOWS", Time = "42 мин назад", Url = "https://blogs.windows.com" });
+        Articles.Add(new RssArticleItem { Title = "Сеть TON и Gram установили рекорд скорости транзакций и активных кошельков", Source = "КРИПТА", Time = "1 час назад", Url = "https://ton.org" });
+        Articles.Add(new RssArticleItem { Title = "Релиз ChattyWidgets 2.0: Полный переход на нативный стек и сверхбыстрые виджеты", Source = "CHATTY", Time = "2 часа назад", Url = "https://github.com/chattytoaster/ChattyWidgets" });
 
         foreach (var a in Articles)
         {
@@ -492,48 +539,158 @@ public class RssWidgetViewModel : NativeViewModelBase
                 try { Process.Start(new ProcessStartInfo(a.Url) { UseShellExecute = true }); } catch { }
             });
         }
+
+        NextSlideCommand = new NativeRelayCommand(() =>
+        {
+            if (Articles.Count == 0) return;
+            _currentIndex = (_currentIndex + 1) % Articles.Count;
+            OnPropertyChanged(nameof(CurrentArticle));
+            OnPropertyChanged(nameof(CounterText));
+        });
+
+        PrevSlideCommand = new NativeRelayCommand(() =>
+        {
+            if (Articles.Count == 0) return;
+            _currentIndex = (_currentIndex - 1 + Articles.Count) % Articles.Count;
+            OnPropertyChanged(nameof(CurrentArticle));
+            OnPropertyChanged(nameof(CounterText));
+        });
+
+        RefreshCommand = new NativeRelayCommand(() =>
+        {
+            _currentIndex = 0;
+            OnPropertyChanged(nameof(CurrentArticle));
+            OnPropertyChanged(nameof(CounterText));
+        });
     }
 }
 
-// 9. Sticky Notes ViewModel
+// 9. Sticky Notes ViewModel (Tasks checklist exactly matching original design)
+public class NoteTaskItem : NativeViewModelBase
+{
+    private string _text = "";
+    public string Text { get => _text; set { _text = value; OnPropertyChanged(); } }
+
+    private bool _isDone;
+    public bool IsDone
+    {
+        get => _isDone;
+        set
+        {
+            _isDone = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TextDecoration));
+            OnPropertyChanged(nameof(TextColor));
+            Toggled?.Invoke();
+        }
+    }
+
+    public TextDecorationCollection? TextDecoration => IsDone ? TextDecorations.Strikethrough : null;
+    public string TextColor => IsDone ? "#64748B" : "#E2E8F0";
+
+    public ICommand DeleteCommand { get; set; } = null!;
+    public Action? Toggled { get; set; }
+}
+
 public class StickyNotesWidgetViewModel : NativeViewModelBase
 {
     private readonly string _storageFile;
-    private string _noteText = "✦ Заметки ChattyWidgets\n- Напишите сюда ваши задачи или мысли.\n- Заметка сохраняется автоматически!";
+    public ObservableCollection<NoteTaskItem> Tasks { get; } = new();
 
-    public string NoteText
+    private string _newTaskText = "";
+    public string NewTaskText
     {
-        get => _noteText;
-        set
-        {
-            if (_noteText != value)
-            {
-                _noteText = value;
-                OnPropertyChanged();
-                SaveNote();
-            }
-        }
+        get => _newTaskText;
+        set { _newTaskText = value; OnPropertyChanged(); }
     }
 
-    public ICommand ClearCommand { get; }
+    public string ActiveCountText => $"{Tasks.Count(t => !t.IsDone)} активных";
+
+    public ICommand AddTaskCommand { get; }
 
     public StickyNotesWidgetViewModel(string instanceId, FrameworkElement? rootElement)
     {
-        ClearCommand = new NativeRelayCommand(() => NoteText = "");
-
         string dir = Path.Combine(ChwPackageService.DataDir, instanceId);
         Directory.CreateDirectory(dir);
-        _storageFile = Path.Combine(dir, "note.txt");
+        _storageFile = Path.Combine(dir, "tasks.json");
 
-        if (File.Exists(_storageFile))
+        AddTaskCommand = new NativeRelayCommand(() =>
         {
-            try { _noteText = File.ReadAllText(_storageFile); } catch { }
-        }
+            if (string.IsNullOrWhiteSpace(NewTaskText)) return;
+            var item = new NoteTaskItem { Text = NewTaskText.Trim(), IsDone = false };
+            item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
+            item.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            Tasks.Add(item);
+            NewTaskText = "";
+            Save();
+            OnPropertyChanged(nameof(ActiveCountText));
+        });
+
+        Load();
     }
 
-    private void SaveNote()
+    private void RemoveTask(NoteTaskItem item)
     {
-        try { File.WriteAllText(_storageFile, _noteText); } catch { }
+        Tasks.Remove(item);
+        Save();
+        OnPropertyChanged(nameof(ActiveCountText));
+    }
+
+    private void Save()
+    {
+        try
+        {
+            var raw = Tasks.Select(t => new { text = t.Text, done = t.IsDone }).ToList();
+            File.WriteAllText(_storageFile, JsonSerializer.Serialize(raw));
+        }
+        catch { }
+    }
+
+    private void Load()
+    {
+        try
+        {
+            if (File.Exists(_storageFile))
+            {
+                string json = File.ReadAllText(_storageFile);
+                var list = JsonSerializer.Deserialize<List<JsonElement>>(json);
+                if (list != null)
+                {
+                    foreach (var elem in list)
+                    {
+                        string text = elem.TryGetProperty("text", out var pText) ? pText.GetString() ?? "" : "";
+                        bool done = elem.TryGetProperty("done", out var pDone) && pDone.GetBoolean();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            var item = new NoteTaskItem { Text = text, IsDone = done };
+                            item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
+                            item.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+                            Tasks.Add(item);
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        if (Tasks.Count == 0)
+        {
+            var t1 = new NoteTaskItem { Text = "Создать свой виджет (.chw)", IsDone = false };
+            t1.DeleteCommand = new NativeRelayCommand(() => RemoveTask(t1));
+            t1.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            Tasks.Add(t1);
+
+            var t2 = new NoteTaskItem { Text = "Открыть магазин ChattyWidgets", IsDone = true };
+            t2.DeleteCommand = new NativeRelayCommand(() => RemoveTask(t2));
+            t2.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            Tasks.Add(t2);
+
+            var t3 = new NoteTaskItem { Text = "Настроить слой на рабочем столе", IsDone = false };
+            t3.DeleteCommand = new NativeRelayCommand(() => RemoveTask(t3));
+            t3.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            Tasks.Add(t3);
+        }
+        OnPropertyChanged(nameof(ActiveCountText));
     }
 }
 
@@ -548,12 +705,16 @@ public class ForecastDayItem
 public class WeatherWidgetViewModel : NativeViewModelBase
 {
     public string City { get => "Москва"; set {} }
-    public string Temperature { get => "+14°C"; set {} }
-    public string Condition { get => "Переменная облачность"; set {} }
-    public string WeatherIcon { get => "⛅"; set {} }
+    public string Temperature { get => "+14°"; set {} }
+    public string Condition { get => "Ясно"; set {} }
+    public string WeatherIcon { get => "☀️"; set {} }
+    public string FeelsLike { get => "Ощущается как +12°"; set {} }
     public string Humidity { get => "64%"; set {} }
     public string WindSpeed { get => "3.4 м/с"; set {} }
     public string Pressure { get => "752 мм"; set {} }
+    public string MinMax { get => "+8° / +16°"; set {} }
+    public string Rain { get => "0 мм"; set {} }
+    public string UpdateTime { get => "Обновлено в " + DateTime.Now.ToString("HH:mm"); set {} }
 
     public ObservableCollection<ForecastDayItem> Forecast { get; } = new();
 
