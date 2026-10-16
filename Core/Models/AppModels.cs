@@ -57,7 +57,7 @@ public class AppSettings
     public string Theme { get; set; } = "dark";
 
     [JsonPropertyName("remoteCatalogUrl")]
-    public string RemoteCatalogUrl { get; set; } = "https://raw.githubusercontent.com/ChattyWidgets/store-catalog/main/catalog.json";
+    public string RemoteCatalogUrl { get; set; } = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/catalog.json";
 
     [JsonPropertyName("widgets")]
     public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();
