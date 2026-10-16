@@ -78,7 +78,9 @@ public class StoreService
                 Category = "Часы и Время",
                 Description = "Элегантные цифровые и аналоговые часы с неоморфизмом, эффектом матового стекла и датой.",
                 Type = "web",
-                Size = "18 KB"
+                Size = "18 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -89,7 +91,9 @@ public class StoreService
                 Category = "Система",
                 Description = "Ультра-легковесный нативный монитор CPU, RAM, SSD и сетевой активности с мгновенным откликом.",
                 Type = "native",
-                Size = "8 KB"
+                Size = "8 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -100,7 +104,9 @@ public class StoreService
                 Category = "Медиа",
                 Description = "Стильный настольный контроллер для Spotify, Яндекс.Музыки, браузера и системных аудиоплееров.",
                 Type = "web",
-                Size = "24 KB"
+                Size = "24 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -111,7 +117,9 @@ public class StoreService
                 Category = "Утилиты",
                 Description = "Компактный стикер для важных заметок и чек-листа задач прямо на рабочем столе с автосохранением.",
                 Type = "web",
-                Size = "16 KB"
+                Size = "16 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -120,9 +128,11 @@ public class StoreService
                 Version = "1.0.0",
                 Author = "ChattyWidgets",
                 Category = "Финансы",
-                Description = "Котировки BTC, ETH, TON, SOL, а также курсы USD, EUR и RUB в реальном времени.",
+                Description = "Котировки BTC, ETH, GRAM, SOL, а также курсы USD, EUR и RUB в реальном времени.",
                 Type = "web",
-                Size = "22 KB"
+                Size = "22 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -133,7 +143,9 @@ public class StoreService
                 Category = "Погода",
                 Description = "Детальный погодный информер с текущей температурой, ощущением, влажностью, ветром и прогнозом.",
                 Type = "web",
-                Size = "20 KB"
+                Size = "20 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -144,7 +156,9 @@ public class StoreService
                 Category = "Утилиты",
                 Description = "Элегантный настольный календарь с переключением месяцев, подсветкой сегодня и быстрыми заметками на дни.",
                 Type = "web",
-                Size = "18 KB"
+                Size = "18 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             },
             new StoreItem
             {
@@ -155,7 +169,9 @@ public class StoreService
                 Category = "Медиа",
                 Description = "Настольная фоторамка и видеоплеер для фоток, гифок или зацикленных видео (MP4, WebM, PNG, JPG, GIF).",
                 Type = "web",
-                Size = "20 KB"
+                Size = "20 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
             }
         };
     }

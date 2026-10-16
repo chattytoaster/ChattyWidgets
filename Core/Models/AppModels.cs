@@ -95,6 +95,24 @@ public class StoreItem
     [JsonPropertyName("size")]
     public string Size { get; set; } = "15 KB";
 
+    [JsonPropertyName("authorGithub")]
+    public string AuthorGithub { get; set; } = string.Empty;
+
+    [JsonPropertyName("authorUrl")]
+    public string AuthorUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("isOfficial")]
+    public bool IsOfficial { get; set; } = false;
+
+    [JsonPropertyName("trustLevel")]
+    public string TrustLevel { get; set; } = "community";
+
+    [JsonPropertyName("sha256")]
+    public string Sha256 { get; set; } = string.Empty;
+
+    [JsonPropertyName("signature")]
+    public string Signature { get; set; } = string.Empty;
+
     [JsonIgnore]
     public bool IsInstalled { get; set; } = false;
 }

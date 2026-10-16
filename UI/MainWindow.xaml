@@ -179,10 +179,17 @@
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Manifest.Type}" FontSize="10" FontWeight="Bold" Foreground="#818CF8"/>
                                                 </Border>
+                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="Bold" Foreground="{Binding BadgeFg}"/>
+                                                </Border>
                                                 <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Manifest.Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Manifest.Author, StringFormat='Автор: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding DisplayAuthor, StringFormat='Автор: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <Border Background="#350A0A" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
+                                                    Visibility="{Binding WarningVisibility}">
+                                                <TextBlock Text="{Binding WarningMessage}" FontSize="11" Foreground="#FCA5A5" TextWrapping="Wrap"/>
+                                            </Border>
                                         </StackPanel>
 
                                         <!-- Actions -->
@@ -242,6 +249,9 @@
                                                 <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0"/>
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
+                                                </Border>
+                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="Bold" Foreground="{Binding BadgeFg}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>

@@ -118,6 +118,8 @@ public partial class MainWindow : Window
             bool isActive = WidgetManager.Instance.IsWidgetActive(manifest.Id);
             if (isActive) activeCount++;
 
+            var trust = SecurityService.Instance.EvaluateWidget(manifest, dir);
+
             viewModels.Add(new InstalledWidgetViewModel
             {
                 Manifest = manifest,
@@ -127,7 +129,8 @@ public partial class MainWindow : Window
                 ToggleButtonText = isActive ? "Остановить" : "Запустить",
                 ToggleButtonBg = isActive
                     ? new SolidColorBrush(Color.FromRgb(239, 68, 68)) // Red
-                    : new SolidColorBrush(Color.FromRgb(16, 185, 129)) // Green
+                    : new SolidColorBrush(Color.FromRgb(16, 185, 129)), // Green
+                Trust = trust
             });
         }
 
@@ -185,20 +188,35 @@ public partial class MainWindow : Window
         TxtStatus.Text = "Загрузка каталога магазина...";
         var catalog = await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
 
-        var viewModels = catalog.Select(item => new StoreItemViewModel
+        var viewModels = catalog.Select(item =>
         {
-            Item = item,
-            Id = item.Id,
-            Name = item.Name,
-            Description = item.Description,
-            Author = item.Author,
-            Category = item.Category,
-            Size = item.Size,
-            CanInstall = !item.IsInstalled,
-            ActionButtonText = item.IsInstalled ? "Установлен ✓" : "Установить ⬇",
-            ActionButtonBg = item.IsInstalled
-                ? new SolidColorBrush(Color.FromRgb(51, 65, 85)) // Slate
-                : new SolidColorBrush(Color.FromRgb(99, 102, 241)) // Indigo
+            bool isOfficial = item.IsOfficial || item.Id.StartsWith(SecurityService.OfficialPrefix, StringComparison.OrdinalIgnoreCase);
+            string badgeText = isOfficial ? "✦ Официальный" : $"{item.Author} (GitHub)";
+            var badgeBg = isOfficial
+                ? new SolidColorBrush(Color.FromRgb(30, 42, 74))
+                : new SolidColorBrush(Color.FromRgb(6, 78, 59));
+            var badgeFg = isOfficial
+                ? new SolidColorBrush(Color.FromRgb(96, 165, 250))
+                : new SolidColorBrush(Color.FromRgb(52, 211, 153));
+
+            return new StoreItemViewModel
+            {
+                Item = item,
+                Id = item.Id,
+                Name = item.Name,
+                Description = item.Description,
+                Author = item.Author,
+                Category = item.Category,
+                Size = item.Size,
+                CanInstall = !item.IsInstalled,
+                ActionButtonText = item.IsInstalled ? "Установлен ✓" : "Установить ⬇",
+                ActionButtonBg = item.IsInstalled
+                    ? new SolidColorBrush(Color.FromRgb(51, 65, 85)) // Slate
+                    : new SolidColorBrush(Color.FromRgb(99, 102, 241)), // Indigo
+                BadgeText = badgeText,
+                BadgeBg = badgeBg,
+                BadgeFg = badgeFg
+            };
         }).ToList();
 
         StoreItemsList.ItemsSource = viewModels;
@@ -281,6 +299,25 @@ public partial class MainWindow : Window
     {
         try
         {
+            TxtStatus.Text = $"Проверка пакета {Path.GetFileName(chwPath)}...";
+
+            // Inspect package for security and spoofing attempts
+            var (isSafe, warningMsg, meta) = SecurityService.Instance.InspectPackageFile(chwPath);
+            if (!isSafe)
+            {
+                var confirm = MessageBox.Show(
+                    $"{warningMsg}\n\nВы всё равно хотите продолжить установку на свой страх и риск?",
+                    "Предупреждение безопасности ChattyWidgets",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (confirm != MessageBoxResult.Yes)
+                {
+                    TxtStatus.Text = "Установка стороннего пакета отменена пользователем.";
+                    return;
+                }
+            }
+
             TxtStatus.Text = $"Установка пакета {Path.GetFileName(chwPath)}...";
             var manifest = ChwPackageService.InstallPackage(chwPath);
             WidgetManager.Instance.StartWidget(manifest.Id);
@@ -413,6 +450,15 @@ public class InstalledWidgetViewModel
     public string TypeBadge { get; set; } = "🌐";
     public string ToggleButtonText { get; set; } = "Запустить";
     public Brush ToggleButtonBg { get; set; } = Brushes.SlateGray;
+    public WidgetTrustInfo Trust { get; set; } = new();
+
+    public Brush BadgeBg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeBg)!;
+    public Brush BadgeFg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeFg)!;
+    public string DisplayAuthor => Trust.DisplayAuthor;
+    public string BadgeText => Trust.BadgeText;
+    public bool HasWarning => !string.IsNullOrEmpty(Trust.WarningMessage);
+    public string WarningMessage => Trust.WarningMessage;
+    public Visibility WarningVisibility => HasWarning ? Visibility.Visible : Visibility.Collapsed;
 }
 
 public class StoreItemViewModel
@@ -427,4 +473,7 @@ public class StoreItemViewModel
     public bool CanInstall { get; set; } = true;
     public string ActionButtonText { get; set; } = "Установить ⬇";
     public Brush ActionButtonBg { get; set; } = Brushes.Indigo;
+    public string BadgeText { get; set; } = string.Empty;
+    public Brush BadgeBg { get; set; } = Brushes.DarkSlateBlue;
+    public Brush BadgeFg { get; set; } = Brushes.LightSkyBlue;
 }
