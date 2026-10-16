@@ -152,11 +152,12 @@ public partial class MainWindow : Window
         var starterCatalog = StoreService.Instance.GetStarterWidgetsCatalog();
         var viewModels = new List<InstalledWidgetViewModel>();
 
-        int activeCount = 0;
+        int totalActiveCopies = 0;
         foreach (var (manifest, dir) in installed)
         {
-            bool isActive = WidgetManager.Instance.IsWidgetActive(manifest.Id);
-            if (isActive) activeCount++;
+            int copies = WidgetManager.Instance.GetActiveInstancesCount(manifest.Id);
+            bool isActive = copies > 0;
+            if (isActive) totalActiveCopies += copies;
 
             var trust = SecurityService.Instance.EvaluateWidget(manifest, dir);
 
@@ -174,6 +175,7 @@ public partial class MainWindow : Window
                 Manifest = manifest,
                 DirectoryPath = dir,
                 IsActive = isActive,
+                ActiveCopiesCount = copies,
                 TypeBadge = manifest.Type == "native" ? "⚡" : "🌐",
                 ToggleButtonText = isActive ? "Остановить" : "Запустить",
                 ToggleButtonBg = isActive
@@ -186,13 +188,22 @@ public partial class MainWindow : Window
         }
 
         InstalledWidgetsList.ItemsSource = viewModels;
-        TxtActiveCount.Text = $"{activeCount} активно из {installed.Count}";
-        TxtStatus.Text = $"Загружено {installed.Count} виджетов. Активно: {activeCount}.";
+        TxtActiveCount.Text = $"{totalActiveCopies} активно из {installed.Count}";
+        TxtStatus.Text = $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}.";
     }
 
     private void OnRefreshInstalledClick(object sender, RoutedEventArgs e)
     {
         RefreshInstalledWidgets();
+    }
+
+    private void OnDuplicateFromHubClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement el && el.Tag is string id)
+        {
+            WidgetManager.Instance.DuplicateWidget(id);
+            RefreshInstalledWidgets();
+        }
     }
 
     private void OnToggleWidgetClick(object sender, RoutedEventArgs e)
@@ -217,13 +228,22 @@ public partial class MainWindow : Window
         if (sender is FrameworkElement el && el.Tag is string id)
         {
             var res = MessageBox.Show(
-                $"Вы уверены, что хотите удалить виджет '{id}'?",
+                $"Вы уверены, что хотите полностью удалить виджет '{id}' и все его копии?",
                 "Удаление виджета",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
             if (res == MessageBoxResult.Yes)
             {
+                // Delete all instances
+                var instances = WidgetManager.Instance.Settings.Widgets.Keys
+                    .Where(k => k == id || k.StartsWith(id + "#"))
+                    .ToList();
+                foreach (var instId in instances)
+                {
+                    WidgetManager.Instance.DeleteWidgetInstance(instId);
+                }
+
                 WidgetManager.Instance.StopWidget(id);
                 ChwPackageService.UninstallWidget(id);
                 RefreshInstalledWidgets();
@@ -605,6 +625,9 @@ public class InstalledWidgetViewModel
     public WidgetManifest Manifest { get; set; } = new();
     public string DirectoryPath { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public int ActiveCopiesCount { get; set; }
+    public string ActiveCopiesText => ActiveCopiesCount > 1 ? $"({ActiveCopiesCount} шт.)" : "";
+    public Visibility ActiveCopiesVisibility => ActiveCopiesCount > 1 ? Visibility.Visible : Visibility.Collapsed;
     public string TypeBadge { get; set; } = "🌐";
     public string ToggleButtonText { get; set; } = "Запустить";
     public Brush ToggleButtonBg { get; set; } = Brushes.SlateGray;

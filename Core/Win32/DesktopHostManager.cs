@@ -1,4 +1,5 @@
 using System.Windows;
+using ChattyWidgets.Core.Services;
 
 namespace ChattyWidgets.Core.Win32;
 
@@ -134,14 +135,21 @@ public class DesktopHostManager
     /// </summary>
     public static Point SnapToScreenAndGrid(double left, double top, double width, double height, double snapDistance = 15, int gridStep = 10)
     {
-        double screenWidth = SystemParameters.PrimaryScreenWidth;
-        double screenHeight = SystemParameters.PrimaryScreenHeight;
+        var monitors = ScreenHelper.GetMonitors();
+        var currentMon = monitors.FirstOrDefault(m =>
+            left + width / 2 >= m.Left && left + width / 2 <= m.Left + m.Width &&
+            top + height / 2 >= m.Top && top + height / 2 <= m.Top + m.Height)
+            ?? monitors.FirstOrDefault(m => m.IsPrimary)
+            ?? (monitors.Count > 0 ? monitors[0] : null);
 
-        // Screen border snapping
-        if (Math.Abs(left) < snapDistance) left = 0;
-        if (Math.Abs(top) < snapDistance) top = 0;
-        if (Math.Abs(screenWidth - (left + width)) < snapDistance) left = screenWidth - width;
-        if (Math.Abs(screenHeight - (top + height)) < snapDistance) top = screenHeight - height;
+        if (currentMon != null)
+        {
+            // Screen border snapping on the active monitor
+            if (Math.Abs(left - currentMon.Left) < snapDistance) left = currentMon.Left;
+            if (Math.Abs(top - currentMon.Top) < snapDistance) top = currentMon.Top;
+            if (Math.Abs((currentMon.Left + currentMon.Width) - (left + width)) < snapDistance) left = currentMon.Left + currentMon.Width - width;
+            if (Math.Abs((currentMon.Top + currentMon.Height) - (top + height)) < snapDistance) top = currentMon.Top + currentMon.Height - height;
+        }
 
         // Grid snapping
         if (gridStep > 1)

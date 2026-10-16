@@ -91,6 +91,11 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        try
+        {
+            WidgetManager.Instance.SaveSettings();
+        }
+        catch { }
         SingleInstanceService.Cleanup();
         base.OnExit(e);
     }

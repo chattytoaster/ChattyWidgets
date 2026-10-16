@@ -26,18 +26,22 @@ public class WidgetManager
         LoadSettings();
         ChwPackageService.RegisterFileAssociation();
 
-        // Start all widgets that were saved as enabled
         var installed = ChwPackageService.GetInstalledWidgets();
-        foreach (var (manifest, dir) in installed)
+        var installedSet = new HashSet<string>(installed.Select(x => x.Manifest.Id));
+
+        // Launch all widget instances that were saved as enabled
+        foreach (var kvp in Settings.Widgets.ToList())
         {
-            if (Settings.Widgets.TryGetValue(manifest.Id, out var widgetSetting))
+            string instanceId = kvp.Key;
+            var widgetSetting = kvp.Value;
+            string baseId = widgetSetting.BaseWidgetId;
+
+            if (widgetSetting.IsEnabled && installedSet.Contains(baseId))
             {
-                if (widgetSetting.IsEnabled)
-                {
-                    StartWidget(manifest.Id);
-                }
+                StartWidget(baseId, instanceId);
             }
         }
+
         PresetService.Instance.EnsureDefaultPresets();
         HotReloadService.Instance.Start();
     }
@@ -45,29 +49,38 @@ public class WidgetManager
     public IEnumerable<WidgetWindow> GetActiveWindows() => _activeWindows.Values;
     public int ActiveCount => _activeWindows.Count;
 
-    public bool IsWidgetActive(string widgetId) => _activeWindows.ContainsKey(widgetId);
+    public bool IsWidgetActive(string instanceOrBaseId) =>
+        _activeWindows.ContainsKey(instanceOrBaseId) || _activeWindows.Values.Any(w => w.BaseWidgetId == instanceOrBaseId);
 
-    public WidgetWindow? GetActiveWindow(string widgetId)
+    public int GetActiveInstancesCount(string baseWidgetId) =>
+        _activeWindows.Values.Count(w => w.BaseWidgetId == baseWidgetId);
+
+    public WidgetWindow? GetActiveWindow(string instanceOrBaseId)
     {
-        _activeWindows.TryGetValue(widgetId, out var win);
-        return win;
+        if (_activeWindows.TryGetValue(instanceOrBaseId, out var win))
+            return win;
+        return _activeWindows.Values.FirstOrDefault(w => w.BaseWidgetId == instanceOrBaseId);
     }
 
-    public void MoveWidgetToMonitor(string widgetId, int monitorIndex)
+    public void MoveWidgetToMonitor(string instanceId, int monitorIndex)
     {
-        if (_activeWindows.TryGetValue(widgetId, out var window))
+        if (_activeWindows.TryGetValue(instanceId, out var window))
         {
             var mon = ScreenHelper.GetMonitor(monitorIndex);
             window.Settings.TargetMonitor = monitorIndex;
             window.Left = mon.Left + 50;
             window.Top = mon.Top + 60;
+            window.Settings.Left = window.Left;
+            window.Settings.Top = window.Top;
             SaveSettings();
         }
     }
 
-    public bool StartWidget(string widgetId)
+    public bool StartWidget(string widgetId, string? instanceId = null)
     {
-        if (_activeWindows.TryGetValue(widgetId, out var existing))
+        string instId = !string.IsNullOrEmpty(instanceId) ? instanceId : widgetId;
+
+        if (_activeWindows.TryGetValue(instId, out var existing))
         {
             existing.Show();
             existing.Activate();
@@ -81,7 +94,7 @@ public class WidgetManager
         if (item.Manifest == null)
             return false;
 
-        if (!Settings.Widgets.TryGetValue(widgetId, out var widgetSetting))
+        if (!Settings.Widgets.TryGetValue(instId, out var widgetSetting))
         {
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double defaultLeft = Math.Max(50, screenWidth - item.Manifest.DefaultWidth - 40);
@@ -89,7 +102,9 @@ public class WidgetManager
 
             widgetSetting = new WidgetInstanceSettings
             {
-                Id = widgetId,
+                Id = instId,
+                WidgetId = widgetId,
+                Title = item.Manifest.Name,
                 IsEnabled = true,
                 Width = item.Manifest.DefaultWidth,
                 Height = item.Manifest.DefaultHeight,
@@ -99,7 +114,15 @@ public class WidgetManager
                 IsClickThrough = false,
                 Opacity = 1.0
             };
-            Settings.Widgets[widgetId] = widgetSetting;
+            Settings.Widgets[instId] = widgetSetting;
+        }
+        else
+        {
+            widgetSetting.WidgetId = widgetId;
+            if (string.IsNullOrWhiteSpace(widgetSetting.Title))
+            {
+                widgetSetting.Title = item.Manifest.Name;
+            }
         }
 
         widgetSetting.IsEnabled = true;
@@ -108,7 +131,7 @@ public class WidgetManager
         window.WidgetClosed += OnWidgetClosed;
         window.SettingsChanged += OnWidgetSettingsChanged;
 
-        _activeWindows[widgetId] = window;
+        _activeWindows[instId] = window;
         window.Show();
         window.Activate();
 
@@ -117,16 +140,147 @@ public class WidgetManager
         return true;
     }
 
-    public void StopWidget(string widgetId)
+    public void StopWidget(string instanceOrWidgetId)
     {
-        if (_activeWindows.TryGetValue(widgetId, out var window))
+        if (_activeWindows.TryGetValue(instanceOrWidgetId, out var window))
         {
             window.Settings.IsEnabled = false;
             window.Close();
-            _activeWindows.Remove(widgetId);
+            _activeWindows.Remove(instanceOrWidgetId);
+            SaveSettings();
+            WidgetsChanged?.Invoke();
+            return;
+        }
+
+        var matchingWindows = _activeWindows.Values
+            .Where(w => w.BaseWidgetId == instanceOrWidgetId)
+            .ToList();
+
+        if (matchingWindows.Count > 0)
+        {
+            foreach (var w in matchingWindows)
+            {
+                w.Settings.IsEnabled = false;
+                w.Close();
+                _activeWindows.Remove(w.InstanceId);
+            }
             SaveSettings();
             WidgetsChanged?.Invoke();
         }
+    }
+
+    public string? DuplicateWidget(string sourceId)
+    {
+        WidgetInstanceSettings? sourceSettings = null;
+        if (Settings.Widgets.TryGetValue(sourceId, out var s))
+        {
+            sourceSettings = s;
+        }
+        else if (_activeWindows.TryGetValue(sourceId, out var win))
+        {
+            sourceSettings = win.Settings;
+        }
+
+        string baseWidgetId = sourceSettings?.BaseWidgetId ?? (sourceId.Contains('#') ? sourceId.Split('#')[0] : sourceId);
+        var installed = ChwPackageService.GetInstalledWidgets();
+        var item = installed.FirstOrDefault(x => x.Manifest.Id == baseWidgetId);
+        if (item.Manifest == null)
+            return null;
+
+        string newInstanceId = $"{baseWidgetId}#inst_{Guid.NewGuid():N.Substring(0, 8)}";
+
+        int copyIndex = Settings.Widgets.Values.Count(w => w.BaseWidgetId == baseWidgetId) + 1;
+        string copyTitle = $"{item.Manifest.Name} (Копия {copyIndex})";
+
+        double newLeft = (sourceSettings != null ? sourceSettings.Left : 100) + 35;
+        double newTop = (sourceSettings != null ? sourceSettings.Top : 100) + 35;
+
+        double virtLeft = SystemParameters.VirtualScreenLeft;
+        double virtTop = SystemParameters.VirtualScreenTop;
+        double virtWidth = SystemParameters.VirtualScreenWidth;
+        double virtHeight = SystemParameters.VirtualScreenHeight;
+
+        if (newLeft > virtLeft + virtWidth - 120)
+            newLeft = virtLeft + 50;
+        if (newTop > virtTop + virtHeight - 120)
+            newTop = virtTop + 60;
+
+        var newSettings = new WidgetInstanceSettings
+        {
+            Id = newInstanceId,
+            WidgetId = baseWidgetId,
+            Title = copyTitle,
+            IsEnabled = true,
+            Left = newLeft,
+            Top = newTop,
+            Width = sourceSettings != null && sourceSettings.Width > 0 ? sourceSettings.Width : item.Manifest.DefaultWidth,
+            Height = sourceSettings != null && sourceSettings.Height > 0 ? sourceSettings.Height : item.Manifest.DefaultHeight,
+            Layer = sourceSettings?.Layer ?? WidgetLayer.Desktop,
+            Opacity = sourceSettings?.Opacity ?? 1.0,
+            Scale = sourceSettings?.Scale ?? 1.0,
+            IsClickThrough = false,
+            IsLocked = false,
+            AutoHideAnchorDot = sourceSettings?.AutoHideAnchorDot ?? false,
+            TargetMonitor = sourceSettings?.TargetMonitor ?? 0
+        };
+
+        // Copy instance data from source if it exists
+        string sourceDataDir = Path.Combine(ChwPackageService.DataDir, sourceId);
+        if (!Directory.Exists(sourceDataDir))
+        {
+            sourceDataDir = Path.Combine(ChwPackageService.DataDir, baseWidgetId);
+        }
+
+        string targetDataDir = Path.Combine(ChwPackageService.DataDir, newInstanceId);
+        try
+        {
+            if (Directory.Exists(sourceDataDir))
+            {
+                Directory.CreateDirectory(targetDataDir);
+                foreach (var file in Directory.GetFiles(sourceDataDir))
+                {
+                    string fileName = Path.GetFileName(file);
+                    File.Copy(file, Path.Combine(targetDataDir, fileName), true);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WidgetManager] Failed copying instance data: {ex.Message}");
+        }
+
+        Settings.Widgets[newInstanceId] = newSettings;
+        SaveSettings();
+
+        StartWidget(baseWidgetId, newInstanceId);
+        return newInstanceId;
+    }
+
+    public void DeleteWidgetInstance(string instanceId)
+    {
+        if (_activeWindows.TryGetValue(instanceId, out var win))
+        {
+            win.Settings.IsEnabled = false;
+            win.Close();
+            _activeWindows.Remove(instanceId);
+        }
+
+        if (Settings.Widgets.Remove(instanceId))
+        {
+            SaveSettings();
+        }
+
+        try
+        {
+            string instanceDataDir = Path.Combine(ChwPackageService.DataDir, instanceId);
+            if (Directory.Exists(instanceDataDir))
+            {
+                Directory.Delete(instanceDataDir, true);
+            }
+        }
+        catch { }
+
+        WidgetsChanged?.Invoke();
     }
 
     public void ToggleWidget(string widgetId)
@@ -139,9 +293,9 @@ public class WidgetManager
 
     private void OnWidgetClosed(WidgetWindow window)
     {
-        if (_activeWindows.ContainsKey(window.Manifest.Id))
+        if (_activeWindows.ContainsKey(window.InstanceId))
         {
-            _activeWindows.Remove(window.Manifest.Id);
+            _activeWindows.Remove(window.InstanceId);
             SaveSettings();
             WidgetsChanged?.Invoke();
         }
@@ -149,7 +303,7 @@ public class WidgetManager
 
     private void OnWidgetSettingsChanged(WidgetWindow window)
     {
-        Settings.Widgets[window.Manifest.Id] = window.Settings;
+        Settings.Widgets[window.InstanceId] = window.Settings;
         SaveSettings();
     }
 

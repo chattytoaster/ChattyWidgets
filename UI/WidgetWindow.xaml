@@ -1,6 +1,7 @@
 <Window x:Class="ChattyWidgets.UI.WidgetWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStartupLocation="Manual"
         WindowStyle="None"
         Icon="/app.ico"
         Background="Transparent"
@@ -13,6 +14,9 @@
     <Window.ContextMenu>
         <ContextMenu x:Name="WidgetContextMenu">
             <MenuItem x:Name="MenuHeader" Header="ChattyWidget" IsEnabled="False" FontWeight="Bold"/>
+            <Separator/>
+            <MenuItem Header="📋 Скопировать виджет (Создать копию)" Click="OnDuplicateWidgetClick"/>
+            <MenuItem Header="🗑 Удалить этот виджет" Click="OnDeleteInstanceClick" Foreground="#EF4444"/>
             <Separator/>
             <MenuItem Header="Слой отображения">
                 <MenuItem x:Name="MenuLayerDesktop" Header="На рабочем столе (под всеми окнами)" Click="OnLayerDesktopClick"/>

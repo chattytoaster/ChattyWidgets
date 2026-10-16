@@ -89,24 +89,27 @@ public class PresetService
         settings.ActivePresetId = presetId;
 
         // Stop all active widgets first
-        var activeIds = WidgetManager.Instance.GetActiveWindows().Select(w => w.Manifest.Id).ToList();
-        foreach (var id in activeIds)
+        var activeWindows = WidgetManager.Instance.GetActiveWindows().ToList();
+        foreach (var win in activeWindows)
         {
-            if (!preset.Widgets.ContainsKey(id))
+            if (!preset.Widgets.ContainsKey(win.InstanceId))
             {
-                WidgetManager.Instance.StopWidget(id);
+                WidgetManager.Instance.StopWidget(win.InstanceId);
             }
         }
 
         // Apply preset positions and launch widgets
         foreach (var kvp in preset.Widgets)
         {
-            string widgetId = kvp.Key;
+            string instanceId = kvp.Key;
             var presetSetting = kvp.Value;
+            string baseId = presetSetting.BaseWidgetId;
 
-            settings.Widgets[widgetId] = new WidgetInstanceSettings
+            settings.Widgets[instanceId] = new WidgetInstanceSettings
             {
-                Id = widgetId,
+                Id = instanceId,
+                WidgetId = baseId,
+                Title = !string.IsNullOrWhiteSpace(presetSetting.Title) ? presetSetting.Title : "",
                 IsEnabled = presetSetting.IsEnabled,
                 Left = presetSetting.Left,
                 Top = presetSetting.Top,
@@ -123,8 +126,8 @@ public class PresetService
 
             if (presetSetting.IsEnabled)
             {
-                WidgetManager.Instance.StartWidget(widgetId);
-                var win = WidgetManager.Instance.GetActiveWindow(widgetId);
+                WidgetManager.Instance.StartWidget(baseId, instanceId);
+                var win = WidgetManager.Instance.GetActiveWindow(instanceId);
                 if (win != null)
                 {
                     win.Left = presetSetting.Left;
@@ -147,9 +150,11 @@ public class PresetService
         var dict = new Dictionary<string, WidgetInstanceSettings>();
         foreach (var win in WidgetManager.Instance.GetActiveWindows())
         {
-            dict[win.Manifest.Id] = new WidgetInstanceSettings
+            dict[win.InstanceId] = new WidgetInstanceSettings
             {
-                Id = win.Manifest.Id,
+                Id = win.InstanceId,
+                WidgetId = win.BaseWidgetId,
+                Title = win.Settings.Title,
                 IsEnabled = true,
                 Left = win.Left,
                 Top = win.Top,

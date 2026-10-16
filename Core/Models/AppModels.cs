@@ -8,6 +8,15 @@ public class WidgetInstanceSettings
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
+    [JsonPropertyName("widgetId")]
+    public string WidgetId { get; set; } = string.Empty;
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public string BaseWidgetId => !string.IsNullOrEmpty(WidgetId) ? WidgetId : (Id.Contains('#') ? Id.Split('#')[0] : Id);
+
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; set; } = true;
 

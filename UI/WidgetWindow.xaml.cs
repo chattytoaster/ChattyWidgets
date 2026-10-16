@@ -18,6 +18,8 @@ public partial class WidgetWindow : Window
     public WidgetManifest Manifest { get; }
     public string WidgetDirectory { get; }
     public WidgetInstanceSettings Settings { get; private set; }
+    public string InstanceId => Settings.Id;
+    public string BaseWidgetId => Settings.BaseWidgetId;
 
     private IntPtr _hwnd = IntPtr.Zero;
     public IntPtr Hwnd => _hwnd;
@@ -34,21 +36,30 @@ public partial class WidgetWindow : Window
         WidgetDirectory = directory;
         Settings = settings;
 
-        Title = manifest.Name;
+        Title = !string.IsNullOrWhiteSpace(settings.Title) ? settings.Title : manifest.Name;
         Width = settings.Width > 0 ? settings.Width : manifest.DefaultWidth;
         Height = settings.Height > 0 ? settings.Height : manifest.DefaultHeight;
 
-        double screenWidth = SystemParameters.PrimaryScreenWidth;
-        double screenHeight = SystemParameters.PrimaryScreenHeight;
-        if (settings.Left < 0 || settings.Left > screenWidth - 50)
-            Left = Math.Max(20, screenWidth - Width - 40);
-        else
-            Left = settings.Left;
+        double virtLeft = SystemParameters.VirtualScreenLeft;
+        double virtTop = SystemParameters.VirtualScreenTop;
+        double virtWidth = SystemParameters.VirtualScreenWidth;
+        double virtHeight = SystemParameters.VirtualScreenHeight;
 
-        if (settings.Top < 0 || settings.Top > screenHeight - 50)
-            Top = 60;
-        else
+        bool isWithinBounds = (settings.Left >= virtLeft - 20)
+                           && (settings.Left <= virtLeft + virtWidth - 30)
+                           && (settings.Top >= virtTop - 20)
+                           && (settings.Top <= virtTop + virtHeight - 30);
+
+        if (isWithinBounds)
+        {
+            Left = settings.Left;
             Top = settings.Top;
+        }
+        else
+        {
+            Left = Math.Max(20, SystemParameters.PrimaryScreenWidth - Width - 40);
+            Top = 60;
+        }
 
         // Window itself stays fully opaque; opacity affects the background surfaces only
         Opacity = 1.0;
@@ -56,7 +67,10 @@ public partial class WidgetWindow : Window
         MinWidth = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
         MinHeight = manifest.MinHeight > 0 ? manifest.MinHeight : 50;
 
-        MenuHeader.Header = $"{manifest.Name} (v{manifest.Version})";
+        string displayName = !string.IsNullOrWhiteSpace(settings.Title) && settings.Title != manifest.Name
+            ? $"{settings.Title} (v{manifest.Version})"
+            : $"{manifest.Name} (v{manifest.Version})";
+        MenuHeader.Header = displayName;
         UpdateMenuChecks();
         UpdateAnchorDotStyle();
 
@@ -268,7 +282,10 @@ public partial class WidgetWindow : Window
             // Expose the ChattyBridge to JavaScript
             var bridge = new ChattyBridge(
                 Manifest.Id,
+                instanceId: InstanceId,
                 closeAction: () => CloseWidget(),
+                duplicateAction: () => WidgetManager.Instance.DuplicateWidget(InstanceId),
+                deleteInstanceAction: () => WidgetManager.Instance.DeleteWidgetInstance(InstanceId),
                 changeLayerAction: (layer) => SetLayer(layer),
                 clickThroughAction: (ct) => SetClickThrough(ct),
                 lockAction: (locked) => SetLocked(locked),
@@ -585,6 +602,7 @@ public partial class WidgetWindow : Window
 
     private void OnLocationChanged(object? sender, EventArgs e)
     {
+        if (!IsLoaded || WindowState != WindowState.Normal) return;
         Settings.Left = Left;
         Settings.Top = Top;
         SettingsChanged?.Invoke(this);
@@ -592,6 +610,7 @@ public partial class WidgetWindow : Window
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        if (!IsLoaded || WindowState != WindowState.Normal) return;
         Settings.Width = Width;
         Settings.Height = Height;
         SettingsChanged?.Invoke(this);
@@ -909,7 +928,7 @@ public partial class WidgetWindow : Window
             };
             item.Click += (s, ev) =>
             {
-                WidgetManager.Instance.MoveWidgetToMonitor(Manifest.Id, idx);
+                WidgetManager.Instance.MoveWidgetToMonitor(InstanceId, idx);
             };
             MenuMonitors.Items.Add(item);
         }
@@ -1018,6 +1037,25 @@ public partial class WidgetWindow : Window
             Application.Current.MainWindow.Show();
             Application.Current.MainWindow.WindowState = WindowState.Normal;
             Application.Current.MainWindow.Activate();
+        }
+    }
+
+    private void OnDuplicateWidgetClick(object sender, RoutedEventArgs e)
+    {
+        WidgetManager.Instance.DuplicateWidget(InstanceId);
+    }
+
+    private void OnDeleteInstanceClick(object sender, RoutedEventArgs e)
+    {
+        var res = MessageBox.Show(
+            $"Удалить этот виджет '{Title}' с рабочего стола?",
+            "Удаление виджета",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (res == MessageBoxResult.Yes)
+        {
+            WidgetManager.Instance.DeleteWidgetInstance(InstanceId);
         }
     }
 

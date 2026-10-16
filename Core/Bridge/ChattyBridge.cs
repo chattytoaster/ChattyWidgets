@@ -11,7 +11,10 @@ namespace ChattyWidgets.Core.Bridge;
 public class ChattyBridge
 {
     private readonly string _widgetId;
+    private readonly string _instanceId;
     private readonly Action? _closeAction;
+    private readonly Action? _duplicateAction;
+    private readonly Action? _deleteInstanceAction;
     private readonly Action<WidgetLayer>? _changeLayerAction;
     private readonly Action<bool>? _clickThroughAction;
     private readonly Action<bool>? _lockAction;
@@ -33,7 +36,10 @@ public class ChattyBridge
 
     public ChattyBridge(
         string widgetId,
+        string? instanceId = null,
         Action? closeAction = null,
+        Action? duplicateAction = null,
+        Action? deleteInstanceAction = null,
         Action<WidgetLayer>? changeLayerAction = null,
         Action<bool>? clickThroughAction = null,
         Action<bool>? lockAction = null,
@@ -52,7 +58,10 @@ public class ChattyBridge
         Action? reloadAction = null)
     {
         _widgetId = widgetId;
+        _instanceId = !string.IsNullOrEmpty(instanceId) ? instanceId : widgetId;
         _closeAction = closeAction;
+        _duplicateAction = duplicateAction;
+        _deleteInstanceAction = deleteInstanceAction;
         _changeLayerAction = changeLayerAction;
         _clickThroughAction = clickThroughAction;
         _lockAction = lockAction;
@@ -74,18 +83,22 @@ public class ChattyBridge
         Directory.CreateDirectory(widgetDir);
         _storageFilePath = Path.Combine(widgetDir, "storage.json");
 
-        string dataDir = Path.Combine(ChwPackageService.DataDir, widgetId);
+        string dataDir = Path.Combine(ChwPackageService.DataDir, _instanceId);
         Directory.CreateDirectory(dataDir);
         _dataStorageFilePath = Path.Combine(dataDir, "storage.json");
 
-        // Migrate if needed
-        if (!File.Exists(_storageFilePath) && File.Exists(_dataStorageFilePath))
+        // Seed instance storage from existing storage if needed
+        if (!File.Exists(_dataStorageFilePath))
         {
-            try { File.Copy(_dataStorageFilePath, _storageFilePath, true); } catch { }
-        }
-        else if (File.Exists(_storageFilePath) && !File.Exists(_dataStorageFilePath))
-        {
-            try { File.Copy(_storageFilePath, _dataStorageFilePath, true); } catch { }
+            string baseDataStorage = Path.Combine(ChwPackageService.DataDir, widgetId, "storage.json");
+            if (File.Exists(baseDataStorage))
+            {
+                try { File.Copy(baseDataStorage, _dataStorageFilePath, true); } catch { }
+            }
+            else if (File.Exists(_storageFilePath))
+            {
+                try { File.Copy(_storageFilePath, _dataStorageFilePath, true); } catch { }
+            }
         }
     }
 
@@ -145,7 +158,7 @@ public class ChattyBridge
         try
         {
             Dictionary<string, string> dict;
-            string readPath = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            string readPath = File.Exists(_dataStorageFilePath) ? _dataStorageFilePath : _storageFilePath;
             if (File.Exists(readPath))
             {
                 string json = File.ReadAllText(readPath);
@@ -158,8 +171,11 @@ public class ChattyBridge
 
             dict[key] = value;
             string output = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_storageFilePath, output);
             File.WriteAllText(_dataStorageFilePath, output);
+            if (_instanceId == _widgetId)
+            {
+                try { File.WriteAllText(_storageFilePath, output); } catch { }
+            }
         }
         catch { }
     }
@@ -168,7 +184,7 @@ public class ChattyBridge
     {
         try
         {
-            string readPath = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            string readPath = File.Exists(_dataStorageFilePath) ? _dataStorageFilePath : _storageFilePath;
             if (File.Exists(readPath))
             {
                 string json = File.ReadAllText(readPath);
@@ -176,8 +192,11 @@ public class ChattyBridge
                 if (dict != null && dict.Remove(key))
                 {
                     string output = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(_storageFilePath, output);
                     File.WriteAllText(_dataStorageFilePath, output);
+                    if (_instanceId == _widgetId)
+                    {
+                        try { File.WriteAllText(_storageFilePath, output); } catch { }
+                    }
                 }
             }
         }
@@ -204,12 +223,17 @@ public class ChattyBridge
                 {
                     string ext = Path.GetExtension(dlg.FileName);
                     string targetFileName = "user_media" + ext;
+                    string dataDir = Path.Combine(ChwPackageService.DataDir, _instanceId);
+                    Directory.CreateDirectory(dataDir);
+                    string targetDataPath = Path.Combine(dataDir, targetFileName);
+                    File.Copy(dlg.FileName, targetDataPath, overwrite: true);
+
                     string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, _widgetId);
                     Directory.CreateDirectory(widgetDir);
-                    string targetPath = Path.Combine(widgetDir, targetFileName);
+                    string targetWidgetPath = Path.Combine(widgetDir, targetFileName);
+                    try { File.Copy(dlg.FileName, targetWidgetPath, overwrite: true); } catch { }
 
-                    File.Copy(dlg.FileName, targetPath, overwrite: true);
-                    selected = targetFileName;
+                    selected = _instanceId == _widgetId ? targetFileName : new Uri(targetDataPath).AbsoluteUri;
                 }
             }
             catch (Exception ex)
@@ -229,12 +253,17 @@ public class ChattyBridge
             {
                 string ext = Path.GetExtension(sourceFilePath);
                 string targetFileName = "user_media" + ext;
+                string dataDir = Path.Combine(ChwPackageService.DataDir, _instanceId);
+                Directory.CreateDirectory(dataDir);
+                string targetDataPath = Path.Combine(dataDir, targetFileName);
+                File.Copy(sourceFilePath, targetDataPath, overwrite: true);
+
                 string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, _widgetId);
                 Directory.CreateDirectory(widgetDir);
-                string targetPath = Path.Combine(widgetDir, targetFileName);
+                string targetWidgetPath = Path.Combine(widgetDir, targetFileName);
+                try { File.Copy(sourceFilePath, targetWidgetPath, overwrite: true); } catch { }
 
-                File.Copy(sourceFilePath, targetPath, overwrite: true);
-                result = targetFileName;
+                result = _instanceId == _widgetId ? targetFileName : new Uri(targetDataPath).AbsoluteUri;
             }
         }
         catch (Exception ex)
@@ -244,7 +273,20 @@ public class ChattyBridge
         return result;
     }
 
-    // --- WINDOW API ---
+    // --- WINDOW & INSTANCE API ---
+
+    public string getInstanceId() => _instanceId;
+    public string getWidgetId() => _widgetId;
+
+    public void duplicate()
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _duplicateAction?.Invoke()));
+    }
+
+    public void deleteWidget()
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _deleteInstanceAction?.Invoke()));
+    }
 
     public void closeWidget()
     {

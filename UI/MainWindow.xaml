@@ -261,10 +261,13 @@
                                             <Image Source="/app.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
 
-                                        <!-- Details -->
+                                         <!-- Details -->
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Manifest.Name}" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0"/>
+                                                <Border Background="#1E293B" CornerRadius="6" Padding="6,2" Margin="0,0,6,0" VerticalAlignment="Center" Visibility="{Binding ActiveCopiesVisibility}">
+                                                    <TextBlock Text="{Binding ActiveCopiesText}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
+                                                </Border>
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Manifest.Type}" FontSize="10" FontWeight="Bold" Foreground="#818CF8"/>
                                                 </Border>
@@ -293,6 +296,7 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="📋 +Копия" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="Создать еще одну копию этого виджета"/>
                                             <Button Content="Папка" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
                                             <Button Content="Удалить" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>
                                             <Button Content="{Binding ToggleButtonText}" Style="{StaticResource PrimaryBtn}" Background="{Binding ToggleButtonBg}" Tag="{Binding Manifest.Id}" Click="OnToggleWidgetClick"/>
