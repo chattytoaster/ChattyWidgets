@@ -86,13 +86,13 @@ public partial class App : System.Windows.Application
             Log($" - Widget: {m.Name} ({m.Id}), Type: {m.Type}, Entry: {m.Entry}");
         }
 
-        if (installed.Count < 5)
+        if (installed.Count < 8)
         {
-            Log($"WARNING: Expected at least 5 starter widgets, found {installed.Count}");
+            Log($"WARNING: Expected at least 8 starter widgets, found {installed.Count}");
         }
         else
         {
-            Log("PASS: All 5 starter widgets successfully deployed and registered.");
+            Log("PASS: All 8 starter widgets successfully deployed and registered.");
         }
 
         // Test 2: System Monitor metrics

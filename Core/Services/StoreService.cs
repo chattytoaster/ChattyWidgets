@@ -123,6 +123,39 @@ public class StoreService
                 Description = "Котировки BTC, ETH, TON, SOL, а также курсы USD, EUR и RUB в реальном времени.",
                 Type = "web",
                 Size = "22 KB"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.weather-card",
+                Name = "Прогноз Погоды",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Погода",
+                Description = "Детальный погодный информер с текущей температурой, ощущением, влажностью, ветром и прогнозом.",
+                Type = "web",
+                Size = "20 KB"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.calendar-glass",
+                Name = "Календарь",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Утилиты",
+                Description = "Элегантный настольный календарь с переключением месяцев, подсветкой сегодня и быстрыми заметками на дни.",
+                Type = "web",
+                Size = "18 KB"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.media-frame",
+                Name = "Медиа-Фоторамка",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Медиа",
+                Description = "Настольная фоторамка и видеоплеер для фоток, гифок или зацикленных видео (MP4, WebM, PNG, JPG, GIF).",
+                Type = "web",
+                Size = "20 KB"
             }
         };
     }

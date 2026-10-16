@@ -150,6 +150,66 @@ public class ChattyBridge
         catch { }
     }
 
+    // --- MEDIA FILE API ---
+
+    public string selectMediaFile()
+    {
+        string selected = string.Empty;
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Выберите изображение или видео для виджета",
+                    Filter = "Медиафайлы (*.jpg;*.png;*.gif;*.webp;*.mp4;*.webm)|*.jpg;*.jpeg;*.png;*.gif;*.webp;*.mp4;*.webm|Изображения (*.jpg;*.png;*.gif;*.webp)|*.jpg;*.jpeg;*.png;*.gif;*.webp|Видео (*.mp4;*.webm)|*.mp4;*.webm|Все файлы (*.*)|*.*",
+                    Multiselect = false
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    string ext = Path.GetExtension(dlg.FileName);
+                    string targetFileName = "user_media" + ext;
+                    string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, _widgetId);
+                    Directory.CreateDirectory(widgetDir);
+                    string targetPath = Path.Combine(widgetDir, targetFileName);
+
+                    File.Copy(dlg.FileName, targetPath, overwrite: true);
+                    selected = targetFileName;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ChattyBridge] selectMediaFile error: {ex.Message}");
+            }
+        });
+        return selected;
+    }
+
+    public string copyDroppedFile(string sourceFilePath)
+    {
+        string result = string.Empty;
+        try
+        {
+            if (File.Exists(sourceFilePath))
+            {
+                string ext = Path.GetExtension(sourceFilePath);
+                string targetFileName = "user_media" + ext;
+                string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, _widgetId);
+                Directory.CreateDirectory(widgetDir);
+                string targetPath = Path.Combine(widgetDir, targetFileName);
+
+                File.Copy(sourceFilePath, targetPath, overwrite: true);
+                result = targetFileName;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChattyBridge] copyDroppedFile error: {ex.Message}");
+        }
+        return result;
+    }
+
     // --- WINDOW API ---
 
     public void closeWidget()
