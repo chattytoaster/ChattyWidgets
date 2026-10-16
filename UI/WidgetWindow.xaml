@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStartupLocation="Manual"
         WindowStyle="None"
-        Icon="/app.ico"
         Background="Transparent"
         ShowInTaskbar="False"
         ResizeMode="NoResize"

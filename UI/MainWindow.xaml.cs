@@ -22,6 +22,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        try
+        {
+            string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+            if (System.IO.File.Exists(iconPath))
+            {
+                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(iconPath));
+            }
+        }
+        catch { }
+
         Loaded += OnWindowLoaded;
         Closing += OnWindowClosing;
     }
