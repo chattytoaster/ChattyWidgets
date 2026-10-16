@@ -3,6 +3,229 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-         
+        <!-- Transparent RepeatButton for scroll and slider tracks -->
+        <Style x:Key="TransparentRepeatButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Focusable" Value="false"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Rectangle Fill="Transparent" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Dark ComboBox ToggleButton -->
+        <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="32" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="8"
+                        Background="#10121C" BorderBrush="#2A3146" BorderThickness="1"/>
+                <Border Grid.Column="0" Margin="1" Background="Transparent"/>
+                <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                      Data="M 0 0 L 4 4 L 8 0" Stroke="#94A3B8" StrokeThickness="1.8"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="Arrow" Property="Stroke" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="Arrow" Property="Stroke" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Modern Dark ComboBox Style -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Name="ToggleButton" Template="{StaticResource ComboBoxToggleButton}"
+                                          Focusable="false" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"/>
+                            <ContentPresenter Name="ContentSite" IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder" Background="#121522" BorderThickness="1" BorderBrush="#2A3146" CornerRadius="10" Margin="0,4,0,8" Padding="4">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="20" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                                        </Border.Effect>
+                                        <ScrollViewer Margin="2" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Circular" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Dark ComboBoxItem Style -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}" Margin="0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#1E2438"/>
+                                <Setter Property="Foreground" Value="#38BDF8"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#252E46"/>
+                                <Setter Property="Foreground" Value="#38BDF8"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Dark ScrollBar Style -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#333B52"/>
+            <Setter Property="Width" Value="7"/>
+            <Setter Property="MinWidth" Value="7"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" SnapsToDevicePixels="true">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="ThumbBorder" Background="#2E364F" CornerRadius="3.5" Margin="1,0"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="true">
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#47557A"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="true">
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#38BDF8"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Glowing Slider Thumb -->
+        <ControlTemplate x:Key="SliderThumbTemplate" TargetType="Thumb">
+            <Grid Width="20" Height="20" Cursor="Hand">
+                <Ellipse x:Name="ThumbGlow" Width="20" Height="20" Fill="#38BDF8" Opacity="0">
+                    <Ellipse.Effect>
+                        <DropShadowEffect BlurRadius="10" Color="#38BDF8" Opacity="0.8" ShadowDepth="0"/>
+                    </Ellipse.Effect>
+                </Ellipse>
+                <Ellipse x:Name="ThumbCircle" Width="14" Height="14" Fill="#F8FAFC" Stroke="#38BDF8" StrokeThickness="2.5">
+                    <Ellipse.Effect>
+                        <DropShadowEffect BlurRadius="6" Color="#000000" Opacity="0.4" ShadowDepth="1"/>
+                    </Ellipse.Effect>
+                </Ellipse>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="ThumbGlow" Property="Opacity" Value="0.4"/>
+                    <Setter TargetName="ThumbCircle" Property="StrokeThickness" Value="3"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter TargetName="ThumbGlow" Property="Opacity" Value="0.75"/>
+                    <Setter TargetName="ThumbCircle" Property="Fill" Value="#38BDF8"/>
+                    <Setter TargetName="ThumbCircle" Property="Stroke" Value="#FFFFFF"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Modern Dark Glowing Slider Style -->
+        <Style TargetType="Slider">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <!-- Background Track Groove -->
+                            <Border x:Name="TrackBackground" Height="6" CornerRadius="3"
+                                    Background="#1A1E2E" BorderBrush="#2D354F" BorderThickness="1" VerticalAlignment="Center"/>
+                            
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="6" CornerRadius="3,0,0,3" Background="#38BDF8" VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="6" Background="Transparent" VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Template="{StaticResource SliderThumbTemplate}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>

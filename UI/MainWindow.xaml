@@ -419,7 +419,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Тип рантайма:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
-                                        <ComboBox x:Name="ComboNewWidgetType" SelectedIndex="0" Background="#10121C" Foreground="#F8FAFC" Padding="6">
+                                        <ComboBox x:Name="ComboNewWidgetType" SelectedIndex="0">
                                             <ComboBoxItem Content="Web (HTML/CSS/JavaScript + Edge WebView2)"/>
                                             <ComboBoxItem Content="Native (Чистый XAML / .NET 8 с 0% CPU)"/>
                                         </ComboBox>
@@ -470,6 +470,41 @@
                                 <CheckBox x:Name="CheckAcrylic" Content="Включить эффект размытия Acrylic / Mica для прозрачных виджетов" FontSize="14" Foreground="#F8FAFC" Checked="OnAcrylicChanged" Unchecked="OnAcrylicChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckHotReload" Content="Включить Hot Reload (авто-перезагрузка при изменении кода виджета)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotReloadChanged" Unchecked="OnHotReloadChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckDevMode" Content="Режим разработчика (F12 DevTools и расширенная консоль)" FontSize="14" Foreground="#F8FAFC" Checked="OnDevModeChanged" Unchecked="OnDevModeChanged" Margin="0,0,0,14"/>
+
+                                <Separator Background="#252A3F" Margin="0,4,0,14"/>
+
+                                <!-- Grid Size Slider -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                                        <TextBlock Text="Шаг сетки прилипания виджетов:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                        <Border Background="#252A3F" CornerRadius="6" Padding="8,2" HorizontalAlignment="Right">
+                                            <TextBlock x:Name="TxtGridSizeVal" Text="10 px" FontSize="12" FontWeight="Bold" Foreground="#38BDF8"/>
+                                        </Border>
+                                    </DockPanel>
+                                    <Slider x:Name="SliderGridSize" Grid.Row="1" Minimum="5" Maximum="40" Value="10" SmallChange="1" LargeChange="5"
+                                            ValueChanged="OnGridSizeSliderChanged"/>
+                                </Grid>
+
+                                <!-- Default Opacity Slider -->
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                                        <TextBlock Text="Прозрачность фона виджетов по умолчанию:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                        <Border Background="#252A3F" CornerRadius="6" Padding="8,2" HorizontalAlignment="Right">
+                                            <TextBlock x:Name="TxtOpacityVal" Text="100%" FontSize="12" FontWeight="Bold" Foreground="#38BDF8"/>
+                                        </Border>
+                                    </DockPanel>
+                                    <Slider x:Name="SliderDefaultOpacity" Grid.Row="1" Minimum="25" Maximum="100" Value="100" SmallChange="5" LargeChange="15"
+                                            ValueChanged="OnDefaultOpacitySliderChanged"/>
+                                </Grid>
+
                                 <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Left" Click="OnOpenAppDataClick"/>
                             </StackPanel>
                         </Border>

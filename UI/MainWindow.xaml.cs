@@ -49,6 +49,11 @@ public partial class MainWindow : Window
         CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
         CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
         CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+        int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
+        SliderGridSize.Value = currentGrid;
+        TxtGridSizeVal.Text = $"{currentGrid} px";
+        SliderDefaultOpacity.Value = 100;
+        TxtOpacityVal.Text = "100%";
 
         HotkeyService.Instance.Initialize(this);
         RenderPresetChips();
@@ -608,6 +613,27 @@ public partial class MainWindow : Window
     {
         WidgetManager.Instance.Settings.EnableDevMode = CheckDevMode.IsChecked == true;
         WidgetManager.Instance.SaveSettings();
+    }
+
+    private void OnGridSizeSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (TxtGridSizeVal != null)
+        {
+            TxtGridSizeVal.Text = $"{Math.Round(e.NewValue)} px";
+        }
+        if (WidgetManager.Instance?.Settings != null)
+        {
+            WidgetManager.Instance.Settings.GridSize = (int)Math.Round(e.NewValue);
+            WidgetManager.Instance.SaveSettings();
+        }
+    }
+
+    private void OnDefaultOpacitySliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (TxtOpacityVal != null)
+        {
+            TxtOpacityVal.Text = $"{Math.Round(e.NewValue)}%";
+        }
     }
 
     private void OnOpenAppDataClick(object sender, RoutedEventArgs e)
