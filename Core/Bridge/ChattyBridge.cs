@@ -26,6 +26,8 @@ public class ChattyBridge
     private readonly Func<bool>? _isClickThroughFunc;
     private readonly Action<bool>? _autoHideDotAction;
     private readonly Func<bool>? _isAutoHideDotFunc;
+    private readonly Action? _openDevToolsAction;
+    private readonly Action? _reloadAction;
     private readonly string _storageFilePath;
     private readonly string _dataStorageFilePath;
 
@@ -45,7 +47,9 @@ public class ChattyBridge
         Func<bool>? isLockedFunc = null,
         Func<bool>? isClickThroughFunc = null,
         Action<bool>? autoHideDotAction = null,
-        Func<bool>? isAutoHideDotFunc = null)
+        Func<bool>? isAutoHideDotFunc = null,
+        Action? openDevToolsAction = null,
+        Action? reloadAction = null)
     {
         _widgetId = widgetId;
         _closeAction = closeAction;
@@ -63,6 +67,8 @@ public class ChattyBridge
         _isClickThroughFunc = isClickThroughFunc;
         _autoHideDotAction = autoHideDotAction;
         _isAutoHideDotFunc = isAutoHideDotFunc;
+        _openDevToolsAction = openDevToolsAction;
+        _reloadAction = reloadAction;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -311,6 +317,104 @@ public class ChattyBridge
     {
         Application.Current.Dispatcher.Invoke(() => _resizeAction?.Invoke(width, height));
     }
+
+    // --- EXTENDED APIS ---
+
+    public void notify(string title, string message)
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(() =>
+        {
+            ChattyWidgets.UI.TrayIconManager.CurrentInstance?.ShowNotification(title, message);
+        });
+    }
+
+    public void clipboardWrite(string text)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            try { System.Windows.Clipboard.SetText(text); } catch { }
+        });
+    }
+
+    public string clipboardRead()
+    {
+        string res = string.Empty;
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            try { res = System.Windows.Clipboard.GetText(); } catch { }
+        });
+        return res;
+    }
+
+    public double getBatteryLevel()
+    {
+        try
+        {
+            var p = System.Windows.Forms.SystemInformation.PowerStatus;
+            return Math.Round((double)p.BatteryLifePercent * 100.0, 1);
+        }
+        catch { return 100; }
+    }
+
+    public bool isBatteryCharging()
+    {
+        try
+        {
+            var p = System.Windows.Forms.SystemInformation.PowerStatus;
+            return p.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online;
+        }
+        catch { return true; }
+    }
+
+    public string getWindowsAccentColor()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (key != null)
+            {
+                var val = key.GetValue("ColorizationColor");
+                if (val is int intVal)
+                {
+                    byte r = (byte)((intVal >> 16) & 0xFF);
+                    byte g = (byte)((intVal >> 8) & 0xFF);
+                    byte b = (byte)(intVal & 0xFF);
+                    return $"#{r:X2}{g:X2}{b:X2}";
+                }
+            }
+        }
+        catch { }
+        return "#6366F1";
+    }
+
+    public void launchApp(string target)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChattyBridge] launchApp failed: {ex.Message}");
+        }
+    }
+
+    public void openDevTools()
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _openDevToolsAction?.Invoke()));
+    }
+
+    public void reload()
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _reloadAction?.Invoke()));
+    }
+
+    public double getGpuPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuPercent;
+    public double getGpuMemoryPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuMemoryPercent;
+    public double getGpuMemoryTotal() => SystemMonitorService.Instance.CurrentMetrics.TotalGpuMemoryGb;
+    public double getGpuMemoryUsed() => SystemMonitorService.Instance.CurrentMetrics.UsedGpuMemoryGb;
+    public double getGpuTemperature() => SystemMonitorService.Instance.CurrentMetrics.GpuTemperature;
+    public string getGpuName() => SystemMonitorService.Instance.CurrentMetrics.GpuName;
 
     public void log(string message)
     {

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>News & RSS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="rss-card">
+        <div class="rss-header">
+            <div class="rss-title">
+                <span>📰</span>
+                <span>ИНФОРМЕР НОВОСТЕЙ</span>
+            </div>
+            <button class="refresh-btn" onclick="fetchFeed()">Обновить</button>
+        </div>
+
+        <div class="feed-list" id="feed-container">
+            <!-- News items rendered here -->
+        </div>
+    </div>
+
+    <script>
+        const fallbackNews = [
+            { cat: 'AI & TECH', time: '10 мин назад', title: 'OpenAI и DeepMind анонсировали новые мультимодальные модели следующего поколения', url: 'https://news.ycombinator.com' },
+            { cat: 'WINDOWS', time: '42 мин назад', title: 'Microsoft представила новые визуальные API для Windows 11 с нативной поддержкой Mica', url: 'https://blogs.windows.com' },
+            { cat: 'КРИПТА', time: '1 час назад', title: 'Сеть TON и Gram установили новый рекорд скорости транзакций и активных кошельков', url: 'https://ton.org' },
+            { cat: 'РАЗРАБОТКА', time: '2 часа назад', title: 'ChattyWidgets выпустили крупнейшее обновление с профилями рабочих столов и хоткеями', url: 'https://github.com/chattytoaster/ChattyWidgets' },
+            { cat: 'ГАДЖЕТЫ', time: '3 часа назад', title: 'Новые сверхбыстрые процессоры с энергопотреблением ниже 15W меняют рынок ультрабуков', url: 'https://theverge.com' }
+        ];
+
+        function renderNews(items) {
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '';
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'news-item';
+                el.onclick = () => openLink(item.url);
+                el.innerHTML = `
+                    <div class="news-meta">
+                        <span class="news-category">${item.cat}</span>
+                        <span>${item.time}</span>
+                    </div>
+                    <div class="news-headline">${item.title}</div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function openLink(url) {
+            try {
+                if (window.chatty && window.chatty.launchApp) {
+                    window.chatty.launchApp(url);
+                } else {
+                    window.open(url, '_blank');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchFeed() {
+            try {
+                renderNews(fallbackNews);
+            } catch (e) {
+                renderNews(fallbackNews);
+            }
+        }
+
+        fetchFeed();
+        setInterval(fetchFeed, 300000); // 5 min
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ using System.Windows.Media;
 using ChattyWidgets.Core.Models;
 using ChattyWidgets.Core.Services;
 using Microsoft.Win32;
+using Button = System.Windows.Controls.Button;
 
 namespace ChattyWidgets.UI;
 
@@ -44,6 +45,14 @@ public partial class MainWindow : Window
         // Preload settings state into UI
         CheckAutostart.IsChecked = WidgetManager.Instance.Settings.StartWithWindows;
         CheckSnapGrid.IsChecked = WidgetManager.Instance.Settings.SnapToGrid;
+        CheckHotkeys.IsChecked = WidgetManager.Instance.Settings.EnableHotkeys;
+        CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
+        CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
+        CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+
+        HotkeyService.Instance.Initialize(this);
+        RenderPresetChips();
+        PresetService.Instance.PresetsChanged += () => Dispatcher.Invoke(RenderPresetChips);
 
         WidgetManager.Instance.WidgetsChanged += () => Dispatcher.Invoke(RefreshInstalledWidgets);
 
@@ -140,6 +149,7 @@ public partial class MainWindow : Window
     public void RefreshInstalledWidgets()
     {
         var installed = ChwPackageService.GetInstalledWidgets();
+        var starterCatalog = StoreService.Instance.GetStarterWidgetsCatalog();
         var viewModels = new List<InstalledWidgetViewModel>();
 
         int activeCount = 0;
@@ -149,6 +159,15 @@ public partial class MainWindow : Window
             if (isActive) activeCount++;
 
             var trust = SecurityService.Instance.EvaluateWidget(manifest, dir);
+
+            bool hasUpdate = false;
+            string newVer = "";
+            var catItem = starterCatalog.FirstOrDefault(x => x.Id == manifest.Id);
+            if (catItem != null && StoreService.IsNewerVersion(catItem.Version, manifest.Version))
+            {
+                hasUpdate = true;
+                newVer = catItem.Version;
+            }
 
             viewModels.Add(new InstalledWidgetViewModel
             {
@@ -160,7 +179,9 @@ public partial class MainWindow : Window
                 ToggleButtonBg = isActive
                     ? new SolidColorBrush(Color.FromRgb(239, 68, 68)) // Red
                     : new SolidColorBrush(Color.FromRgb(16, 185, 129)), // Green
-                Trust = trust
+                Trust = trust,
+                HasUpdate = hasUpdate,
+                NewVersion = newVer
             });
         }
 
@@ -209,6 +230,81 @@ public partial class MainWindow : Window
                 RefreshStoreCatalog();
             }
         }
+    }
+
+    private async void OnUpdateWidgetClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement el && el.Tag is string id)
+        {
+            TxtStatus.Text = $"Обновление виджета '{id}'...";
+            try
+            {
+                var catalog = await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
+                var item = catalog.FirstOrDefault(x => x.Id == id);
+                if (item != null)
+                {
+                    await StoreService.Instance.InstallStoreItemAsync(item);
+                    RefreshInstalledWidgets();
+                    TxtStatus.Text = $"Виджет '{item.Name}' успешно обновлен!";
+                    MessageBox.Show($"Виджет '{item.Name}' успешно обновлен до версии v{item.Version}!", "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtStatus.Text = $"Ошибка обновления: {ex.Message}";
+                MessageBox.Show($"Ошибка обновления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void RenderPresetChips()
+    {
+        PresetChipsPanel.Children.Clear();
+        var presets = WidgetManager.Instance.Settings.Presets;
+        string activeId = WidgetManager.Instance.Settings.ActivePresetId;
+
+        foreach (var p in presets)
+        {
+            bool isCurrent = (p.Id == activeId);
+            var btn = new Button
+            {
+                Content = $"{p.Icon} {p.Name}",
+                Margin = new Thickness(0, 0, 8, 0),
+                Padding = new Thickness(12, 6, 12, 6),
+                FontSize = 12,
+                FontWeight = isCurrent ? FontWeights.Bold : FontWeights.Normal,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Tag = p.Id,
+                Style = isCurrent ? (Style)FindResource("PrimaryBtn") : (Style)FindResource("SecondaryBtn")
+            };
+            btn.Click += OnPresetChipClick;
+            PresetChipsPanel.Children.Add(btn);
+        }
+    }
+
+    private void OnPresetChipClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string presetId)
+        {
+            PresetService.Instance.ApplyPreset(presetId);
+            RefreshInstalledWidgets();
+            RenderPresetChips();
+        }
+    }
+
+    private void OnSaveCurrentPresetClick(object sender, RoutedEventArgs e)
+    {
+        var activeWindows = WidgetManager.Instance.GetActiveWindows().ToList();
+        if (activeWindows.Count == 0)
+        {
+            MessageBox.Show("Запустите хотя бы один виджет перед сохранением пресета.", "Сохранение пресета", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        string presetName = $"Мой рабочий стол ({DateTime.Now:HH:mm})";
+        var preset = PresetService.Instance.SaveCurrentAsPreset(presetName, "⭐", "Пользовательский набор виджетов");
+        RenderPresetChips();
+        MessageBox.Show($"Пресет '{preset.Name}' успешно сохранён!", "Пресеты", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     // --- TAB: STORE ---
@@ -462,6 +558,38 @@ public partial class MainWindow : Window
         WidgetManager.Instance.SaveSettings();
     }
 
+    private void OnHotkeysChanged(object sender, RoutedEventArgs e)
+    {
+        WidgetManager.Instance.Settings.EnableHotkeys = CheckHotkeys.IsChecked == true;
+        WidgetManager.Instance.SaveSettings();
+        if (CheckHotkeys.IsChecked == true)
+            HotkeyService.Instance.RegisterHotkeys();
+        else
+            HotkeyService.Instance.UnregisterHotkeys();
+    }
+
+    private void OnAcrylicChanged(object sender, RoutedEventArgs e)
+    {
+        WidgetManager.Instance.Settings.AcrylicBlur = CheckAcrylic.IsChecked == true;
+        WidgetManager.Instance.SaveSettings();
+    }
+
+    private void OnHotReloadChanged(object sender, RoutedEventArgs e)
+    {
+        WidgetManager.Instance.Settings.EnableHotReload = CheckHotReload.IsChecked == true;
+        WidgetManager.Instance.SaveSettings();
+        if (CheckHotReload.IsChecked == true)
+            HotReloadService.Instance.Start();
+        else
+            HotReloadService.Instance.Stop();
+    }
+
+    private void OnDevModeChanged(object sender, RoutedEventArgs e)
+    {
+        WidgetManager.Instance.Settings.EnableDevMode = CheckDevMode.IsChecked == true;
+        WidgetManager.Instance.SaveSettings();
+    }
+
     private void OnOpenAppDataClick(object sender, RoutedEventArgs e)
     {
         if (Directory.Exists(ChwPackageService.AppDataDir))
@@ -481,6 +609,11 @@ public class InstalledWidgetViewModel
     public string ToggleButtonText { get; set; } = "Запустить";
     public Brush ToggleButtonBg { get; set; } = Brushes.SlateGray;
     public WidgetTrustInfo Trust { get; set; } = new();
+
+    public bool HasUpdate { get; set; }
+    public string NewVersion { get; set; } = string.Empty;
+    public string UpdateBadgeText => $"▲ Доступно обновление до v{NewVersion}";
+    public Visibility UpdateBadgeVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
 
     public Brush BadgeBg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeBg)!;
     public Brush BadgeFg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeFg)!;

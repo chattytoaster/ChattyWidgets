@@ -7,12 +7,15 @@ namespace ChattyWidgets.UI;
 
 public class TrayIconManager : IDisposable
 {
+    public static TrayIconManager? CurrentInstance { get; private set; }
+
     private readonly NotifyIcon _notifyIcon;
     private readonly Action _showMainWindowAction;
     private readonly Action<string> _openTabAction;
 
     public TrayIconManager(Action showMainWindowAction, Action<string> openTabAction)
     {
+        CurrentInstance = this;
         _showMainWindowAction = showMainWindowAction;
         _openTabAction = openTabAction;
 
@@ -27,6 +30,7 @@ public class TrayIconManager : IDisposable
         BuildContextMenu();
 
         WidgetManager.Instance.WidgetsChanged += BuildContextMenu;
+        PresetService.Instance.PresetsChanged += BuildContextMenu;
     }
 
     public void BuildContextMenu()
@@ -39,6 +43,36 @@ public class TrayIconManager : IDisposable
         };
         openItem.Click += (s, e) => _showMainWindowAction();
         menu.Items.Add(openItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // Desktop Presets submenu
+        var presetsItem = new ToolStripMenuItem("Пресеты рабочих столов");
+        var settings = WidgetManager.Instance.Settings;
+        foreach (var p in settings.Presets)
+        {
+            string pId = p.Id;
+            var pItem = new ToolStripMenuItem($"{p.Icon} {p.Name}")
+            {
+                Checked = (settings.ActivePresetId == p.Id)
+            };
+            pItem.Click += (s, e) =>
+            {
+                PresetService.Instance.ApplyPreset(pId);
+                BuildContextMenu();
+            };
+            presetsItem.DropDownItems.Add(pItem);
+        }
+        menu.Items.Add(presetsItem);
+
+        // Quick Hotkeys actions
+        var hideShowItem = new ToolStripMenuItem("Скрыть / Показать виджеты (Win+Alt+W)");
+        hideShowItem.Click += (s, e) => HotkeyService.Instance.ToggleWidgetsVisibility();
+        menu.Items.Add(hideShowItem);
+
+        var peekItem = new ToolStripMenuItem("Режим «Быстрый взгляд» (Win+Alt+P)");
+        peekItem.Click += (s, e) => HotkeyService.Instance.TogglePeekMode();
+        menu.Items.Add(peekItem);
 
         menu.Items.Add(new ToolStripSeparator());
 

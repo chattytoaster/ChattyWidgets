@@ -36,9 +36,12 @@
                 <MenuItem Header="50% фона" Click="OnOpacity70Click"/>
                 <MenuItem Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
             </MenuItem>
+            <MenuItem x:Name="MenuMonitors" Header="Переместить на монитор..."/>
             <Separator x:Name="MenuCustomSeparator" Visibility="Collapsed"/>
             <MenuItem x:Name="MenuCustomSettings" Header="Настройки виджета" Visibility="Collapsed"/>
             <Separator/>
+            <MenuItem Header="⟳ Перезагрузить виджет" Click="OnReloadWidgetClick"/>
+            <MenuItem x:Name="MenuDevTools" Header="🛠 Открыть DevTools (F12)" Click="OnOpenDevToolsClick"/>
             <MenuItem Header="Открыть папку виджета" Click="OnOpenFolderClick"/>
             <MenuItem Header="Открыть Хаб ChattyWidgets" Click="OnOpenHubClick"/>
             <Separator/>

@@ -38,7 +38,12 @@ public class WidgetManager
                 }
             }
         }
+        PresetService.Instance.EnsureDefaultPresets();
+        HotReloadService.Instance.Start();
     }
+
+    public IEnumerable<WidgetWindow> GetActiveWindows() => _activeWindows.Values;
+    public int ActiveCount => _activeWindows.Count;
 
     public bool IsWidgetActive(string widgetId) => _activeWindows.ContainsKey(widgetId);
 
@@ -46,6 +51,18 @@ public class WidgetManager
     {
         _activeWindows.TryGetValue(widgetId, out var win);
         return win;
+    }
+
+    public void MoveWidgetToMonitor(string widgetId, int monitorIndex)
+    {
+        if (_activeWindows.TryGetValue(widgetId, out var window))
+        {
+            var mon = ScreenHelper.GetMonitor(monitorIndex);
+            window.Settings.TargetMonitor = monitorIndex;
+            window.Left = mon.Left + 50;
+            window.Top = mon.Top + 60;
+            SaveSettings();
+        }
     }
 
     public bool StartWidget(string widgetId)

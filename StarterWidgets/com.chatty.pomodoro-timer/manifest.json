@@ -1,0 +1,15 @@
+{
+  "id": "com.chatty.pomodoro-timer",
+  "name": "Фокус-Таймер Pomodoro",
+  "version": "1.0.0",
+  "author": "ChattyWidgets",
+  "description": "Таймер 25/5 мин для фокуса на делах с системными тост-уведомлениями и приятным звуковым сигналом.",
+  "type": "web",
+  "entry": "index.html",
+  "defaultWidth": 280,
+  "defaultHeight": 230,
+  "minWidth": 240,
+  "minHeight": 200,
+  "defaultLayer": "desktop",
+  "permissions": ["system"]
+}

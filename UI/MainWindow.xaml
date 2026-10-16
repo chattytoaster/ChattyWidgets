@@ -220,10 +220,11 @@
             <Grid x:Name="ViewMyWidgets" Visibility="Visible">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                <DockPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Установленные виджеты" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock x:Name="TxtActiveCount" Text="0 активно" Foreground="#10B981" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
@@ -231,17 +232,28 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- Desktop Layout Presets Toolbar -->
+                <Border Grid.Row="1" Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
+                    <DockPanel LastChildFill="True">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,14,0">
+                            <TextBlock Text="🎨 Пресеты стола:" FontSize="13" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Content="+ Сохранить текущий вид" Style="{StaticResource SecondaryBtn}" DockPanel.Dock="Right" VerticalAlignment="Center" Click="OnSaveCurrentPresetClick"/>
+                        <WrapPanel x:Name="PresetChipsPanel" VerticalAlignment="Center" Orientation="Horizontal"/>
+                    </DockPanel>
+                </Border>
+
                 <!-- Cards list -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="InstalledWidgetsList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
+                                             <ColumnDefinition Width="Auto"/>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Type icon badge -->
@@ -263,6 +275,16 @@
                                             </StackPanel>
                                             <TextBlock Text="{Binding Manifest.Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding DisplayAuthor, StringFormat='Автор: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+
+                                            <!-- Update available badge -->
+                                            <Border Background="#163326" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
+                                                    Visibility="{Binding UpdateBadgeVisibility}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding UpdateBadgeText}" FontSize="11" Foreground="#34D399" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <Button Content="Обновить" Style="{StaticResource SecondaryBtn}" Padding="8,2" Margin="10,0,0,0" Tag="{Binding Manifest.Id}" Click="OnUpdateWidgetClick" Foreground="#34D399"/>
+                                                </StackPanel>
+                                            </Border>
+
                                             <Border Background="#350A0A" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
                                                     Visibility="{Binding WarningVisibility}">
                                                 <TextBlock Text="{Binding WarningMessage}" FontSize="11" Foreground="#FCA5A5" TextWrapping="Wrap"/>
@@ -440,6 +462,10 @@
                             <StackPanel>
                                 <CheckBox x:Name="CheckAutostart" Content="Запускать ChattyWidgets автоматически при старте Windows" FontSize="14" Foreground="#F8FAFC" Checked="OnAutostartChanged" Unchecked="OnAutostartChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckSnapGrid" Content="Включить прилипание виджетов к краям экрана и сетке" FontSize="14" Foreground="#F8FAFC" IsChecked="True" Checked="OnSnapGridChanged" Unchecked="OnSnapGridChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckHotkeys" Content="Включить глобальные хоткеи (Win+Alt+W: скрыть/показать, Win+Alt+P: «Быстрый взгляд»)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotkeysChanged" Unchecked="OnHotkeysChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckAcrylic" Content="Включить эффект размытия Acrylic / Mica для прозрачных виджетов" FontSize="14" Foreground="#F8FAFC" Checked="OnAcrylicChanged" Unchecked="OnAcrylicChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckHotReload" Content="Включить Hot Reload (авто-перезагрузка при изменении кода виджета)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotReloadChanged" Unchecked="OnHotReloadChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckDevMode" Content="Режим разработчика (F12 DevTools и расширенная консоль)" FontSize="14" Foreground="#F8FAFC" Checked="OnDevModeChanged" Unchecked="OnDevModeChanged" Margin="0,0,0,14"/>
                                 <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Left" Click="OnOpenAppDataClick"/>
                             </StackPanel>
                         </Border>

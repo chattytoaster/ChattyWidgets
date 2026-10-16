@@ -12,6 +12,8 @@ public class WorkshopService
     private FileSystemWatcher? _watcher;
     private System.Timers.Timer? _debounceTimer;
 
+    public static string WorkshopDir => Path.Combine(ChwPackageService.AppDataDir, "workshop");
+
     private WorkshopService() { }
 
     /// <summary>

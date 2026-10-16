@@ -52,18 +52,38 @@ public class StoreService
             // Offline fallback is already in `items`
         }
 
-        // Mark installed items
+        // Mark installed items and detect updates
         var installed = ChwPackageService.GetInstalledWidgets();
         foreach (var item in items)
         {
-            item.IsInstalled = installed.Any(x => x.Manifest.Id == item.Id);
+            var match = installed.FirstOrDefault(x => x.Manifest.Id == item.Id);
+            if (match.Manifest != null)
+            {
+                item.IsInstalled = true;
+                item.InstalledVersion = match.Manifest.Version;
+                item.HasUpdate = IsNewerVersion(item.Version, match.Manifest.Version);
+            }
+            else
+            {
+                item.IsInstalled = false;
+                item.HasUpdate = false;
+            }
         }
 
         return items;
     }
 
+    public static bool IsNewerVersion(string remoteVer, string localVer)
+    {
+        if (Version.TryParse(remoteVer, out var rVer) && Version.TryParse(localVer, out var lVer))
+        {
+            return rVer > lVer;
+        }
+        return string.Compare(remoteVer, localVer, StringComparison.OrdinalIgnoreCase) > 0;
+    }
+
     /// <summary>
-    /// Returns default catalog for the 5 built-in starter widgets.
+    /// Returns default catalog for bundled starter widgets.
     /// </summary>
     public List<StoreItem> GetStarterWidgetsCatalog()
     {
@@ -170,6 +190,58 @@ public class StoreService
                 Description = "Настольная фоторамка и видеоплеер для фоток, гифок или зацикленных видео (MP4, WebM, PNG, JPG, GIF).",
                 Type = "web",
                 Size = "20 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.gpu-monitor",
+                Name = "Монитор GPU & Графика",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Система",
+                Description = "Мониторинг видеокарты: загрузка GPU %, видеопамять VRAM, температура и модель адаптера.",
+                Type = "web",
+                Size = "20 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.pomodoro-timer",
+                Name = "Фокус-Таймер Pomodoro",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Продуктивность",
+                Description = "Таймер 25/5 мин для фокуса на делах с системными тост-уведомлениями и приятным звуковым сигналом.",
+                Type = "web",
+                Size = "18 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.quick-dock",
+                Name = "Быстрый Док / Лаунчер",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Утилиты",
+                Description = "Плавающая панель быстрого запуска любимых программ, сайтов, проводника и терминала в стиле macOS.",
+                Type = "web",
+                Size = "22 KB",
+                IsOfficial = true,
+                TrustLevel = "official"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.rss-reader",
+                Name = "Лента Новостей & RSS",
+                Version = "1.0.0",
+                Author = "ChattyWidgets",
+                Category = "Новости",
+                Description = "Живая лента новостей технологий, крипты и Telegram-каналов с автообновлением и карточками.",
+                Type = "web",
+                Size = "24 KB",
                 IsOfficial = true,
                 TrustLevel = "official"
             }

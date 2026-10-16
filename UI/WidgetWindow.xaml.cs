@@ -20,6 +20,7 @@ public partial class WidgetWindow : Window
     public WidgetInstanceSettings Settings { get; private set; }
 
     private IntPtr _hwnd = IntPtr.Zero;
+    public IntPtr Hwnd => _hwnd;
     private WebView2? _webView;
 
     public event Action<WidgetWindow>? WidgetClosed;
@@ -96,7 +97,39 @@ public partial class WidgetWindow : Window
         var margins = new Win32Native.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
         Win32Native.DwmExtendFrameIntoClientArea(_hwnd, ref margins);
 
+        if (WidgetManager.Instance.Settings.AcrylicBlur)
+        {
+            ApplyAcrylicBlur();
+        }
+
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
+    }
+
+    private void ApplyAcrylicBlur()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        try
+        {
+            var accent = new Win32Native.AccentPolicy
+            {
+                AccentState = Win32Native.AccentState.ACCENT_ENABLE_BLURBEHIND,
+                GradientColor = 0x88121622
+            };
+            int accentStructSize = System.Runtime.InteropServices.Marshal.SizeOf(accent);
+            IntPtr accentPtr = System.Runtime.InteropServices.Marshal.AllocHGlobal(accentStructSize);
+            System.Runtime.InteropServices.Marshal.StructureToPtr(accent, accentPtr, false);
+
+            var data = new Win32Native.WindowCompositionAttributeData
+            {
+                Attribute = Win32Native.WindowCompositionAttribute.WCA_ACCENT_POLICY,
+                Data = accentPtr,
+                SizeOfData = accentStructSize
+            };
+
+            Win32Native.SetWindowCompositionAttribute(_hwnd, ref data);
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(accentPtr);
+        }
+        catch { }
     }
 
     private Win32Native.SubclassProc? _subclassProc;
@@ -249,13 +282,32 @@ public partial class WidgetWindow : Window
                 isLockedFunc: () => Settings.IsLocked,
                 isClickThroughFunc: () => Settings.IsClickThrough,
                 autoHideDotAction: (ah) => SetAutoHideAnchorDot(ah),
-                isAutoHideDotFunc: () => Settings.AutoHideAnchorDot
+                isAutoHideDotFunc: () => Settings.AutoHideAnchorDot,
+                openDevToolsAction: () => OpenDevTools(),
+                reloadAction: () => ReloadWidget()
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
 
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
+
+                // Sync Windows Accent Color as CSS variables
+                try {
+                    var accent = window.chatty.getWindowsAccentColor();
+                    if (accent) {
+                        document.documentElement.style.setProperty('--chatty-accent', accent);
+                        document.documentElement.style.setProperty('--chatty-accent-glow', accent + '66');
+                    }
+                } catch(ex) {}
+
+                // F12 -> Open WebView2 DevTools
+                window.addEventListener('keydown', function(e) {
+                    if (e.key === 'F12') {
+                        e.preventDefault();
+                        try { window.chatty.openDevTools(); } catch(ex) {}
+                    }
+                });
 
                 // Open ChattyWidgets context menu on right click
                 window.addEventListener('contextmenu', function(e) {
@@ -843,6 +895,25 @@ public partial class WidgetWindow : Window
 
     private void OnContextMenuOpened(object? sender, RoutedEventArgs e)
     {
+        // Populate Monitors Submenu
+        MenuMonitors.Items.Clear();
+        var monitors = ScreenHelper.GetMonitors();
+        foreach (var mon in monitors)
+        {
+            int idx = mon.Index;
+            var item = new MenuItem
+            {
+                Header = mon.ToString(),
+                IsCheckable = true,
+                IsChecked = (Settings.TargetMonitor == mon.Index)
+            };
+            item.Click += (s, ev) =>
+            {
+                WidgetManager.Instance.MoveWidgetToMonitor(Manifest.Id, idx);
+            };
+            MenuMonitors.Items.Add(item);
+        }
+
         if (Settings.AutoHideAnchorDot)
         {
             if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
@@ -852,6 +923,36 @@ public partial class WidgetWindow : Window
             }
             ApplyMenuOpenDomState(true);
         }
+    }
+
+    private void OnOpenDevToolsClick(object sender, RoutedEventArgs e) => OpenDevTools();
+    private void OnReloadWidgetClick(object sender, RoutedEventArgs e) => ReloadWidget();
+
+    public void OpenDevTools()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_webView?.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+                _webView.CoreWebView2.OpenDevToolsWindow();
+            }
+        });
+    }
+
+    public void ReloadWidget()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_webView?.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.Reload();
+            }
+            else
+            {
+                LoadNativeWidget();
+            }
+        });
     }
 
     private void OnContextMenuClosed(object? sender, RoutedEventArgs e)

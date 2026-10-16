@@ -40,6 +40,27 @@ public class WidgetInstanceSettings
 
     [JsonPropertyName("autoHideAnchorDot")]
     public bool AutoHideAnchorDot { get; set; } = false;
+
+    [JsonPropertyName("targetMonitor")]
+    public int TargetMonitor { get; set; } = 0;
+}
+
+public class DesktopPreset
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("icon")]
+    public string Icon { get; set; } = "💼";
+
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyName("widgets")]
+    public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();
 }
 
 public class AppSettings
@@ -58,6 +79,24 @@ public class AppSettings
 
     [JsonPropertyName("remoteCatalogUrl")]
     public string RemoteCatalogUrl { get; set; } = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/catalog.json";
+
+    [JsonPropertyName("activePresetId")]
+    public string ActivePresetId { get; set; } = "all";
+
+    [JsonPropertyName("presets")]
+    public List<DesktopPreset> Presets { get; set; } = new();
+
+    [JsonPropertyName("enableHotkeys")]
+    public bool EnableHotkeys { get; set; } = true;
+
+    [JsonPropertyName("enableDevMode")]
+    public bool EnableDevMode { get; set; } = true;
+
+    [JsonPropertyName("enableHotReload")]
+    public bool EnableHotReload { get; set; } = true;
+
+    [JsonPropertyName("acrylicBlur")]
+    public bool AcrylicBlur { get; set; } = true;
 
     [JsonPropertyName("widgets")]
     public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();
@@ -115,4 +154,10 @@ public class StoreItem
 
     [JsonIgnore]
     public bool IsInstalled { get; set; } = false;
+
+    [JsonIgnore]
+    public bool HasUpdate { get; set; } = false;
+
+    [JsonIgnore]
+    public string InstalledVersion { get; set; } = string.Empty;
 }
