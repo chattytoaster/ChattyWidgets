@@ -188,6 +188,7 @@
                     <!-- Window Control Buttons (Far Right) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
                                 WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="BtnLanguageToggle" Content="🇷🇺" Style="{StaticResource CaptionBtnStyle}" Click="OnLanguageToggleClick" ToolTip="Язык / Language (RU / EN)"/>
                         <Button x:Name="BtnThemeToggle" Content="🌙" Style="{StaticResource CaptionBtnStyle}" Click="OnThemeToggleClick" ToolTip="Тема оформления (Тёмная / Светлая)"/>
                         <Button Content="—" Style="{StaticResource CaptionBtnStyle}" Click="OnMinimizeWindowClick" ToolTip="Свернуть"/>
                         <Button x:Name="BtnMaximizeRestore" Content="▢" Style="{StaticResource CaptionBtnStyle}" Click="OnMaximizeRestoreWindowClick" ToolTip="Развернуть"/>
@@ -481,13 +482,30 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="Тема оформления (Хаб и виджеты):" FontSize="13" Foreground="#94A3B8"/>
-                                        <TextBlock Text="При светлой теме иконки темные, при темной — светлые" FontSize="11" Foreground="#64748B"/>
+                                        <TextBlock x:Name="TxtHubThemeLabel" Text="Тема оформления (Хаб и виджеты):" FontSize="13" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="TxtHubThemeHint" Text="При светлой теме иконки темные, при темной — светлые" FontSize="11" Foreground="#64748B"/>
                                     </StackPanel>
                                     <ComboBox x:Name="ComboHubTheme" Grid.Column="1" Width="260" Height="32" SelectionChanged="OnComboHubThemeChanged"
                                               Background="#1E2333" Foreground="#F8FAFC" BorderBrush="#333B52">
                                         <ComboBoxItem Content="🌙 Тёмная тема (Dark)" Tag="dark"/>
                                         <ComboBoxItem Content="☀️ Светлая тема (Light)" Tag="light"/>
+                                    </ComboBox>
+                                </Grid>
+
+                                <!-- Language Selection -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtHubLanguageLabel" Text="Язык интерфейса (Хаб и виджеты):" FontSize="13" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="TxtHubLanguageHint" Text="Русский и английский с мгновенным переключением" FontSize="11" Foreground="#64748B"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="ComboHubLanguage" Grid.Column="1" Width="260" Height="32" SelectionChanged="OnComboHubLanguageChanged"
+                                              Background="#1E2333" Foreground="#F8FAFC" BorderBrush="#333B52">
+                                        <ComboBoxItem Content="🇷🇺 Русский (Russian)" Tag="ru"/>
+                                        <ComboBoxItem Content="🇬🇧 English (Английский)" Tag="en"/>
                                     </ComboBox>
                                 </Grid>
 

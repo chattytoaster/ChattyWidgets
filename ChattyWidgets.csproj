@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Page Remove="StarterWidgets\**\*.xaml" />
+    <Compile Remove="StarterWidgets\**\*.cs" />
     <None Include="StarterWidgets\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

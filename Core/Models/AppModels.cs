@@ -98,6 +98,9 @@ public class AppSettings
     [JsonPropertyName("theme")]
     public string Theme { get; set; } = "dark";
 
+    [JsonPropertyName("language")]
+    public string Language { get; set; } = "ru";
+
     [JsonPropertyName("remoteCatalogUrl")]
     public string RemoteCatalogUrl { get; set; } = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/catalog.json";
 

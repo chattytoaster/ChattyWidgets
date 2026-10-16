@@ -75,6 +75,9 @@ public partial class MainWindow : Window
         TxtOpacityVal.Text = "100%";
 
         ApplyTheme(WidgetManager.Instance.Settings.Theme);
+        LocalizationService.Instance.Initialize(WidgetManager.Instance.Settings.Language);
+        LocalizationService.Instance.LanguageChanged += () => Dispatcher.Invoke(() => ApplyLanguage(LocalizationService.Instance.CurrentLanguage));
+        ApplyLanguage(LocalizationService.Instance.CurrentLanguage);
 
         HotkeyService.Instance.Initialize(this);
         RenderPresetChips();
@@ -917,6 +920,57 @@ public partial class MainWindow : Window
                 WidgetManager.Instance.ApplyGlobalTheme(t);
             }
         }
+    }
+
+    private void OnLanguageToggleClick(object sender, RoutedEventArgs e)
+    {
+        string nextLang = LocalizationService.Instance.IsRussian ? "en" : "ru";
+        LocalizationService.Instance.SetLanguage(nextLang);
+    }
+
+    private void OnComboHubLanguageChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ComboHubLanguage?.SelectedItem is ComboBoxItem item && item.Tag is string l)
+        {
+            if (LocalizationService.Instance.CurrentLanguage != l)
+            {
+                LocalizationService.Instance.SetLanguage(l);
+            }
+        }
+    }
+
+    public void ApplyLanguage(string lang)
+    {
+        bool isRu = lang.Equals("ru", StringComparison.OrdinalIgnoreCase);
+        if (BtnLanguageToggle != null)
+        {
+            BtnLanguageToggle.Content = isRu ? "🇷🇺" : "🇬🇧";
+            BtnLanguageToggle.ToolTip = isRu ? "Язык: Русский (Нажмите для переключения на English)" : "Language: English (Click to switch to Russian)";
+        }
+        if (ComboHubLanguage != null)
+        {
+            ComboHubLanguage.SelectedIndex = isRu ? 0 : 1;
+        }
+
+        // Navigation Tabs
+        if (TabMyWidgets != null) TabMyWidgets.Content = LocalizationService.Instance.T("Hub.TabMyWidgets");
+        if (TabStore != null) TabStore.Content = LocalizationService.Instance.T("Hub.TabStore");
+        if (TabWorkshop != null) TabWorkshop.Content = LocalizationService.Instance.T("Hub.TabWorkshop");
+        if (TabSettings != null) TabSettings.Content = LocalizationService.Instance.T("Hub.TabSettings");
+
+        // Settings items
+        if (CheckAutostart != null) CheckAutostart.Content = LocalizationService.Instance.T("Hub.Autostart");
+        if (CheckSnapGrid != null) CheckSnapGrid.Content = LocalizationService.Instance.T("Hub.SnapGrid");
+        if (CheckHotkeys != null) CheckHotkeys.Content = LocalizationService.Instance.T("Hub.Hotkeys");
+        if (CheckAcrylic != null) CheckAcrylic.Content = LocalizationService.Instance.T("Hub.Acrylic");
+        if (CheckHotReload != null) CheckHotReload.Content = LocalizationService.Instance.T("Hub.HotReload");
+        if (CheckDevMode != null) CheckDevMode.Content = LocalizationService.Instance.T("Hub.DevMode");
+        if (TxtHubThemeLabel != null) TxtHubThemeLabel.Text = LocalizationService.Instance.T("Hub.ThemeLabel");
+        if (TxtHubThemeHint != null) TxtHubThemeHint.Text = LocalizationService.Instance.T("Hub.ThemeHint");
+        if (TxtHubLanguageLabel != null) TxtHubLanguageLabel.Text = LocalizationService.Instance.T("Hub.LanguageLabel");
+        if (TxtHubLanguageHint != null) TxtHubLanguageHint.Text = LocalizationService.Instance.T("Hub.LanguageHint");
+
+        RefreshInstalledWidgets();
     }
 
     public void ApplyTheme(string theme)
