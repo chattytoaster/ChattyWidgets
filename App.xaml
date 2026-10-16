@@ -3,19 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <!-- Transparent RepeatButton for scroll and slider tracks -->
+        <!-- Transparent RepeatButton Template for scroll and slider tracks -->
+        <ControlTemplate x:Key="TransparentRepeatButtonTemplate" TargetType="RepeatButton">
+            <Rectangle Fill="Transparent" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+        </ControlTemplate>
         <Style x:Key="TransparentRepeatButton" TargetType="RepeatButton">
             <Setter Property="OverridesDefaultStyle" Value="true"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Focusable" Value="false"/>
             <Setter Property="IsTabStop" Value="false"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RepeatButton">
-                        <Rectangle Fill="Transparent" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Template" Value="{StaticResource TransparentRepeatButtonTemplate}"/>
         </Style>
 
         <!-- Modern Dark ComboBox ToggleButton -->
@@ -115,29 +112,21 @@
             </Setter>
         </Style>
 
-        <!-- Modern Dark Rounded ScrollBar Thumb -->
-        <Style x:Key="DarkScrollBarThumb" TargetType="Thumb">
-            <Setter Property="OverridesDefaultStyle" Value="true"/>
-            <Setter Property="IsTabStop" Value="false"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="ThumbBorder"
-                                Background="#252D42"
-                                CornerRadius="4"
-                                Margin="1"/>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="#384364"/>
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="true">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="#4F5D8A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Modern Dark Rounded ScrollBar Thumb Template -->
+        <ControlTemplate x:Key="DarkScrollBarThumbTemplate" TargetType="Thumb">
+            <Border x:Name="ThumbBorder"
+                    Background="#252D42"
+                    CornerRadius="4"
+                    Margin="1"/>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#384364"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="true">
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#4F5D8A"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
 
         <!-- Modern Dark Rounded ScrollBar Style (Vertical and Horizontal) -->
         <Style TargetType="ScrollBar">
@@ -153,13 +142,13 @@
                         <Grid x:Name="Bg" Background="Transparent" SnapsToDevicePixels="true">
                             <Track x:Name="PART_Track" IsDirectionReversed="true">
                                 <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Template="{StaticResource TransparentRepeatButtonTemplate}"/>
                                 </Track.DecreaseRepeatButton>
                                 <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Template="{StaticResource TransparentRepeatButtonTemplate}"/>
                                 </Track.IncreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb Style="{StaticResource DarkScrollBarThumb}"/>
+                                    <Thumb Template="{StaticResource DarkScrollBarThumbTemplate}"/>
                                 </Track.Thumb>
                             </Track>
                         </Grid>
@@ -177,13 +166,13 @@
                                 <Grid x:Name="Bg" Background="Transparent" SnapsToDevicePixels="true">
                                     <Track x:Name="PART_Track" IsDirectionReversed="false">
                                         <Track.DecreaseRepeatButton>
-                                            <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                            <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}" Template="{StaticResource TransparentRepeatButtonTemplate}"/>
                                         </Track.DecreaseRepeatButton>
                                         <Track.IncreaseRepeatButton>
-                                            <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                            <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}" Template="{StaticResource TransparentRepeatButtonTemplate}"/>
                                         </Track.IncreaseRepeatButton>
                                         <Track.Thumb>
-                                            <Thumb Style="{StaticResource DarkScrollBarThumb}"/>
+                                            <Thumb Template="{StaticResource DarkScrollBarThumbTemplate}"/>
                                         </Track.Thumb>
                                     </Track>
                                 </Grid>
@@ -196,38 +185,40 @@
 
         <!-- Modern Dark Rounded Slider Thumb -->
         <ControlTemplate x:Key="SliderThumbTemplate" TargetType="Thumb">
-            <Grid Width="18" Height="22" Cursor="Hand">
+            <Grid Width="20" Height="20" Cursor="Hand">
                 <Border x:Name="ThumbBorder"
-                        Background="#1E2436"
-                        BorderBrush="#3D4968"
-                        BorderThickness="1.5"
-                        CornerRadius="7">
+                        Width="18" Height="18"
+                        Background="#161B28"
+                        BorderBrush="#38BDF8"
+                        BorderThickness="2"
+                        CornerRadius="9"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Border.Effect>
-                        <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.5" Color="#000000"/>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.55" Color="#000000"/>
                     </Border.Effect>
-                    <!-- Grip indicator -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="1.5" Height="8" Background="#64748B" CornerRadius="0.5" Margin="1,0"/>
-                        <Border Width="1.5" Height="8" Background="#64748B" CornerRadius="0.5" Margin="1,0"/>
-                    </StackPanel>
+                    <!-- Sleek glowing center dot -->
+                    <Border x:Name="InnerDot" Width="4" Height="4" Background="#38BDF8" CornerRadius="2"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="ThumbBorder" Property="Background" Value="#28314A"/>
-                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#222B42"/>
+                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#7DD3FC"/>
+                    <Setter TargetName="InnerDot" Property="Background" Value="#7DD3FC"/>
                     <Setter TargetName="ThumbBorder" Property="Effect">
                         <Setter.Value>
-                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="#38BDF8" Opacity="0.6"/>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#38BDF8" Opacity="0.85"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>
                 <Trigger Property="IsDragging" Value="True">
-                    <Setter TargetName="ThumbBorder" Property="Background" Value="#333E5E"/>
-                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#0F172A"/>
+                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#00F0FF"/>
+                    <Setter TargetName="InnerDot" Property="Background" Value="#00F0FF"/>
                     <Setter TargetName="ThumbBorder" Property="Effect">
                         <Setter.Value>
-                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#38BDF8" Opacity="0.8"/>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="#00F0FF" Opacity="1.0"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>
@@ -238,22 +229,32 @@
         <Style TargetType="Slider">
             <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="MinHeight" Value="24"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
                             <!-- Dark Rounded Track Capsule -->
-                            <Border x:Name="TrackBackground" Height="8" CornerRadius="4"
-                                    Background="#10131F" BorderBrush="#232A3D" BorderThickness="1" VerticalAlignment="Center"/>
+                            <Border x:Name="TrackBackground" Height="6" CornerRadius="3"
+                                    Background="#0C101A" BorderBrush="#20283E" BorderThickness="1" VerticalAlignment="Center"/>
                             
+                            <!-- Interactive Track with Neon Cyan Gradient Progress -->
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="8" CornerRadius="4,0,0,4" Background="#3B82F6" VerticalAlignment="Center"/>
+                                                <Border Height="6" CornerRadius="3" VerticalAlignment="Center">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                            <GradientStop Color="#0284C7" Offset="0.0"/>
+                                                            <GradientStop Color="#38BDF8" Offset="1.0"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
@@ -262,7 +263,7 @@
                                     <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="8" Background="Transparent" VerticalAlignment="Center"/>
+                                                <Border Height="6" Background="Transparent" VerticalAlignment="Center"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
