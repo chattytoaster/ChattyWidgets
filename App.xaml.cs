@@ -6,16 +6,22 @@ namespace ChattyWidgets;
 
 public partial class App : System.Windows.Application
 {
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern bool AttachConsole(int dwProcessId);
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        AttachConsole(-1);
         base.OnStartup(e);
 
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
+            try { System.IO.File.AppendAllText("crash.log", $"[CRITICAL UNHANDLED] {args.ExceptionObject}\n"); } catch { }
             System.Diagnostics.Debug.WriteLine($"[CRITICAL UNHANDLED] {args.ExceptionObject}");
         };
         DispatcherUnhandledException += (s, args) =>
         {
+            try { System.IO.File.AppendAllText("crash.log", $"[DISPATCHER UNHANDLED] {args.Exception}\n"); } catch { }
             System.Diagnostics.Debug.WriteLine($"[DISPATCHER UNHANDLED] {args.Exception.Message}");
             args.Handled = true; // Prevent crash on binding or async errors
         };
