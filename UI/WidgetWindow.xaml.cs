@@ -71,6 +71,10 @@ public partial class WidgetWindow : Window
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         LocationChanged += OnLocationChanged;
         SizeChanged += OnSizeChanged;
+        MouseEnter += OnWindowMouseEnter;
+        MouseLeave += OnWindowMouseLeave;
+        WidgetContextMenu.Opened += OnContextMenuOpened;
+        WidgetContextMenu.Closed += OnContextMenuClosed;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -199,7 +203,8 @@ public partial class WidgetWindow : Window
     {
         try
         {
-            // Web widgets host an HWND, so hide the WPF AnchorDot and inject an HTML control dot instead
+            // Web widgets host an HWND, so hide the WPF AnchorContainer and inject an HTML control dot instead
+            AnchorContainer.Visibility = Visibility.Collapsed;
             AnchorDot.Visibility = Visibility.Collapsed;
 
             TxtLoadingTitle.Text = $"✦ Загрузка {Manifest.Name}...";
@@ -242,7 +247,9 @@ public partial class WidgetWindow : Window
                 addMenuItemAction: (id, title) => AddCustomMenuItem(id, title),
                 resizeAction: (w, h) => ResizeWidget(w, h),
                 isLockedFunc: () => Settings.IsLocked,
-                isClickThroughFunc: () => Settings.IsClickThrough
+                isClickThroughFunc: () => Settings.IsClickThrough,
+                autoHideDotAction: (ah) => SetAutoHideAnchorDot(ah),
+                isAutoHideDotFunc: () => Settings.AutoHideAnchorDot
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
@@ -267,6 +274,7 @@ public partial class WidgetWindow : Window
                         hasMoved = false;
                         dragStartX = e.screenX;
                         dragStartY = e.screenY;
+                        document.documentElement.classList.add('chatty-is-dragging');
                     }
                 }
 
@@ -302,6 +310,7 @@ public partial class WidgetWindow : Window
                 window.addEventListener('mouseup', function(e) {
                     if (isDragging) {
                         isDragging = false;
+                        document.documentElement.classList.remove('chatty-is-dragging');
                         if (hasMoved) {
                             try { window.chatty.snapToScreen(); } catch(ex) {}
                         }
@@ -310,6 +319,13 @@ public partial class WidgetWindow : Window
 
                 // Ensure the control dot is wired up
                 function setupChattyDot() {
+                    try {
+                        if (window.chatty && window.chatty.isAutoHideDot && window.chatty.isAutoHideDot()) {
+                            document.documentElement.classList.add('chatty-autohide-dot');
+                            if (document.body) document.body.classList.add('chatty-autohide-dot');
+                        }
+                    } catch(ex) {}
+
                     var dot = document.querySelector('.chatty-anchor-dot') || document.getElementById('chatty-control-dot');
                     if (!dot && document.body) {
                         dot = document.createElement('div');
@@ -339,15 +355,52 @@ public partial class WidgetWindow : Window
                     }
                 }
 
-                // Click-through CSS rules
+                // Click-through & Auto-hide CSS rules
                 var ctStyle = document.createElement('style');
                 ctStyle.textContent = `
+                    .chatty-anchor-dot,
+                    #chatty-control-dot {
+                        transition: opacity 0.22s ease-in-out, transform 0.15s ease !important;
+                    }
+                    /* Extended hover hitbox (top-right corner) so hover activates smoothly */
+                    .chatty-anchor-dot::before,
+                    #chatty-control-dot::before {
+                        content: '' !important;
+                        position: absolute !important;
+                        top: -12px !important;
+                        left: -12px !important;
+                        right: -12px !important;
+                        bottom: -12px !important;
+                    }
                     body.chatty-click-through {
                         pointer-events: none !important;
                     }
                     body.chatty-click-through .chatty-anchor-dot,
                     body.chatty-click-through #chatty-control-dot {
                         pointer-events: auto !important;
+                    }
+                    /* Auto-hide dot mode: hidden by default, visible on hover or when dragging / menu open */
+                    html.chatty-autohide-dot .chatty-anchor-dot,
+                    html.chatty-autohide-dot #chatty-control-dot,
+                    body.chatty-autohide-dot .chatty-anchor-dot,
+                    body.chatty-autohide-dot #chatty-control-dot {
+                        opacity: 0 !important;
+                    }
+                    html.chatty-autohide-dot:hover .chatty-anchor-dot,
+                    html.chatty-autohide-dot:hover #chatty-control-dot,
+                    body.chatty-autohide-dot:hover .chatty-anchor-dot,
+                    body.chatty-autohide-dot:hover #chatty-control-dot,
+                    .chatty-anchor-dot:hover,
+                    #chatty-control-dot:hover,
+                    html.chatty-menu-open .chatty-anchor-dot,
+                    html.chatty-menu-open #chatty-control-dot,
+                    body.chatty-menu-open .chatty-anchor-dot,
+                    body.chatty-menu-open #chatty-control-dot,
+                    html.chatty-is-dragging .chatty-anchor-dot,
+                    html.chatty-is-dragging #chatty-control-dot,
+                    body.chatty-is-dragging .chatty-anchor-dot,
+                    body.chatty-is-dragging #chatty-control-dot {
+                        opacity: 1 !important;
                     }
                 `;
                 if (document.head) {
@@ -373,6 +426,10 @@ public partial class WidgetWindow : Window
                 {
                     ApplyClickThroughDomState(true);
                 }
+                if (Settings.AutoHideAnchorDot)
+                {
+                    ApplyAutoHideDomState(true);
+                }
             };
 
             string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
@@ -393,6 +450,7 @@ public partial class WidgetWindow : Window
 
     private void LoadNativeWidget()
     {
+        AnchorContainer.Visibility = Visibility.Visible;
         AnchorDot.Visibility = Visibility.Visible;
         try
         {
@@ -584,10 +642,25 @@ public partial class WidgetWindow : Window
             shadow.Color = Color.FromRgb(96, 165, 250); // Glow #60A5FA
         }
 
+        if (Settings.AutoHideAnchorDot)
+        {
+            if (!IsMouseOver && !(AnchorContainer?.IsMouseOver ?? false) && !WidgetContextMenu.IsOpen)
+            {
+                AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
+                AnchorDot.Opacity = 0.0;
+            }
+        }
+        else
+        {
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
+            AnchorDot.Opacity = 1.0;
+        }
+
         string status = "";
         if (Settings.IsLocked && Settings.IsClickThrough) status = " [Зафиксирован + Клик насквозь]";
         else if (Settings.IsLocked) status = " [Зафиксирован]";
         else if (Settings.IsClickThrough) status = " [Клик насквозь]";
+        if (Settings.AutoHideAnchorDot) status += " [Точка скрыта]";
 
         AnchorDot.ToolTip = $"ChattyWidgets{status}: ПКМ — меню настроек" + (Settings.IsLocked ? "" : ", ЛКМ — переместить");
     }
@@ -677,6 +750,7 @@ public partial class WidgetWindow : Window
         MenuLayerTop.IsChecked = Settings.Layer == WidgetLayer.Top;
         MenuClickThrough.IsChecked = Settings.IsClickThrough;
         MenuLockPosition.IsChecked = Settings.IsLocked;
+        MenuAutoHideDot.IsChecked = Settings.AutoHideAnchorDot;
         MenuFreeResizeToggle.IsChecked = ResizeMode == ResizeMode.CanResizeWithGrip || ResizeMode == ResizeMode.CanResize;
     }
 
@@ -693,6 +767,104 @@ public partial class WidgetWindow : Window
     private void OnClickThroughClick(object sender, RoutedEventArgs e)
     {
         SetClickThrough(!Settings.IsClickThrough);
+    }
+
+    private void OnAutoHideDotClick(object sender, RoutedEventArgs e)
+    {
+        SetAutoHideAnchorDot(!Settings.AutoHideAnchorDot);
+    }
+
+    public void SetAutoHideAnchorDot(bool autoHide)
+    {
+        Settings.AutoHideAnchorDot = autoHide;
+        ApplyAutoHideDomState(autoHide);
+        UpdateMenuChecks();
+        UpdateAnchorDotStyle();
+        SettingsChanged?.Invoke(this);
+    }
+
+    private void ApplyAutoHideDomState(bool autoHide)
+    {
+        if (_webView?.CoreWebView2 != null)
+        {
+            string script = autoHide
+                ? "document.documentElement.classList.add('chatty-autohide-dot'); if (document.body) document.body.classList.add('chatty-autohide-dot');"
+                : "document.documentElement.classList.remove('chatty-autohide-dot'); if (document.body) document.body.classList.remove('chatty-autohide-dot');";
+            _webView.CoreWebView2.ExecuteScriptAsync(script);
+        }
+    }
+
+    private void ApplyMenuOpenDomState(bool isOpen)
+    {
+        if (_webView?.CoreWebView2 != null)
+        {
+            string script = isOpen
+                ? "document.documentElement.classList.add('chatty-menu-open'); if (document.body) document.body.classList.add('chatty-menu-open');"
+                : "document.documentElement.classList.remove('chatty-menu-open'); if (document.body) document.body.classList.remove('chatty-menu-open');";
+            _webView.CoreWebView2.ExecuteScriptAsync(script);
+        }
+    }
+
+    private void OnAnchorContainerMouseEnter(object sender, MouseEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
+        {
+            var anim = new System.Windows.Media.Animation.DoubleAnimation(1.0, TimeSpan.FromMilliseconds(180));
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+    }
+
+    private void OnAnchorContainerMouseLeave(object sender, MouseEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !IsMouseOver)
+        {
+            var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+    }
+
+    private void OnWindowMouseEnter(object sender, MouseEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
+        {
+            var anim = new System.Windows.Media.Animation.DoubleAnimation(1.0, TimeSpan.FromMilliseconds(180));
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+    }
+
+    private void OnWindowMouseLeave(object sender, MouseEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !(AnchorContainer?.IsMouseOver ?? false))
+        {
+            var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+    }
+
+    private void OnContextMenuOpened(object? sender, RoutedEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot)
+        {
+            if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
+            {
+                AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
+                AnchorDot.Opacity = 1.0;
+            }
+            ApplyMenuOpenDomState(true);
+        }
+    }
+
+    private void OnContextMenuClosed(object? sender, RoutedEventArgs e)
+    {
+        if (Settings.AutoHideAnchorDot)
+        {
+            if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !IsMouseOver && !(AnchorContainer?.IsMouseOver ?? false))
+            {
+                var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
+                AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
+            }
+            ApplyMenuOpenDomState(false);
+        }
     }
 
     private void OnResize75Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.75);

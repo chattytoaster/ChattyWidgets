@@ -24,6 +24,8 @@ public class ChattyBridge
     private readonly Action<double, double>? _resizeAction;
     private readonly Func<bool>? _isLockedFunc;
     private readonly Func<bool>? _isClickThroughFunc;
+    private readonly Action<bool>? _autoHideDotAction;
+    private readonly Func<bool>? _isAutoHideDotFunc;
     private readonly string _storageFilePath;
     private readonly string _dataStorageFilePath;
 
@@ -41,7 +43,9 @@ public class ChattyBridge
         Action<string, string>? addMenuItemAction = null,
         Action<double, double>? resizeAction = null,
         Func<bool>? isLockedFunc = null,
-        Func<bool>? isClickThroughFunc = null)
+        Func<bool>? isClickThroughFunc = null,
+        Action<bool>? autoHideDotAction = null,
+        Func<bool>? isAutoHideDotFunc = null)
     {
         _widgetId = widgetId;
         _closeAction = closeAction;
@@ -57,6 +61,8 @@ public class ChattyBridge
         _resizeAction = resizeAction;
         _isLockedFunc = isLockedFunc;
         _isClickThroughFunc = isClickThroughFunc;
+        _autoHideDotAction = autoHideDotAction;
+        _isAutoHideDotFunc = isAutoHideDotFunc;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -288,6 +294,13 @@ public class ChattyBridge
     public bool isLocked() => _isLockedFunc?.Invoke() ?? false;
 
     public bool isClickThrough() => _isClickThroughFunc?.Invoke() ?? false;
+
+    public void setAutoHideDot(bool autoHide)
+    {
+        Application.Current.Dispatcher.Invoke(() => _autoHideDotAction?.Invoke(autoHide));
+    }
+
+    public bool isAutoHideDot() => _isAutoHideDotFunc?.Invoke() ?? false;
 
     public void addMenuItem(string id, string title)
     {

@@ -21,6 +21,7 @@
             </MenuItem>
             <MenuItem x:Name="MenuLockPosition" Header="Зафиксировать позицию" IsCheckable="True" Click="OnLockPositionClick"/>
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>
+            <MenuItem x:Name="MenuAutoHideDot" Header="Спрятать точку управления" IsCheckable="True" Click="OnAutoHideDotClick"/>
             <MenuItem Header="Изменить размер">
                 <MenuItem Header="75% (Компактный)" Click="OnResize75Click"/>
                 <MenuItem Header="100% (Обычный)" Click="OnResize100Click"/>
@@ -57,18 +58,24 @@
             </StackPanel>
         </Border>
 
-        <!-- Anchor dot for click-through control and moving (always blue, neatly inside widget) -->
-        <Border x:Name="AnchorDot" Width="12" Height="12" Margin="0,12,12,0"
-                HorizontalAlignment="Right" VerticalAlignment="Top"
-                Background="#3B82F6" CornerRadius="6" Cursor="Hand"
-                ToolTip="Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)"
-                MouseRightButtonUp="OnAnchorDotRightClick"
-                MouseLeftButtonDown="OnAnchorDotLeftDown">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#60A5FA" Opacity="0.9"/>
-            </Border.Effect>
-            <!-- Inner white dot -->
-            <Ellipse Width="4" Height="4" Fill="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
+        <!-- Anchor container and dot for click-through control and moving (always blue, neatly inside widget) -->
+        <Grid x:Name="AnchorContainer" Width="36" Height="36"
+              HorizontalAlignment="Right" VerticalAlignment="Top"
+              Background="Transparent" Cursor="Hand"
+              MouseRightButtonUp="OnAnchorDotRightClick"
+              MouseLeftButtonDown="OnAnchorDotLeftDown"
+              MouseEnter="OnAnchorContainerMouseEnter"
+              MouseLeave="OnAnchorContainerMouseLeave">
+            <Border x:Name="AnchorDot" Width="12" Height="12" Margin="0,12,12,0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Background="#3B82F6" CornerRadius="6"
+                    ToolTip="Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#60A5FA" Opacity="0.9"/>
+                </Border.Effect>
+                <!-- Inner white dot -->
+                <Ellipse Width="4" Height="4" Fill="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
