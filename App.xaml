@@ -115,18 +115,42 @@
             </Setter>
         </Style>
 
-        <!-- Modern Dark ScrollBar Style -->
+        <!-- Modern Dark Rounded ScrollBar Thumb -->
+        <Style x:Key="DarkScrollBarThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Background="#252D42"
+                                CornerRadius="4"
+                                Margin="1"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="#384364"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="#4F5D8A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Dark Rounded ScrollBar Style (Vertical and Horizontal) -->
         <Style TargetType="ScrollBar">
             <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
             <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#333B52"/>
-            <Setter Property="Width" Value="7"/>
-            <Setter Property="MinWidth" Value="7"/>
+            <Setter Property="Foreground" Value="#252D42"/>
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
-                        <Grid x:Name="Bg" SnapsToDevicePixels="true">
+                        <Grid x:Name="Bg" Background="Transparent" SnapsToDevicePixels="true">
                             <Track x:Name="PART_Track" IsDirectionReversed="true">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Template="{StaticResource TransparentRepeatButton}"/>
@@ -135,76 +159,101 @@
                                     <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Template="{StaticResource TransparentRepeatButton}"/>
                                 </Track.IncreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb>
-                                        <Thumb.Template>
-                                            <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder" Background="#2E364F" CornerRadius="3.5" Margin="1,0"/>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="true">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#47557A"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsDragging" Value="true">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#38BDF8"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Thumb.Template>
-                                    </Thumb>
+                                    <Thumb Style="{StaticResource DarkScrollBarThumb}"/>
                                 </Track.Thumb>
                             </Track>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="Height" Value="8"/>
+                    <Setter Property="MinHeight" Value="8"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid x:Name="Bg" Background="Transparent" SnapsToDevicePixels="true">
+                                    <Track x:Name="PART_Track" IsDirectionReversed="false">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}" Template="{StaticResource TransparentRepeatButton}"/>
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb Style="{StaticResource DarkScrollBarThumb}"/>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <!-- Modern Glowing Slider Thumb -->
+        <!-- Modern Dark Rounded Slider Thumb -->
         <ControlTemplate x:Key="SliderThumbTemplate" TargetType="Thumb">
-            <Grid Width="20" Height="20" Cursor="Hand">
-                <Ellipse x:Name="ThumbGlow" Width="20" Height="20" Fill="#38BDF8" Opacity="0">
-                    <Ellipse.Effect>
-                        <DropShadowEffect BlurRadius="10" Color="#38BDF8" Opacity="0.8" ShadowDepth="0"/>
-                    </Ellipse.Effect>
-                </Ellipse>
-                <Ellipse x:Name="ThumbCircle" Width="14" Height="14" Fill="#F8FAFC" Stroke="#38BDF8" StrokeThickness="2.5">
-                    <Ellipse.Effect>
-                        <DropShadowEffect BlurRadius="6" Color="#000000" Opacity="0.4" ShadowDepth="1"/>
-                    </Ellipse.Effect>
-                </Ellipse>
+            <Grid Width="18" Height="22" Cursor="Hand">
+                <Border x:Name="ThumbBorder"
+                        Background="#1E2436"
+                        BorderBrush="#3D4968"
+                        BorderThickness="1.5"
+                        CornerRadius="7">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.5" Color="#000000"/>
+                    </Border.Effect>
+                    <!-- Grip indicator -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Width="1.5" Height="8" Background="#64748B" CornerRadius="0.5" Margin="1,0"/>
+                        <Border Width="1.5" Height="8" Background="#64748B" CornerRadius="0.5" Margin="1,0"/>
+                    </StackPanel>
+                </Border>
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="ThumbGlow" Property="Opacity" Value="0.4"/>
-                    <Setter TargetName="ThumbCircle" Property="StrokeThickness" Value="3"/>
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#28314A"/>
+                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="ThumbBorder" Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="#38BDF8" Opacity="0.6"/>
+                        </Setter.Value>
+                    </Setter>
                 </Trigger>
                 <Trigger Property="IsDragging" Value="True">
-                    <Setter TargetName="ThumbGlow" Property="Opacity" Value="0.75"/>
-                    <Setter TargetName="ThumbCircle" Property="Fill" Value="#38BDF8"/>
-                    <Setter TargetName="ThumbCircle" Property="Stroke" Value="#FFFFFF"/>
+                    <Setter TargetName="ThumbBorder" Property="Background" Value="#333E5E"/>
+                    <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="#38BDF8"/>
+                    <Setter TargetName="ThumbBorder" Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#38BDF8" Opacity="0.8"/>
+                        </Setter.Value>
+                    </Setter>
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
 
-        <!-- Modern Dark Glowing Slider Style -->
+        <!-- Modern Dark Rounded Slider Style -->
         <Style TargetType="Slider">
             <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="MinHeight" Value="26"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <!-- Background Track Groove -->
-                            <Border x:Name="TrackBackground" Height="6" CornerRadius="3"
-                                    Background="#1A1E2E" BorderBrush="#2D354F" BorderThickness="1" VerticalAlignment="Center"/>
+                            <!-- Dark Rounded Track Capsule -->
+                            <Border x:Name="TrackBackground" Height="8" CornerRadius="4"
+                                    Background="#10131F" BorderBrush="#232A3D" BorderThickness="1" VerticalAlignment="Center"/>
                             
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="6" CornerRadius="3,0,0,3" Background="#38BDF8" VerticalAlignment="Center"/>
+                                                <Border Height="8" CornerRadius="4,0,0,4" Background="#3B82F6" VerticalAlignment="Center"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
@@ -213,7 +262,7 @@
                                     <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="6" Background="Transparent" VerticalAlignment="Center"/>
+                                                <Border Height="8" Background="Transparent" VerticalAlignment="Center"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>

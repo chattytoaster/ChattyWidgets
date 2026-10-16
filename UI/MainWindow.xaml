@@ -19,11 +19,6 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <!-- Modern ScrollViewer style -->
-        <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Width" Value="8"/>
-        </Style>
 
         <!-- Modern Button Style -->
         <Style x:Key="PrimaryBtn" TargetType="Button">
