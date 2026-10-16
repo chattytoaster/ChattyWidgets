@@ -24,12 +24,6 @@
                     <TextBlock Text="⚡ " FontSize="12" Foreground="#38BDF8"/>
                     <TextBlock Text="СИСТЕМА" FontWeight="Bold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Border DockPanel.Dock="Right" HorizontalAlignment="Right" Background="#1810B981" CornerRadius="6" Padding="6,2">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="6" Height="6" Fill="#10B981" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="LIVE" FontWeight="Bold" FontSize="9" Foreground="#10B981" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
             </DockPanel>
 
             <!-- Dynamic Items Container with sleek auto scroll -->

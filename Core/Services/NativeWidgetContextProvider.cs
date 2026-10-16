@@ -77,7 +77,7 @@ public class ClockWidgetViewModel : NativeViewModelBase
     private string _timeDigits = "";
     private string _secondsBadge = "";
     private string _dayName = "";
-    private string _weatherHint = "Синхронизировано";
+    private string _weatherHint = "";
 
     public bool Is24Hour
     {
@@ -488,11 +488,35 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 // 5. Music Player ViewModel
 public class MusicPlayerWidgetViewModel : NativeViewModelBase
 {
+    private readonly DispatcherTimer _spinTimer;
+    private double _vinylAngle = 0;
+    public double VinylAngle
+    {
+        get => _vinylAngle;
+        set { _vinylAngle = value; OnPropertyChanged(); }
+    }
+
     private bool _isPlaying = false;
     public bool IsPlaying
     {
         get => _isPlaying;
-        set { _isPlaying = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlayPauseIcon)); }
+        set
+        {
+            if (_isPlaying != value)
+            {
+                _isPlaying = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PlayPauseIcon));
+                if (_isPlaying)
+                {
+                    _spinTimer.Start();
+                }
+                else
+                {
+                    _spinTimer.Stop();
+                }
+            }
+        }
     }
 
     public string PlayPauseIcon => IsPlaying ? "⏸" : "▶";
@@ -536,6 +560,16 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
 
     public MusicPlayerWidgetViewModel()
     {
+        _spinTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(30)
+        };
+        _spinTimer.Tick += (s, e) =>
+        {
+            VinylAngle = (_vinylAngle + 1.2) % 360.0;
+        };
+        if (_isPlaying) _spinTimer.Start();
+
         PlayPauseCommand = new NativeRelayCommand(() =>
         {
             MediaMonitorService.Instance.PlayPause();
