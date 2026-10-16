@@ -73,7 +73,7 @@
                                             <DropShadowEffect BlurRadius="20" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
                                         </Border.Effect>
                                         <ScrollViewer Margin="2" SnapsToDevicePixels="True">
-                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Circular" />
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                                         </ScrollViewer>
                                     </Border>
                                 </Grid>

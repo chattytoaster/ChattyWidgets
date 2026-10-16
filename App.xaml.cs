@@ -237,6 +237,28 @@ public partial class App : System.Windows.Application
             Log($"FAIL in StartWidget: {ex}");
         }
 
+        // Test 6: MainWindow tabs navigation
+        Log("TEST 6: Testing MainWindow creation and tab switching...");
+        try
+        {
+            var mw = new MainWindow();
+            mw.Show();
+            mw.SwitchToTab("store");
+            mw.SwitchToTab("workshop");
+            mw.ComboNewWidgetType.IsDropDownOpen = true;
+            mw.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
+            mw.ComboNewWidgetType.IsDropDownOpen = false;
+            mw.SwitchToTab("settings");
+            mw.SwitchToTab("my_widgets");
+            mw.Close();
+            Log("PASS: MainWindow initialized and all tabs switched without errors.");
+        }
+        catch (Exception ex)
+        {
+            Log($"FAIL in MainWindow tab test: {ex}");
+            throw;
+        }
+
         Log("=== ALL TESTS COMPLETED SUCCESSFULLY ===");
 
         // Write report to file
