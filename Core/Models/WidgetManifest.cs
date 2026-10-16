@@ -51,4 +51,19 @@ public class WidgetManifest
 
     [JsonPropertyName("permissions")]
     public List<string> Permissions { get; set; } = new();
+
+    [JsonPropertyName("menuItems")]
+    public List<CustomMenuItem> MenuItems { get; set; } = new();
+}
+
+public class CustomMenuItem
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("icon")]
+    public string? Icon { get; set; }
 }

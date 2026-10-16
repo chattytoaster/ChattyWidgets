@@ -27,29 +27,30 @@
     .crypto-card {
       width: 100%;
       height: 100%;
-      background: rgba(18, 22, 34, 0.78);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(18, 22, 34, 0.80);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 8px 32px rgba(0, 0, 0, 0.35);
+      position: relative;
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       padding-bottom: 6px;
-      padding-right: 18px;
+      padding-right: 20px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .title {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
       color: #38BDF8;
       display: flex;
       align-items: center;
@@ -57,7 +58,7 @@
     }
     .btn-refresh {
       background: rgba(255, 255, 255, 0.08);
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: #94A3B8;
       cursor: pointer;
       font-size: 11px;
@@ -66,22 +67,22 @@
       transition: all 0.15s;
     }
     .btn-refresh:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.18);
       color: #F8FAFC;
     }
     .rates-list {
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: space-around;
-      gap: 4px;
+      justify-content: space-between;
+      gap: 3px;
     }
     .rate-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       background: rgba(255, 255, 255, 0.03);
-      padding: 6px 10px;
+      padding: 5px 10px;
       border-radius: 8px;
       font-size: 12px;
       transition: background 0.15s;
@@ -108,10 +109,13 @@
     }
     .change-badge {
       font-size: 10px;
-      padding: 2px 6px;
+      padding: 2px 5px;
       border-radius: 4px;
       font-weight: 600;
       margin-left: 6px;
+      display: inline-block;
+      min-width: 42px;
+      text-align: right;
     }
     .change-up {
       background: rgba(16, 185, 129, 0.15);
@@ -153,7 +157,7 @@
   <div class="crypto-card">
     <div class="chatty-anchor-dot" title="ChattyWidgets: ЛКМ — переместить, ПКМ — меню"></div>
     <div class="header">
-      <div class="title">💎 КУРСЫ ВАЛЮТ</div>
+      <div class="title">💎 КОТИРОВКИ & ВАЛЮТЫ</div>
       <button class="btn-refresh" id="refreshBtn" onclick="fetchPrices()">Обновить ↻</button>
     </div>
 
@@ -164,8 +168,8 @@
           <span class="coin-name">Bitcoin</span>
         </div>
         <div>
-          <span class="price-value" id="btcPrice">$67,450</span>
-          <span class="change-badge change-up" id="btcChange">+2.4%</span>
+          <span class="price-value" id="btcPrice">$---</span>
+          <span class="change-badge" id="btcChange">--%</span>
         </div>
       </div>
 
@@ -175,8 +179,8 @@
           <span class="coin-name">Ethereum</span>
         </div>
         <div>
-          <span class="price-value" id="ethPrice">$2,640</span>
-          <span class="change-badge change-up" id="ethChange">+1.8%</span>
+          <span class="price-value" id="ethPrice">$---</span>
+          <span class="change-badge" id="ethChange">--%</span>
         </div>
       </div>
 
@@ -186,19 +190,30 @@
           <span class="coin-name">Toncoin</span>
         </div>
         <div>
-          <span class="price-value" id="tonPrice">$5.32</span>
-          <span class="change-badge change-down" id="tonChange">-0.7%</span>
+          <span class="price-value" id="tonPrice">$---</span>
+          <span class="change-badge" id="tonChange">--%</span>
+        </div>
+      </div>
+
+      <div class="rate-row">
+        <div class="coin-tag">
+          <span style="color:#14F195">◎</span> SOL
+          <span class="coin-name">Solana</span>
+        </div>
+        <div>
+          <span class="price-value" id="solPrice">$---</span>
+          <span class="change-badge" id="solChange">--%</span>
         </div>
       </div>
 
       <div class="rate-row">
         <div class="coin-tag">
           <span style="color:#10B981">$</span> USD/RUB
-          <span class="coin-name">Доллар</span>
+          <span class="coin-name">ЦБ РФ</span>
         </div>
         <div>
-          <span class="price-value" id="usdPrice">96.80 ₽</span>
-          <span class="change-badge change-up" id="usdChange">+0.3%</span>
+          <span class="price-value" id="usdPrice">-- ₽</span>
+          <span class="change-badge" id="usdChange">--%</span>
         </div>
       </div>
     </div>
@@ -209,41 +224,79 @@
       const btn = document.getElementById('refreshBtn');
       btn.textContent = '...';
 
+      // 1. Fetch Binance for Crypto
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,the-open-network&vs_currencies=usd&include_24hr_change=true');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.bitcoin) {
-            document.getElementById('btcPrice').textContent = '$' + data.bitcoin.usd.toLocaleString();
-            formatChange('btcChange', data.bitcoin.usd_24h_change);
-          }
-          if (data.ethereum) {
-            document.getElementById('ethPrice').textContent = '$' + data.ethereum.usd.toLocaleString();
-            formatChange('ethChange', data.ethereum.usd_24h_change);
-          }
-          if (data['the-open-network']) {
-            document.getElementById('tonPrice').textContent = '$' + data['the-open-network'].usd.toFixed(2);
-            formatChange('tonChange', data['the-open-network'].usd_24h_change);
+        const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22TONUSDT%22,%22SOLUSDT%22]');
+        if (binanceRes.ok) {
+          const tickers = await binanceRes.json();
+          tickers.forEach(t => {
+            const price = parseFloat(t.lastPrice);
+            const change = parseFloat(t.priceChangePercent);
+
+            if (t.symbol === 'BTCUSDT') {
+              document.getElementById('btcPrice').textContent = '$' + Math.round(price).toLocaleString('en-US');
+              formatChange('btcChange', change);
+            } else if (t.symbol === 'ETHUSDT') {
+              document.getElementById('ethPrice').textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+              formatChange('ethChange', change);
+            } else if (t.symbol === 'TONUSDT') {
+              document.getElementById('tonPrice').textContent = '$' + price.toFixed(2);
+              formatChange('tonChange', change);
+            } else if (t.symbol === 'SOLUSDT') {
+              document.getElementById('solPrice').textContent = '$' + price.toFixed(1);
+              formatChange('solChange', change);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Binance fetch error:', err);
+      }
+
+      // 2. Fetch CBR for USD/RUB
+      try {
+        const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+        if (cbrRes.ok) {
+          const cbr = await cbrRes.json();
+          if (cbr?.Valute?.USD) {
+            const usd = cbr.Valute.USD.Value;
+            const prev = cbr.Valute.USD.Previous;
+            const change = ((usd - prev) / prev) * 100;
+            document.getElementById('usdPrice').textContent = usd.toFixed(2) + ' ₽';
+            formatChange('usdChange', change);
           }
         }
-      } catch (e) {
-        // Fallback to slight simulated price fluctuation if offline/rate-limited
-        const btc = 67400 + Math.floor(Math.random() * 200 - 100);
-        document.getElementById('btcPrice').textContent = '$' + btc.toLocaleString();
-      } finally {
-        setTimeout(() => { btn.textContent = 'Обновить ↻'; }, 600);
+      } catch (err) {
+        // Fallback to open.er-api.com
+        try {
+          const fxRes = await fetch('https://open.er-api.com/v6/latest/USD');
+          if (fxRes.ok) {
+            const fx = await fxRes.json();
+            if (fx?.rates?.RUB) {
+              document.getElementById('usdPrice').textContent = fx.rates.RUB.toFixed(2) + ' ₽';
+            }
+          }
+        } catch(e) {}
       }
+
+      setTimeout(() => { btn.textContent = 'Обновить ↻'; }, 500);
     }
 
-    function formatChange(elementId, val) {
+    function formatChange(elementId, num) {
       const el = document.getElementById(elementId);
-      if (!val) return;
-      const num = Number(val);
+      if (isNaN(num)) return;
       el.textContent = (num >= 0 ? '+' : '') + num.toFixed(1) + '%';
       el.className = 'change-badge ' + (num >= 0 ? 'change-up' : 'change-down');
     }
 
-    setInterval(fetchPrices, 60000); // Auto-refresh every minute
+    // Developer Custom Menu Handling
+    window.onChattyMenu = function(id) {
+      if (id === 'refresh-rates') {
+        fetchPrices();
+      }
+    };
+
+    fetchPrices();
+    setInterval(fetchPrices, 30000); // Auto-refresh every 30 seconds
   </script>
 </body>
 </html>

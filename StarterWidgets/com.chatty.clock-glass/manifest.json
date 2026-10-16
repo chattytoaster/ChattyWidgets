@@ -3,7 +3,7 @@
   "name": "Стеклянные Часы",
   "version": "1.0.0",
   "author": "ChattyWidgets",
-  "description": "Элегантные цифровые часы с неоморфизмом, эффектом матового стекла и датой.",
+  "description": "Элегантные цифровые часы с неоморфизмом, эффектом матового стекла и актуальной погодой.",
   "type": "web",
   "entry": "index.html",
   "icon": "icon.png",
@@ -14,5 +14,8 @@
   "resizable": true,
   "defaultLayer": "desktop",
   "clickThrough": false,
-  "permissions": ["system"]
+  "permissions": ["system"],
+  "menuItems": [
+    { "id": "refresh-weather", "title": "Обновить погоду" }
+  ]
 }

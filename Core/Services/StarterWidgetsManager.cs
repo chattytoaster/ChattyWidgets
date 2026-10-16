@@ -39,12 +39,8 @@ public static class StarterWidgetsManager
                 // Create .chw package
                 ChwPackageService.CreatePackage(widgetDir, chwFile);
 
-                // Auto-install into %LocalAppData%\ChattyWidgets\widgets\<id>
-                string installedDir = Path.Combine(ChwPackageService.WidgetsDir, id);
-                if (!Directory.Exists(installedDir))
-                {
-                    ChwPackageService.InstallPackage(chwFile);
-                }
+                // Auto-install / update into %LocalAppData%\ChattyWidgets\widgets\<id>
+                ChwPackageService.InstallPackage(chwFile);
             }
             catch (Exception ex)
             {

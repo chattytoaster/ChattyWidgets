@@ -14,11 +14,16 @@ public class ChattyBridge
     private readonly Action? _closeAction;
     private readonly Action<WidgetLayer>? _changeLayerAction;
     private readonly Action<bool>? _clickThroughAction;
+    private readonly Action<bool>? _lockAction;
     private readonly Action<double>? _opacityAction;
     private readonly Action? _dragMoveAction;
     private readonly Action? _contextMenuAction;
     private readonly Action<double, double>? _moveByAction;
     private readonly Action? _snapAction;
+    private readonly Action<string, string>? _addMenuItemAction;
+    private readonly Action<double, double>? _resizeAction;
+    private readonly Func<bool>? _isLockedFunc;
+    private readonly Func<bool>? _isClickThroughFunc;
     private readonly string _storageFilePath;
 
     public ChattyBridge(
@@ -26,21 +31,31 @@ public class ChattyBridge
         Action? closeAction = null,
         Action<WidgetLayer>? changeLayerAction = null,
         Action<bool>? clickThroughAction = null,
+        Action<bool>? lockAction = null,
         Action<double>? opacityAction = null,
         Action? dragMoveAction = null,
         Action? contextMenuAction = null,
         Action<double, double>? moveByAction = null,
-        Action? snapAction = null)
+        Action? snapAction = null,
+        Action<string, string>? addMenuItemAction = null,
+        Action<double, double>? resizeAction = null,
+        Func<bool>? isLockedFunc = null,
+        Func<bool>? isClickThroughFunc = null)
     {
         _widgetId = widgetId;
         _closeAction = closeAction;
         _changeLayerAction = changeLayerAction;
         _clickThroughAction = clickThroughAction;
+        _lockAction = lockAction;
         _opacityAction = opacityAction;
         _dragMoveAction = dragMoveAction;
         _contextMenuAction = contextMenuAction;
         _moveByAction = moveByAction;
         _snapAction = snapAction;
+        _addMenuItemAction = addMenuItemAction;
+        _resizeAction = resizeAction;
+        _isLockedFunc = isLockedFunc;
+        _isClickThroughFunc = isClickThroughFunc;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -181,6 +196,25 @@ public class ChattyBridge
     public void showContextMenu()
     {
         Application.Current.Dispatcher.BeginInvoke(new Action(() => _contextMenuAction?.Invoke()));
+    }
+
+    public void setLocked(bool locked)
+    {
+        Application.Current.Dispatcher.Invoke(() => _lockAction?.Invoke(locked));
+    }
+
+    public bool isLocked() => _isLockedFunc?.Invoke() ?? false;
+
+    public bool isClickThrough() => _isClickThroughFunc?.Invoke() ?? false;
+
+    public void addMenuItem(string id, string title)
+    {
+        Application.Current.Dispatcher.Invoke(() => _addMenuItemAction?.Invoke(id, title));
+    }
+
+    public void resize(double width, double height)
+    {
+        Application.Current.Dispatcher.Invoke(() => _resizeAction?.Invoke(width, height));
     }
 
     public void log(string message)

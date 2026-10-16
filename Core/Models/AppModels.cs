@@ -29,6 +29,9 @@ public class WidgetInstanceSettings
     [JsonPropertyName("isClickThrough")]
     public bool IsClickThrough { get; set; } = false;
 
+    [JsonPropertyName("isLocked")]
+    public bool IsLocked { get; set; } = false;
+
     [JsonPropertyName("opacity")]
     public double Opacity { get; set; } = 1.0;
 

@@ -19,13 +19,24 @@
                 <MenuItem x:Name="MenuLayerNormal" Header="Плавающее окно" Click="OnLayerNormalClick"/>
                 <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" Click="OnLayerTopClick"/>
             </MenuItem>
-            <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" Click="OnClickThroughClick"/>
+            <MenuItem x:Name="MenuLockPosition" Header="Зафиксировать позицию" IsCheckable="True" Click="OnLockPositionClick"/>
+            <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>
+            <MenuItem Header="Изменить размер">
+                <MenuItem Header="75% (Компактный)" Click="OnResize75Click"/>
+                <MenuItem Header="100% (Обычный)" Click="OnResize100Click"/>
+                <MenuItem Header="125% (Увеличенный)" Click="OnResize125Click"/>
+                <MenuItem Header="150% (Большой)" Click="OnResize150Click"/>
+                <Separator/>
+                <MenuItem x:Name="MenuFreeResizeToggle" Header="Тянуть за края (Свободный размер)" IsCheckable="True" Click="OnToggleFreeResizeClick"/>
+            </MenuItem>
             <MenuItem Header="Прозрачность фона">
                 <MenuItem Header="100% (Непрозрачный фон)" Click="OnOpacity100Click"/>
                 <MenuItem Header="75% фона" Click="OnOpacity85Click"/>
                 <MenuItem Header="50% фона" Click="OnOpacity70Click"/>
                 <MenuItem Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
             </MenuItem>
+            <Separator x:Name="MenuCustomSeparator" Visibility="Collapsed"/>
+            <MenuItem x:Name="MenuCustomSettings" Header="Настройки виджета" Visibility="Collapsed"/>
             <Separator/>
             <MenuItem Header="Открыть папку виджета" Click="OnOpenFolderClick"/>
             <MenuItem Header="Открыть Хаб ChattyWidgets" Click="OnOpenHubClick"/>

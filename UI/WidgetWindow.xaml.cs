@@ -59,6 +59,14 @@ public partial class WidgetWindow : Window
         UpdateMenuChecks();
         UpdateAnchorDotStyle();
 
+        if (manifest.MenuItems != null && manifest.MenuItems.Count > 0)
+        {
+            foreach (var item in manifest.MenuItems)
+            {
+                AddCustomMenuItem(item.Id, item.Title);
+            }
+        }
+
         Loaded += OnLoaded;
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         LocationChanged += OnLocationChanged;
@@ -174,11 +182,16 @@ public partial class WidgetWindow : Window
                 closeAction: () => CloseWidget(),
                 changeLayerAction: (layer) => SetLayer(layer),
                 clickThroughAction: (ct) => SetClickThrough(ct),
+                lockAction: (locked) => SetLocked(locked),
                 opacityAction: (op) => SetWidgetOpacity(op),
                 dragMoveAction: () => StartDragMove(),
                 contextMenuAction: () => ShowWidgetContextMenu(),
                 moveByAction: (dx, dy) => MoveBy(dx, dy),
-                snapAction: () => SnapToScreen()
+                snapAction: () => SnapToScreen(),
+                addMenuItemAction: (id, title) => AddCustomMenuItem(id, title),
+                resizeAction: (w, h) => ResizeWidget(w, h),
+                isLockedFunc: () => Settings.IsLocked,
+                isClickThroughFunc: () => Settings.IsClickThrough
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
@@ -363,7 +376,7 @@ public partial class WidgetWindow : Window
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsClickThrough)
+        if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsClickThrough && !Settings.IsLocked)
         {
             DragMove();
             SnapToScreen();
@@ -372,7 +385,7 @@ public partial class WidgetWindow : Window
 
     private void OnAnchorDotLeftDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed)
+        if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsLocked)
         {
             DragMove();
             SnapToScreen();
@@ -411,7 +424,7 @@ public partial class WidgetWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            if (Settings.IsClickThrough) return;
+            if (Settings.IsClickThrough || Settings.IsLocked) return;
             Win32Native.ReleaseCapture();
             Win32Native.SendMessage(_hwnd, Win32Native.WM_NCLBUTTONDOWN, (IntPtr)Win32Native.HTCAPTION, IntPtr.Zero);
             SnapToScreen();
@@ -429,7 +442,7 @@ public partial class WidgetWindow : Window
 
     public void MoveBy(double deltaX, double deltaY)
     {
-        if (Settings.IsClickThrough) return;
+        if (Settings.IsClickThrough || Settings.IsLocked) return;
         Left += deltaX;
         Top += deltaY;
         Settings.Left = Left;
@@ -466,6 +479,14 @@ public partial class WidgetWindow : Window
         SettingsChanged?.Invoke(this);
     }
 
+    public void SetLocked(bool locked)
+    {
+        Settings.IsLocked = locked;
+        UpdateMenuChecks();
+        UpdateAnchorDotStyle();
+        SettingsChanged?.Invoke(this);
+    }
+
     private void UpdateAnchorDotStyle()
     {
         if (AnchorDot == null) return;
@@ -477,14 +498,12 @@ public partial class WidgetWindow : Window
             shadow.Color = Color.FromRgb(96, 165, 250); // Glow #60A5FA
         }
 
-        if (Settings.IsClickThrough)
-        {
-            AnchorDot.ToolTip = "ChattyWidgets [Клик насквозь ВКЛ]: ПКМ — меню настроек, ЛКМ — переместить";
-        }
-        else
-        {
-            AnchorDot.ToolTip = "ChattyWidgets: ПКМ — меню настроек, ЛКМ — переместить";
-        }
+        string status = "";
+        if (Settings.IsLocked && Settings.IsClickThrough) status = " [Зафиксирован + Клик насквозь]";
+        else if (Settings.IsLocked) status = " [Зафиксирован]";
+        else if (Settings.IsClickThrough) status = " [Клик насквозь]";
+
+        AnchorDot.ToolTip = $"ChattyWidgets{status}: ПКМ — меню настроек" + (Settings.IsLocked ? "" : ", ЛКМ — переместить");
     }
 
     public void SetWidgetOpacity(double opacity)
@@ -519,12 +538,60 @@ public partial class WidgetWindow : Window
         }
     }
 
+    private readonly Dictionary<string, MenuItem> _customMenuItems = new();
+
+    public void AddCustomMenuItem(string id, string title)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_customMenuItems.TryGetValue(id, out var existingItem))
+            {
+                existingItem.Header = title;
+                return;
+            }
+
+            MenuCustomSeparator.Visibility = Visibility.Visible;
+            MenuCustomSettings.Visibility = Visibility.Visible;
+
+            var menuItem = new MenuItem
+            {
+                Header = title,
+                Tag = id
+            };
+            menuItem.Click += (s, e) => TriggerCustomMenuAction(id);
+
+            _customMenuItems[id] = menuItem;
+            MenuCustomSettings.Items.Add(menuItem);
+        });
+    }
+
+    public void TriggerCustomMenuAction(string id)
+    {
+        if (_webView?.CoreWebView2 != null)
+        {
+            string escapedId = id.Replace("\\", "\\\\").Replace("'", "\\'");
+            string js = $@"
+                try {{
+                    window.dispatchEvent(new CustomEvent('chatty:menu', {{ detail: {{ id: '{escapedId}' }} }}));
+                    if (typeof window.onChattyMenu === 'function') {{
+                        window.onChattyMenu('{escapedId}');
+                    }}
+                }} catch(e) {{
+                    console.error('Custom menu error:', e);
+                }}
+            ";
+            _webView.CoreWebView2.ExecuteScriptAsync(js);
+        }
+    }
+
     private void UpdateMenuChecks()
     {
         MenuLayerDesktop.IsChecked = Settings.Layer == WidgetLayer.Desktop;
         MenuLayerNormal.IsChecked = Settings.Layer == WidgetLayer.Normal;
         MenuLayerTop.IsChecked = Settings.Layer == WidgetLayer.Top;
         MenuClickThrough.IsChecked = Settings.IsClickThrough;
+        MenuLockPosition.IsChecked = Settings.IsLocked;
+        MenuFreeResizeToggle.IsChecked = ResizeMode == ResizeMode.CanResizeWithGrip || ResizeMode == ResizeMode.CanResize;
     }
 
     // Context menu handlers
@@ -532,9 +599,44 @@ public partial class WidgetWindow : Window
     private void OnLayerNormalClick(object sender, RoutedEventArgs e) => SetLayer(WidgetLayer.Normal);
     private void OnLayerTopClick(object sender, RoutedEventArgs e) => SetLayer(WidgetLayer.Top);
 
+    private void OnLockPositionClick(object sender, RoutedEventArgs e)
+    {
+        SetLocked(!Settings.IsLocked);
+    }
+
     private void OnClickThroughClick(object sender, RoutedEventArgs e)
     {
         SetClickThrough(!Settings.IsClickThrough);
+    }
+
+    private void OnResize75Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.75);
+    private void OnResize100Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.0);
+    private void OnResize125Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.25);
+    private void OnResize150Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.50);
+
+    private void ApplyResizePreset(double factor)
+    {
+        double baseW = Manifest.DefaultWidth > 0 ? Manifest.DefaultWidth : 300;
+        double baseH = Manifest.DefaultHeight > 0 ? Manifest.DefaultHeight : 200;
+        ResizeWidget(Math.Round(baseW * factor), Math.Round(baseH * factor));
+    }
+
+    public void ResizeWidget(double newWidth, double newHeight)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            Width = Math.Max(MinWidth, newWidth);
+            Height = Math.Max(MinHeight, newHeight);
+            Settings.Width = Width;
+            Settings.Height = Height;
+            SettingsChanged?.Invoke(this);
+        });
+    }
+
+    private void OnToggleFreeResizeClick(object sender, RoutedEventArgs e)
+    {
+        bool isFree = MenuFreeResizeToggle.IsChecked;
+        ResizeMode = isFree ? ResizeMode.CanResizeWithGrip : ResizeMode.NoResize;
     }
 
     private void OnOpacity100Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(1.0);

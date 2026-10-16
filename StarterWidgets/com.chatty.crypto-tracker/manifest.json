@@ -14,5 +14,8 @@
   "resizable": true,
   "defaultLayer": "desktop",
   "clickThrough": false,
-  "permissions": ["network"]
+  "permissions": ["network"],
+  "menuItems": [
+    { "id": "refresh-rates", "title": "Обновить котировки" }
+  ]
 }
