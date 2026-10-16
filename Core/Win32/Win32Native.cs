@@ -36,6 +36,16 @@ public static class Win32Native
     public const uint SMTO_NORMAL = 0x0000;
     public const uint WM_SPAWN_WORKER = 0x052C;
 
+    public const int WM_NCLBUTTONDOWN = 0x00A1;
+    public const int WM_LBUTTONDOWN = 0x0201;
+    public const int WM_RBUTTONUP = 0x0205;
+
+    [DllImport("user32.dll")]
+    public static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll", EntryPoint = "SendMessage")]
+    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 

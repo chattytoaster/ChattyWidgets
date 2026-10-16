@@ -76,15 +76,15 @@ public class DesktopHostManager
         if (hwnd == IntPtr.Zero) return;
 
         MakeToolWindow(hwnd);
-        AttachToDesktop(hwnd);
 
-        // Always ensure top-level window (SetParent to WorkerW swallows WPF windows on modern Windows)
+        // Always ensure top-level window without owner interference
         Win32Native.SetParent(hwnd, IntPtr.Zero);
 
         switch (layer)
         {
             case WidgetLayer.Desktop:
-                Win32Native.SetWindowPos(hwnd, Win32Native.HWND_BOTTOM, 0, 0, 0, 0,
+                // Sits on desktop behind active applications, but stays in front of desktop wallpaper/icons and is 100% clickable
+                Win32Native.SetWindowPos(hwnd, Win32Native.HWND_NOTOPMOST, 0, 0, 0, 0,
                     Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE | Win32Native.SWP_SHOWWINDOW);
                 break;
 

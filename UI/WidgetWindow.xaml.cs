@@ -104,6 +104,12 @@ public partial class WidgetWindow : Window
                 return (IntPtr)Win32Native.HTTRANSPARENT;
             }
         }
+        else if (msg == Win32Native.WM_RBUTTONUP)
+        {
+            ShowWidgetContextMenu();
+            handled = true;
+            return IntPtr.Zero;
+        }
         return IntPtr.Zero;
     }
 
@@ -138,8 +144,15 @@ public partial class WidgetWindow : Window
             await _webView.EnsureCoreWebView2Async(env);
 
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-            _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+            _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             _webView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+            _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+
+            _webView.CoreWebView2.ContextMenuRequested += (s, args) =>
+            {
+                args.Handled = true;
+                ShowWidgetContextMenu();
+            };
 
             // Expose the ChattyBridge to JavaScript
             var bridge = new ChattyBridge(
@@ -147,7 +160,9 @@ public partial class WidgetWindow : Window
                 closeAction: () => CloseWidget(),
                 changeLayerAction: (layer) => SetLayer(layer),
                 clickThroughAction: (ct) => SetClickThrough(ct),
-                opacityAction: (op) => SetWidgetOpacity(op)
+                opacityAction: (op) => SetWidgetOpacity(op),
+                dragMoveAction: () => StartDragMove(),
+                contextMenuAction: () => ShowWidgetContextMenu()
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
@@ -155,6 +170,23 @@ public partial class WidgetWindow : Window
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
                 console.log('ChattyWidgets Bridge Initialized');
+
+                window.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    try { window.chatty.showContextMenu(); } catch(ex) {}
+                });
+
+                window.addEventListener('mousedown', function(e) {
+                    if (e.button === 0) {
+                        var target = e.target;
+                        var tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+                        var interactive = ['button', 'input', 'textarea', 'a', 'select'];
+                        if (interactive.indexOf(tag) !== -1 || (target.closest && target.closest('button, input, textarea, a, select'))) {
+                            return;
+                        }
+                        try { window.chatty.dragMove(); } catch(ex) {}
+                    }
+                });
             ";
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(initScript);
 
@@ -275,6 +307,32 @@ public partial class WidgetWindow : Window
         SettingsChanged?.Invoke(this);
     }
 
+    private void OnWindowRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        ShowWidgetContextMenu();
+        e.Handled = true;
+    }
+
+    public void StartDragMove()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (Settings.IsClickThrough) return;
+            Win32Native.ReleaseCapture();
+            Win32Native.SendMessage(_hwnd, Win32Native.WM_NCLBUTTONDOWN, (IntPtr)Win32Native.HTCAPTION, IntPtr.Zero);
+            SnapToScreen();
+        });
+    }
+
+    public void ShowWidgetContextMenu()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            WidgetContextMenu.PlacementTarget = AnchorDot != null && AnchorDot.IsVisible ? AnchorDot : this;
+            WidgetContextMenu.IsOpen = true;
+        });
+    }
+
     private void SnapToScreen()
     {
         var pt = DesktopHostManager.SnapToScreenAndGrid(Left, Top, Width, Height, snapDistance: 15, gridStep: 10);
@@ -308,15 +366,20 @@ public partial class WidgetWindow : Window
     {
         if (AnchorDot == null) return;
 
+        // AnchorDot is ALWAYS blue (never red) as requested by user
+        AnchorDot.Background = new SolidColorBrush(Color.FromRgb(59, 130, 246)); // Vibrant blue #3B82F6
+        if (AnchorDot.Effect is System.Windows.Media.Effects.DropShadowEffect shadow)
+        {
+            shadow.Color = Color.FromRgb(96, 165, 250); // Glow #60A5FA
+        }
+
         if (Settings.IsClickThrough)
         {
-            AnchorDot.Background = new SolidColorBrush(Color.FromRgb(239, 68, 68)); // Red when ClickThrough is active
-            AnchorDot.ToolTip = "Режим клика насквозь ВКЛЮЧЕН (ПКМ — контекстное меню, ЛКМ — переместить)";
+            AnchorDot.ToolTip = "ChattyWidgets [Клик насквозь ВКЛ]: ПКМ — меню настроек, ЛКМ — переместить";
         }
         else
         {
-            AnchorDot.Background = new SolidColorBrush(Color.FromRgb(99, 102, 241)); // Indigo when normal
-            AnchorDot.ToolTip = "Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)";
+            AnchorDot.ToolTip = "ChattyWidgets: ПКМ — меню настроек, ЛКМ — переместить";
         }
     }
 

@@ -15,6 +15,8 @@ public class ChattyBridge
     private readonly Action<WidgetLayer>? _changeLayerAction;
     private readonly Action<bool>? _clickThroughAction;
     private readonly Action<double>? _opacityAction;
+    private readonly Action? _dragMoveAction;
+    private readonly Action? _contextMenuAction;
     private readonly string _storageFilePath;
 
     public ChattyBridge(
@@ -22,13 +24,17 @@ public class ChattyBridge
         Action? closeAction = null,
         Action<WidgetLayer>? changeLayerAction = null,
         Action<bool>? clickThroughAction = null,
-        Action<double>? opacityAction = null)
+        Action<double>? opacityAction = null,
+        Action? dragMoveAction = null,
+        Action? contextMenuAction = null)
     {
         _widgetId = widgetId;
         _closeAction = closeAction;
         _changeLayerAction = changeLayerAction;
         _clickThroughAction = clickThroughAction;
         _opacityAction = opacityAction;
+        _dragMoveAction = dragMoveAction;
+        _contextMenuAction = contextMenuAction;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -149,6 +155,16 @@ public class ChattyBridge
     public void setOpacity(double opacity)
     {
         Application.Current.Dispatcher.Invoke(() => _opacityAction?.Invoke(opacity));
+    }
+
+    public void dragMove()
+    {
+        Application.Current.Dispatcher.Invoke(() => _dragMoveAction?.Invoke());
+    }
+
+    public void showContextMenu()
+    {
+        Application.Current.Dispatcher.Invoke(() => _contextMenuAction?.Invoke());
     }
 
     public void log(string message)

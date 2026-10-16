@@ -84,11 +84,14 @@ public class WorkshopService
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: transparent;
+      width: 100vw;
       height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
     }
     .card {
       width: 100%;
@@ -97,6 +100,7 @@ public class WorkshopService
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 20px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
       padding: 20px;
       color: #F8FAFC;
       display: flex;
