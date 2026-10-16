@@ -1,0 +1,29 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## IDE cache
+.vs/
+.idea/
+*.swp
+*~
+
+## WebView2 cache
+**/webview_cache/
+
+## Test report generated during self-test
+TEST_REPORT.txt
+
+## OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

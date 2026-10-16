@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Стеклянные Часы</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background: transparent;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      overflow: hidden;
+    }
+    .widget-card {
+      width: 100%;
+      height: 100%;
+      background: rgba(18, 22, 34, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .widget-card::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      left: -20%;
+      width: 140%;
+      height: 60%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .date-label {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #94A3B8;
+    }
+    .system-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      color: #38BDF8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+    .system-dot {
+      width: 6px;
+      height: 6px;
+      background: #38BDF8;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #38BDF8;
+    }
+    .time-container {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .time-digits {
+      font-size: 54px;
+      font-weight: 700;
+      color: #F8FAFC;
+      letter-spacing: -1px;
+      text-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+      font-variant-numeric: tabular-nums;
+    }
+    .seconds-badge {
+      font-size: 20px;
+      font-weight: 600;
+      color: #818CF8;
+      font-variant-numeric: tabular-nums;
+    }
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+    }
+    .day-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #E2E8F0;
+    }
+    .weather-hint {
+      font-size: 12px;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-card">
+    <div class="top-bar">
+      <div class="date-label" id="dateLabel">16 ОКТЯБРЯ</div>
+      <div class="system-pill" id="systemPill">
+        <span class="system-dot"></span>
+        <span id="cpuPill">CPU --%</span>
+      </div>
+    </div>
+
+    <div class="time-container">
+      <span class="time-digits" id="timeDigits">00:00</span>
+      <span class="seconds-badge" id="secondsBadge">00</span>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="day-name" id="dayName">Пятница</div>
+      <div class="weather-hint" id="weatherHint">🌤 +18°C • Ясно</div>
+    </div>
+  </div>
+
+  <script>
+    const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    const months = ['ЯНВАРЯ', 'ФЕВРАЛЯ', 'МАРТА', 'АПРЕЛЯ', 'МАЯ', 'ИЮНЯ', 'ИЮЛЯ', 'АВГУСТА', 'СЕНТЯБРЯ', 'ОКТЯБРЯ', 'НОЯБРЯ', 'ДЕКАБРЯ'];
+
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+
+      document.getElementById('timeDigits').textContent = `${h}:${m}`;
+      document.getElementById('secondsBadge').textContent = s;
+
+      document.getElementById('dayName').textContent = days[now.getDay()];
+      document.getElementById('dateLabel').textContent = `${now.getDate()} ${months[now.getMonth()]}`;
+    }
+
+    function updateSystem() {
+      if (window.chatty) {
+        try {
+          const cpu = Math.round(window.chatty.getCpu());
+          document.getElementById('cpuPill').textContent = `CPU ${cpu}%`;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(updateSystem, 2000);
+  </script>
+</body>
+</html>

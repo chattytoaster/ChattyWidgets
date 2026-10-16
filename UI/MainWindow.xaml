@@ -1,0 +1,382 @@
+<Window x:Class="ChattyWidgets.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ChattyWidgets Hub"
+        Height="680" Width="980"
+        MinHeight="550" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="#0F111A"
+        Foreground="#F8FAFC"
+        UseLayoutRounding="True"
+        AllowDrop="True"
+        Drop="OnWindowDrop"
+        DragEnter="OnWindowDragEnter">
+
+    <Window.Resources>
+        <!-- Modern ScrollViewer style -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="8"/>
+        </Style>
+
+        <!-- Modern Button Style -->
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#6366F1"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#4F46E5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#1E2333"/>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#333B52"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2A3146"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Nav Tab RadioButton Style -->
+        <Style x:Key="NavTabBtn" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="TabBorder" Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}" Margin="0,0,6,0">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#1E2235"/>
+                                <Setter Property="Foreground" Value="#38BDF8"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#171A29"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Top App Bar -->
+            <RowDefinition Height="64"/>
+            <!-- Content Area -->
+            <RowDefinition Height="*"/>
+            <!-- Bottom Status Bar -->
+            <RowDefinition Height="32"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Header Navigation -->
+        <Border Grid.Row="0" Background="#121522" BorderBrush="#1E2336" BorderThickness="0,0,0,1" Padding="24,0">
+            <DockPanel LastChildFill="True">
+                <!-- Logo & Brand -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,32,0">
+                    <Border Width="34" Height="34" Background="#6366F1" CornerRadius="8" Margin="0,0,12,0">
+                        <TextBlock Text="✦" FontSize="18" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="ChattyWidgets" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        <TextBlock Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Action Button in Header -->
+                <Button DockPanel.Dock="Right" Content="+ Импорт .chw" Style="{StaticResource PrimaryBtn}" Click="OnImportChwClick" VerticalAlignment="Center"/>
+
+                <!-- Navigation Tabs -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="TabMyWidgets" Content="📱 Мои виджеты" Style="{StaticResource NavTabBtn}" IsChecked="True" Checked="OnTabChanged"/>
+                    <RadioButton x:Name="TabStore" Content="🛍 Магазин" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                    <RadioButton x:Name="TabWorkshop" Content="🛠 Мастерская" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                    <RadioButton x:Name="TabSettings" Content="⚙ Настройки" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="24">
+            
+            <!-- TAB 1: MY WIDGETS -->
+            <Grid x:Name="ViewMyWidgets" Visibility="Visible">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="Установленные виджеты" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock x:Name="TxtActiveCount" Text="0 активно" Foreground="#10B981" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <Button Content="Обновить" Style="{StaticResource SecondaryBtn}" Click="OnRefreshInstalledClick"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Cards list -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="InstalledWidgetsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Type icon badge -->
+                                        <Border Grid.Column="0" Width="44" Height="44" Background="#206366F1" CornerRadius="10" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding TypeBadge}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Details -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Manifest.Name}" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0"/>
+                                                <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Manifest.Type}" FontSize="10" FontWeight="Bold" Foreground="#818CF8"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Manifest.Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Manifest.Author, StringFormat='Автор: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="Папка" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
+                                            <Button Content="Удалить" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>
+                                            <Button Content="{Binding ToggleButtonText}" Style="{StaticResource PrimaryBtn}" Background="{Binding ToggleButtonBg}" Tag="{Binding Manifest.Id}" Click="OnToggleWidgetClick"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- TAB 2: STORE -->
+            <Grid x:Name="ViewStore" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="Магазин Виджетов" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC"/>
+                    <Button Content="Проверить обновления" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Right" Click="OnRefreshStoreClick"/>
+                </DockPanel>
+
+                <!-- Drag & drop box hint -->
+                <Border Grid.Row="1" Background="#141926" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
+                    <DockPanel>
+                        <TextBlock Text="📦 Подсказка: " FontWeight="Bold" Foreground="#38BDF8" DockPanel.Dock="Left"/>
+                        <TextBlock Text="Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." Foreground="#94A3B8"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Store Items Grid -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="StoreItemsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Width="44" Height="44" Background="#2038BDF8" CornerRadius="10" Margin="0,0,16,0">
+                                            <TextBlock Text="📦" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0"/>
+                                                <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Author, StringFormat='Разработчик: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <Button Content="{Binding ActionButtonText}" Style="{StaticResource PrimaryBtn}" 
+                                                    Background="{Binding ActionButtonBg}" IsEnabled="{Binding CanInstall}"
+                                                    Tag="{Binding}" Click="OnInstallStoreItemClick"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- TAB 3: WORKSHOP (DEVTOOLS) -->
+            <Grid x:Name="ViewWorkshop" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Мастерская Разработчика (.chw)" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Form: Create New Widget -->
+                        <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Создать новый виджет из шаблона" FontSize="15" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,12"/>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="ID виджета (латиница без пробелов):" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputNewWidgetId" Text="com.myname.cool-widget" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Название виджета:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputNewWidgetName" Text="Мой Новый Виджет" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Имя автора:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputNewWidgetAuthor" Text="Developer" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Тип рантайма:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="ComboNewWidgetType" SelectedIndex="0" Background="#10121C" Foreground="#F8FAFC" Padding="6">
+                                            <ComboBoxItem Content="Web (HTML/CSS/JavaScript + Edge WebView2)"/>
+                                            <ComboBoxItem Content="Native (Чистый XAML / .NET 8 с 0% CPU)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Краткое описание:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                <TextBox x:Name="InputNewWidgetDesc" Text="Полезный виджет для рабочего стола Windows" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13" Margin="0,0,0,16"/>
+
+                                <Button Content="✨ Создать каркас проекта виджета" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="OnCreateWidgetTemplateClick"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Form: Pack to .chw -->
+                        <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="Экспорт папки в пакет .chw (Сборщик)" FontSize="15" FontWeight="Bold" Foreground="#10B981" Margin="0,0,0,12"/>
+                                <TextBlock Text="Выберите папку с manifest.json и ресурсами виджета для упаковки в распространяемый файл .chw:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,8"/>
+
+                                <DockPanel Margin="0,0,0,12">
+                                    <Button Content="Обзор папки..." Style="{StaticResource SecondaryBtn}" DockPanel.Dock="Right" Margin="8,0,0,0" Click="OnBrowseFolderToPackClick"/>
+                                    <TextBox x:Name="InputPackFolderPath" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                </DockPanel>
+
+                                <Button Content="📦 Собрать пакет .chw" Style="{StaticResource PrimaryBtn}" Background="#10B981" HorizontalAlignment="Left" Click="OnExportChwPackageClick"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- TAB 4: SETTINGS -->
+            <Grid x:Name="ViewSettings" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Настройки движка" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,0,0,16">
+                            <StackPanel>
+                                <CheckBox x:Name="CheckAutostart" Content="Запускать ChattyWidgets автоматически при старте Windows" FontSize="14" Foreground="#F8FAFC" Checked="OnAutostartChanged" Unchecked="OnAutostartChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckSnapGrid" Content="Включить прилипание виджетов к краям экрана и сетке" FontSize="14" Foreground="#F8FAFC" IsChecked="True" Checked="OnSnapGridChanged" Unchecked="OnSnapGridChanged" Margin="0,0,0,14"/>
+                                <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Left" Click="OnOpenAppDataClick"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
+                                <TextBlock Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBlock Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+        </Grid>
+
+        <!-- Bottom Status Bar -->
+        <Border Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
+            <DockPanel LastChildFill="True">
+                <TextBlock x:Name="TxtStatus" Text="Готово" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+                <TextBlock Text="ChattyWidgets Engine v1.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
