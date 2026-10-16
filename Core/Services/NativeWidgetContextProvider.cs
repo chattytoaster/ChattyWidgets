@@ -522,10 +522,11 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
     public System.Windows.Media.ImageSource? CoverBitmap
     {
         get => _coverBitmap;
-        set { _coverBitmap = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasCover)); }
+        set { _coverBitmap = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasCover)); OnPropertyChanged(nameof(CoverVisibility)); }
     }
 
     public bool HasCover => _coverBitmap != null;
+    public Visibility CoverVisibility => _coverBitmap != null ? Visibility.Visible : Visibility.Collapsed;
 
     public ICommand PlayPauseCommand { get; }
     public ICommand NextCommand { get; }

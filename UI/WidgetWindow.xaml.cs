@@ -101,10 +101,22 @@ public partial class WidgetWindow : Window
         WidgetContextMenu.Closed += OnContextMenuClosed;
     }
 
+    private static void LogW(string msg)
+    {
+        try
+        {
+            string logDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+            System.IO.File.AppendAllText(System.IO.Path.Combine(logDir, "app.log"), $"[{DateTime.Now:HH:mm:ss.fff}] [WW] {msg}\n");
+        }
+        catch { }
+    }
+
     protected override void OnSourceInitialized(EventArgs e)
     {
+        LogW($"OnSourceInitialized start for {InstanceId}");
         base.OnSourceInitialized(e);
         _hwnd = new WindowInteropHelper(this).Handle;
+        LogW($"OnSourceInitialized hwnd={_hwnd} for {InstanceId}");
 
         var source = HwndSource.FromHwnd(_hwnd);
         if (source != null)
@@ -116,7 +128,6 @@ public partial class WidgetWindow : Window
             }
         }
 
-        // Enable DWM glass/transparent frame for frameless transparency without blocking WebView2 input
         var margins = new Win32Native.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
         Win32Native.DwmExtendFrameIntoClientArea(_hwnd, ref margins);
 
@@ -125,8 +136,11 @@ public partial class WidgetWindow : Window
             ApplyAcrylicBlur();
         }
 
+        LogW($"OnSourceInitialized calling ApplyLayer for {InstanceId}");
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
+        LogW($"OnSourceInitialized calling UpdateWindowShape for {InstanceId}");
         UpdateWindowShape();
+        LogW($"OnSourceInitialized done for {InstanceId}");
     }
 
     public void UpdateWindowShape()
@@ -141,59 +155,14 @@ public partial class WidgetWindow : Window
             // Suppress Windows 11 1px DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
             int noneColor = unchecked((int)0xFFFFFFFE);
             Win32Native.DwmSetWindowAttribute(_hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noneColor, sizeof(int));
-
-            // Clip HWND to exact rounded rectangle so DWM never draws rectangular corners or borders
-            double dpiScale = 1.0;
-            try
-            {
-                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
-                if (dpi.DpiScaleX > 0) dpiScale = dpi.DpiScaleX;
-            }
-            catch { }
-
-            double currentW = ActualWidth > 0 ? ActualWidth : Width;
-            double currentH = ActualHeight > 0 ? ActualHeight : Height;
-            int w = (int)Math.Round(currentW * dpiScale);
-            int h = (int)Math.Round(currentH * dpiScale);
-            if (w <= 0 || h <= 0) return;
-
-            // 20px radius in DIPs -> ellipse diameter in physical pixels
-            int ellipseDiam = (int)Math.Round(40 * dpiScale);
-            IntPtr hRgn = Win32Native.CreateRoundRectRgn(0, 0, w, h, ellipseDiam, ellipseDiam);
-            if (hRgn != IntPtr.Zero)
-            {
-                Win32Native.SetWindowRgn(_hwnd, hRgn, true);
-            }
         }
         catch { }
     }
 
     private void ApplyAcrylicBlur()
     {
-        if (_hwnd == IntPtr.Zero) return;
-        try
-        {
-            var accent = new Win32Native.AccentPolicy
-            {
-                AccentState = Win32Native.AccentState.ACCENT_ENABLE_BLURBEHIND,
-                GradientColor = 0x88121622
-            };
-            int accentStructSize = System.Runtime.InteropServices.Marshal.SizeOf(accent);
-            IntPtr accentPtr = System.Runtime.InteropServices.Marshal.AllocHGlobal(accentStructSize);
-            System.Runtime.InteropServices.Marshal.StructureToPtr(accent, accentPtr, false);
-
-            var data = new Win32Native.WindowCompositionAttributeData
-            {
-                Attribute = Win32Native.WindowCompositionAttribute.WCA_ACCENT_POLICY,
-                Data = accentPtr,
-                SizeOfData = accentStructSize
-            };
-
-            Win32Native.SetWindowCompositionAttribute(_hwnd, ref data);
-            System.Runtime.InteropServices.Marshal.FreeHGlobal(accentPtr);
-            UpdateWindowShape();
-        }
-        catch { }
+        // Safe no-op on modern Windows 11 to avoid KERNELBASE crashes and ugly rectangular straight blur edges.
+        UpdateWindowShape();
     }
 
     private Win32Native.SubclassProc? _subclassProc;

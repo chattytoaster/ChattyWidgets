@@ -11,17 +11,25 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        string logDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+        System.IO.Directory.CreateDirectory(logDir);
+        string appLog = System.IO.Path.Combine(logDir, "app.log");
+        void Log(string msg) {
+            try { System.IO.File.AppendAllText(appLog, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n"); } catch {}
+        }
+
+        Log("OnStartup entered");
         AttachConsole(-1);
         base.OnStartup(e);
 
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
-            try { System.IO.File.AppendAllText("crash.log", $"[CRITICAL UNHANDLED] {args.ExceptionObject}\n"); } catch { }
+            Log($"[CRITICAL UNHANDLED] {args.ExceptionObject}");
             System.Diagnostics.Debug.WriteLine($"[CRITICAL UNHANDLED] {args.ExceptionObject}");
         };
         DispatcherUnhandledException += (s, args) =>
         {
-            try { System.IO.File.AppendAllText("crash.log", $"[DISPATCHER UNHANDLED] {args.Exception}\n"); } catch { }
+            Log($"[DISPATCHER UNHANDLED] {args.Exception}");
             System.Diagnostics.Debug.WriteLine($"[DISPATCHER UNHANDLED] {args.Exception.Message}");
             args.Handled = true; // Prevent crash on binding or async errors
         };
@@ -30,6 +38,7 @@ public partial class App : System.Windows.Application
         // Check test argument
         if (allArgs.Any(a => a.Equals("--test", StringComparison.OrdinalIgnoreCase)))
         {
+            Log("Running self test");
             RunSelfTest();
             Shutdown(0);
             return;
@@ -38,21 +47,27 @@ public partial class App : System.Windows.Application
         // Single instance check: if another instance is running, pass command-line arguments to it and exit!
         if (!SingleInstanceService.TryStartAsFirstInstance(OnSecondInstanceArgsReceived))
         {
+            Log("Second instance detected, passing args and shutting down");
             SingleInstanceService.SendArgsToRunningInstance(e.Args);
             Shutdown(0);
             return;
         }
 
+        Log("First instance confirmed, proceeding");
+
         // Register .chw file association in Windows Registry so double-clicking installs widgets
-        FileAssociationService.EnsureFileAssociation();
+        try { FileAssociationService.EnsureFileAssociation(); } catch (Exception ex) { Log($"FileAssociation error: {ex.Message}"); }
 
         // 1. Unpack & prepare starter widgets
-        StarterWidgetsManager.InitializeStarterWidgets();
+        Log("Initializing StarterWidgets");
+        try { StarterWidgetsManager.InitializeStarterWidgets(); } catch (Exception ex) { Log($"StarterWidgets error: {ex.Message}"); }
 
         // 2. Initialize WidgetManager
-        WidgetManager.Instance.Initialize();
+        Log("Initializing WidgetManager");
+        try { WidgetManager.Instance.Initialize(); } catch (Exception ex) { Log($"WidgetManager error: {ex.Message}"); }
 
         // 3. Create Main Hub Window
+        Log("Creating MainWindow");
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
 
@@ -76,8 +91,18 @@ public partial class App : System.Windows.Application
 
         if (!startMinimized)
         {
-            mainWindow.Show();
+            Log("Showing MainWindow");
+            try
+            {
+                mainWindow.Show();
+                Log("mainWindow.Show returned OK");
+            }
+            catch (Exception ex)
+            {
+                Log($"mainWindow.Show THREW: {ex}");
+            }
         }
+        Log("OnStartup finished successfully");
     }
 
     private void OnSecondInstanceArgsReceived(string rawArgs)

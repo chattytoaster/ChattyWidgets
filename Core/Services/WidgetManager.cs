@@ -21,13 +21,26 @@ public class WidgetManager
     {
     }
 
+    private static void Log(string msg)
+    {
+        try
+        {
+            string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+            File.AppendAllText(Path.Combine(logDir, "app.log"), $"[{DateTime.Now:HH:mm:ss.fff}] [WM] {msg}\n");
+        }
+        catch { }
+    }
+
     public void Initialize()
     {
+        Log("Initialize start");
         LoadSettings();
+        Log("LoadSettings done");
         ChwPackageService.RegisterFileAssociation();
 
         var installed = ChwPackageService.GetInstalledWidgets();
         var installedSet = new HashSet<string>(installed.Select(x => x.Manifest.Id));
+        Log($"Installed count: {installed.Count}");
 
         // Launch all widget instances that were saved as enabled
         foreach (var kvp in Settings.Widgets.ToList())
@@ -38,12 +51,24 @@ public class WidgetManager
 
             if (widgetSetting.IsEnabled && installedSet.Contains(baseId))
             {
-                StartWidget(baseId, instanceId);
+                Log($"Starting {baseId} ({instanceId})");
+                try
+                {
+                    StartWidget(baseId, instanceId);
+                    Log($"Started {baseId} ({instanceId}) OK");
+                }
+                catch (Exception ex)
+                {
+                    Log($"ERROR starting {baseId}: {ex}");
+                }
             }
         }
 
+        Log("Presets check");
         PresetService.Instance.EnsureDefaultPresets();
+        Log("HotReload check");
         HotReloadService.Instance.Start();
+        Log("Initialize complete");
     }
 
     public IEnumerable<WidgetWindow> GetActiveWindows() => _activeWindows.Values;
@@ -128,13 +153,17 @@ public class WidgetManager
 
         widgetSetting.IsEnabled = true;
 
+        Log($"StartWidget: creating WidgetWindow for {instId}");
         var window = new WidgetWindow(item.Manifest, item.DirectoryPath, widgetSetting);
         window.WidgetClosed += OnWidgetClosed;
         window.SettingsChanged += OnWidgetSettingsChanged;
 
         _activeWindows[instId] = window;
+        Log($"StartWidget: calling window.Show() for {instId}");
         window.Show();
+        Log($"StartWidget: calling window.Activate() for {instId}");
         window.Activate();
+        Log($"StartWidget: finished for {instId}");
 
         SaveSettings();
         WidgetsChanged?.Invoke();
