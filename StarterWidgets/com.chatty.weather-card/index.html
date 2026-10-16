@@ -295,6 +295,7 @@
       </div>
       <input type="text" class="city-input" id="cityInput" placeholder="Поиск города (напр. Казань, Сочи)..." onkeydown="if(event.key==='Enter') searchAndSelectCity()" />
       <div class="city-quick-list">
+        <div class="city-chip" style="background:#38BDF8;color:#0F172A;font-weight:700;" onclick="selectAutoLocation()">🌐 Авто (по IP)</div>
         <div class="city-chip" onclick="selectPreset('Москва', 55.7558, 37.6173)">Москва</div>
         <div class="city-chip" onclick="selectPreset('Санкт-Петербург', 59.9343, 30.3351)">СПб</div>
         <div class="city-chip" onclick="selectPreset('Новосибирск', 55.0084, 82.9357)">Новосибирск</div>
@@ -335,14 +336,67 @@
       96: { text: 'Гроза с градом', icon: '⛈', glow: 'rgba(139, 92, 246, 0.45)' }
     };
 
-    function loadSavedCity() {
+    async function detectLocationAutomatically() {
+      try {
+        const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        if (geoRes.ok) {
+          const geo = await geoRes.json();
+          if (geo.latitude && geo.longitude) {
+            currentCity = {
+              name: geo.city || geo.region || 'Авто',
+              lat: parseFloat(geo.latitude),
+              lon: parseFloat(geo.longitude),
+              isAuto: true
+            };
+            document.getElementById('cityName').textContent = currentCity.name;
+            if (window.chatty) {
+              window.chatty.storageSet('weather_city', JSON.stringify(currentCity));
+            }
+            return true;
+          }
+        }
+      } catch(e) {}
+
+      // Fallback to freeipapi
+      try {
+        const altRes = await fetch('https://freeipapi.com/api/json');
+        if (altRes.ok) {
+          const alt = await altRes.json();
+          if (alt.latitude && alt.longitude) {
+            currentCity = {
+              name: alt.cityName || alt.regionName || 'Авто',
+              lat: parseFloat(alt.latitude),
+              lon: parseFloat(alt.longitude),
+              isAuto: true
+            };
+            document.getElementById('cityName').textContent = currentCity.name;
+            if (window.chatty) {
+              window.chatty.storageSet('weather_city', JSON.stringify(currentCity));
+            }
+            return true;
+          }
+        }
+      } catch(e) {}
+      return false;
+    }
+
+    async function loadSavedCity() {
+      let isManual = false;
       if (window.chatty) {
         const saved = window.chatty.storageGet('weather_city', '');
         if (saved) {
           try {
-            currentCity = JSON.parse(saved);
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.name && !parsed.isAuto) {
+              currentCity = parsed;
+              isManual = true;
+            }
           } catch(e) {}
         }
+      }
+
+      if (!isManual) {
+        await detectLocationAutomatically();
       }
       document.getElementById('cityName').textContent = currentCity.name;
     }
@@ -398,8 +452,14 @@
       document.getElementById('cityModal').classList.remove('open');
     }
 
+    async function selectAutoLocation() {
+      await detectLocationAutomatically();
+      closeCityModal();
+      fetchWeather();
+    }
+
     function selectPreset(name, lat, lon) {
-      currentCity = { name, lat, lon };
+      currentCity = { name, lat, lon, isAuto: false };
       document.getElementById('cityName').textContent = name;
       if (window.chatty) {
         window.chatty.storageSet('weather_city', JSON.stringify(currentCity));
@@ -436,8 +496,7 @@
       }
     };
 
-    loadSavedCity();
-    fetchWeather();
+    loadSavedCity().then(() => fetchWeather());
     setInterval(fetchWeather, 15 * 60 * 1000); // 15 mins
   </script>
 </body>

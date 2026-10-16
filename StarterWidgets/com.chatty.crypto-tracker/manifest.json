@@ -3,7 +3,7 @@
   "name": "Курсы Валют и Крипты",
   "version": "1.0.0",
   "author": "ChattyWidgets",
-  "description": "Котировки BTC, ETH, TON, SOL, а также курсы USD, EUR и RUB в реальном времени.",
+  "description": "Котировки BTC, ETH, GRAM, SOL, а также курсы USD, EUR и RUB в реальном времени.",
   "type": "web",
   "entry": "index.html",
   "icon": "icon.png",

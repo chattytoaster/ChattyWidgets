@@ -25,6 +25,7 @@ public class ChattyBridge
     private readonly Func<bool>? _isLockedFunc;
     private readonly Func<bool>? _isClickThroughFunc;
     private readonly string _storageFilePath;
+    private readonly string _dataStorageFilePath;
 
     public ChattyBridge(
         string widgetId,
@@ -60,6 +61,20 @@ public class ChattyBridge
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
         _storageFilePath = Path.Combine(widgetDir, "storage.json");
+
+        string dataDir = Path.Combine(ChwPackageService.DataDir, widgetId);
+        Directory.CreateDirectory(dataDir);
+        _dataStorageFilePath = Path.Combine(dataDir, "storage.json");
+
+        // Migrate if needed
+        if (!File.Exists(_storageFilePath) && File.Exists(_dataStorageFilePath))
+        {
+            try { File.Copy(_dataStorageFilePath, _storageFilePath, true); } catch { }
+        }
+        else if (File.Exists(_storageFilePath) && !File.Exists(_dataStorageFilePath))
+        {
+            try { File.Copy(_storageFilePath, _dataStorageFilePath, true); } catch { }
+        }
     }
 
     // --- SYSTEM API ---
@@ -98,10 +113,11 @@ public class ChattyBridge
     {
         try
         {
-            if (!File.Exists(_storageFilePath))
+            string path = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            if (!File.Exists(path))
                 return defaultValue;
 
-            string json = File.ReadAllText(_storageFilePath);
+            string json = File.ReadAllText(path);
             var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
             if (dict != null && dict.TryGetValue(key, out var val))
             {
@@ -117,9 +133,10 @@ public class ChattyBridge
         try
         {
             Dictionary<string, string> dict;
-            if (File.Exists(_storageFilePath))
+            string readPath = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            if (File.Exists(readPath))
             {
-                string json = File.ReadAllText(_storageFilePath);
+                string json = File.ReadAllText(readPath);
                 dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
             }
             else
@@ -128,7 +145,9 @@ public class ChattyBridge
             }
 
             dict[key] = value;
-            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true }));
+            string output = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_storageFilePath, output);
+            File.WriteAllText(_dataStorageFilePath, output);
         }
         catch { }
     }
@@ -137,13 +156,16 @@ public class ChattyBridge
     {
         try
         {
-            if (File.Exists(_storageFilePath))
+            string readPath = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            if (File.Exists(readPath))
             {
-                string json = File.ReadAllText(_storageFilePath);
+                string json = File.ReadAllText(readPath);
                 var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (dict != null && dict.Remove(key))
                 {
-                    File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true }));
+                    string output = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(_storageFilePath, output);
+                    File.WriteAllText(_dataStorageFilePath, output);
                 }
             }
         }

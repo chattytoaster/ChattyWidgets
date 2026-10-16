@@ -14,12 +14,14 @@ public class ChwPackageService
     );
 
     public static readonly string WidgetsDir = Path.Combine(AppDataDir, "widgets");
+    public static readonly string DataDir = Path.Combine(AppDataDir, "data");
     public static readonly string SettingsFile = Path.Combine(AppDataDir, "settings.json");
 
     static ChwPackageService()
     {
         Directory.CreateDirectory(AppDataDir);
         Directory.CreateDirectory(WidgetsDir);
+        Directory.CreateDirectory(DataDir);
     }
 
     /// <summary>
@@ -46,14 +48,31 @@ public class ChwPackageService
 
             // Destination directory
             string destDir = Path.Combine(WidgetsDir, manifest.Id);
+
+            // Preserve user data before replacing files
+            string storageFile = Path.Combine(destDir, "storage.json");
+            string? preservedStorage = File.Exists(storageFile) ? File.ReadAllText(storageFile) : null;
+            var mediaFiles = Directory.Exists(destDir) ? Directory.GetFiles(destDir, "user_media.*") : Array.Empty<string>();
+            var preservedMedia = mediaFiles.Select(f => (Path.GetFileName(f), File.ReadAllBytes(f))).ToList();
+
             if (Directory.Exists(destDir))
             {
                 Directory.Delete(destDir, true);
             }
             Directory.CreateDirectory(destDir);
 
-            // Copy all files
+            // Copy all package files
             CopyDirectory(tempExtract, destDir);
+
+            // Restore user data
+            if (preservedStorage != null)
+            {
+                File.WriteAllText(storageFile, preservedStorage);
+            }
+            foreach (var (name, bytes) in preservedMedia)
+            {
+                File.WriteAllBytes(Path.Combine(destDir, name), bytes);
+            }
 
             return manifest;
         }

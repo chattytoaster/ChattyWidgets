@@ -95,6 +95,63 @@ public partial class WidgetWindow : Window
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
     }
 
+    private Win32Native.SubclassProc? _subclassProc;
+    private readonly List<IntPtr> _subclassedHwnds = new();
+
+    private void AttachClickThroughSubclass()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        _subclassProc ??= SubclassCallback;
+
+        Win32Native.EnumChildWindows(_hwnd, (childHwnd, lParam) =>
+        {
+            if (!_subclassedHwnds.Contains(childHwnd))
+            {
+                _subclassedHwnds.Add(childHwnd);
+                Win32Native.SetWindowSubclass(childHwnd, _subclassProc, (UIntPtr)101, UIntPtr.Zero);
+            }
+            return true;
+        }, IntPtr.Zero);
+    }
+
+    private IntPtr SubclassCallback(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, UIntPtr dwRefData)
+    {
+        if (uMsg == (uint)Win32Native.WM_NCHITTEST)
+        {
+            if (Settings.IsClickThrough)
+            {
+                int x = (short)(lParam.ToInt64() & 0xFFFF);
+                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+                var pt = PointFromScreen(new Point(x, y));
+
+                // Anchor dot hotspot (top-right corner 36x36)
+                if (pt.X >= (Width - 36) && pt.X <= Width && pt.Y >= 0 && pt.Y <= 36)
+                {
+                    return (IntPtr)Win32Native.HTCLIENT;
+                }
+
+                // Pass through clicks to windows underneath
+                return (IntPtr)Win32Native.HTTRANSPARENT;
+            }
+        }
+        else if (uMsg == (uint)Win32Native.WM_RBUTTONUP)
+        {
+            if (Settings.IsClickThrough)
+            {
+                int x = (short)(lParam.ToInt64() & 0xFFFF);
+                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+                var pt = PointFromScreen(new Point(x, y));
+                if (pt.X >= (Width - 36) && pt.X <= Width && pt.Y >= 0 && pt.Y <= 36)
+                {
+                    ShowWidgetContextMenu();
+                    return IntPtr.Zero;
+                }
+            }
+        }
+
+        return Win32Native.DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    }
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == Win32Native.WM_NCHITTEST)
@@ -105,17 +162,11 @@ public partial class WidgetWindow : Window
                 int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
                 var windowPt = PointFromScreen(new Point(x, y));
 
-                // Check if cursor is over AnchorDot
-                if (AnchorDot.IsVisible)
+                // Check if cursor is over AnchorDot (top-right corner 36x36)
+                if (windowPt.X >= (Width - 36) && windowPt.X <= Width && windowPt.Y >= 0 && windowPt.Y <= 36)
                 {
-                    var anchorPos = AnchorDot.TranslatePoint(new Point(0, 0), this);
-                    var anchorRect = new Rect(anchorPos.X - 4, anchorPos.Y - 4, AnchorDot.ActualWidth + 8, AnchorDot.ActualHeight + 8);
-
-                    if (anchorRect.Contains(windowPt))
-                    {
-                        handled = true;
-                        return (IntPtr)Win32Native.HTCLIENT;
-                    }
+                    handled = true;
+                    return (IntPtr)Win32Native.HTCLIENT;
                 }
 
                 // Everywhere else on the widget: pass through clicks
@@ -288,6 +339,23 @@ public partial class WidgetWindow : Window
                     }
                 }
 
+                // Click-through CSS rules
+                var ctStyle = document.createElement('style');
+                ctStyle.textContent = `
+                    body.chatty-click-through {
+                        pointer-events: none !important;
+                    }
+                    body.chatty-click-through .chatty-anchor-dot,
+                    body.chatty-click-through #chatty-control-dot {
+                        pointer-events: auto !important;
+                    }
+                `;
+                if (document.head) {
+                    document.head.appendChild(ctStyle);
+                } else {
+                    document.addEventListener('DOMContentLoaded', function() { document.head.appendChild(ctStyle); });
+                }
+
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', setupChattyDot);
                 } else {
@@ -300,6 +368,11 @@ public partial class WidgetWindow : Window
             {
                 LoadingIndicator.Visibility = Visibility.Collapsed;
                 ApplyBackgroundOpacity(Settings.Opacity);
+                AttachClickThroughSubclass();
+                if (Settings.IsClickThrough)
+                {
+                    ApplyClickThroughDomState(true);
+                }
             };
 
             string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
@@ -474,9 +547,22 @@ public partial class WidgetWindow : Window
     public void SetClickThrough(bool clickThrough)
     {
         Settings.IsClickThrough = clickThrough;
+        AttachClickThroughSubclass();
+        ApplyClickThroughDomState(clickThrough);
         UpdateMenuChecks();
         UpdateAnchorDotStyle();
         SettingsChanged?.Invoke(this);
+    }
+
+    private void ApplyClickThroughDomState(bool clickThrough)
+    {
+        if (_webView?.CoreWebView2 != null)
+        {
+            string script = clickThrough
+                ? "document.body.classList.add('chatty-click-through');"
+                : "document.body.classList.remove('chatty-click-through');";
+            _webView.CoreWebView2.ExecuteScriptAsync(script);
+        }
     }
 
     public void SetLocked(bool locked)

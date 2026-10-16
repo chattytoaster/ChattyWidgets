@@ -185,10 +185,10 @@
     <video id="mediaVideo" class="media-element" autoplay loop muted playsinline></video>
 
     <!-- Empty state placeholder -->
-    <div class="placeholder" id="placeholder" onclick="openFilePicker()">
+    <div class="placeholder" id="placeholder">
       <div class="icon-box">🖼️</div>
       <div class="placeholder-title">Перетащите сюда фото или видео</div>
-      <div class="placeholder-subtitle">или нажмите для выбора файла с ПК</div>
+      <div class="placeholder-subtitle">или нажмите ПКМ для выбора файла</div>
       <div class="format-chips">
         <span class="chip">JPG</span>
         <span class="chip">PNG</span>
@@ -196,14 +196,6 @@
         <span class="chip">MP4</span>
         <span class="chip">WEBM</span>
       </div>
-    </div>
-
-    <!-- Floating controls overlay -->
-    <div class="overlay-toolbar" id="toolbar">
-      <button class="tool-btn" title="Выбрать файл" onclick="openFilePicker()">📁 Файл</button>
-      <button class="tool-btn" id="btnFit" title="Масштаб (Cover / Contain)" onclick="toggleFit()">🔍 Заполнить</button>
-      <button class="tool-btn" id="btnSound" title="Звук видео" onclick="toggleSound()" style="display:none;">🔇 Звук</button>
-      <button class="tool-btn" title="Сбросить" onclick="resetMedia()" style="color:#F87171;">✕</button>
     </div>
 
     <input type="file" id="fileInput" accept="image/*,video/*" style="display:none" onchange="handleNativeInput(event)" />
@@ -317,14 +309,14 @@
         videoEl.src = src;
         videoEl.muted = isMuted;
         videoEl.play().catch(() => {});
-        btnSound.style.display = 'flex';
+        if (btnSound) btnSound.style.display = 'flex';
       } else {
         currentType = 'image';
         videoEl.pause();
         videoEl.style.display = 'none';
         imgEl.style.display = 'block';
         imgEl.src = src;
-        btnSound.style.display = 'none';
+        if (btnSound) btnSound.style.display = 'none';
       }
 
       applyFitMode();
@@ -342,18 +334,18 @@
       if (currentFit === 'contain') {
         imgEl.classList.add('contain-mode');
         videoEl.classList.add('contain-mode');
-        btnFit.textContent = '🔍 По размеру';
+        if (btnFit) btnFit.textContent = '🔍 По размеру';
       } else {
         imgEl.classList.remove('contain-mode');
         videoEl.classList.remove('contain-mode');
-        btnFit.textContent = '🔍 Заполнить';
+        if (btnFit) btnFit.textContent = '🔍 Заполнить';
       }
     }
 
     function toggleSound() {
       isMuted = !isMuted;
       videoEl.muted = isMuted;
-      btnSound.textContent = isMuted ? '🔇 Звук' : '🔊 Звук';
+      if (btnSound) btnSound.textContent = isMuted ? '🔇 Звук' : '🔊 Звук';
     }
 
     function resetMedia() {

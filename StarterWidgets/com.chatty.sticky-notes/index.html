@@ -186,20 +186,26 @@
     let tasks = [];
 
     function loadTasks() {
+      let isInit = false;
       if (window.chatty) {
         try {
-          const raw = window.chatty.storageGet('tasks', '[]');
-          tasks = JSON.parse(raw);
+          const initFlag = window.chatty.storageGet('tasks_init', '');
+          isInit = initFlag === 'true';
+          const raw = window.chatty.storageGet('tasks', '');
+          if (raw) {
+            tasks = JSON.parse(raw);
+          }
         } catch(e) {
           tasks = [];
         }
       }
-      if (!tasks || tasks.length === 0) {
+      if (!isInit && (!tasks || tasks.length === 0)) {
         tasks = [
           { text: 'Создать свой виджет (.chw)', done: false },
           { text: 'Открыть магазин ChattyWidgets', done: true },
           { text: 'Настроить слой на рабочем столе', done: false }
         ];
+        if (window.chatty) window.chatty.storageSet('tasks_init', 'true');
       }
       render();
     }
@@ -207,6 +213,7 @@
     function saveTasks() {
       if (window.chatty) {
         try {
+          window.chatty.storageSet('tasks_init', 'true');
           window.chatty.storageSet('tasks', JSON.stringify(tasks));
         } catch(e) {}
       }

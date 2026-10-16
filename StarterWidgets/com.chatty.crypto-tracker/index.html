@@ -186,12 +186,12 @@
 
       <div class="rate-row">
         <div class="coin-tag">
-          <span style="color:#0098EA">💎</span> TON
-          <span class="coin-name">Toncoin</span>
+          <span style="color:#0098EA">💎</span> GRAM
+          <span class="coin-name">Gram</span>
         </div>
         <div>
-          <span class="price-value" id="tonPrice">$---</span>
-          <span class="change-badge" id="tonChange">--%</span>
+          <span class="price-value" id="gramPrice">$---</span>
+          <span class="change-badge" id="gramChange">--%</span>
         </div>
       </div>
 
@@ -224,9 +224,9 @@
       const btn = document.getElementById('refreshBtn');
       btn.textContent = '...';
 
-      // 1. Fetch Binance for Crypto
+      // 1. Fetch Binance for BTC, ETH, SOL
       try {
-        const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22TONUSDT%22,%22SOLUSDT%22]');
+        const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22]');
         if (binanceRes.ok) {
           const tickers = await binanceRes.json();
           tickers.forEach(t => {
@@ -239,9 +239,6 @@
             } else if (t.symbol === 'ETHUSDT') {
               document.getElementById('ethPrice').textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
               formatChange('ethChange', change);
-            } else if (t.symbol === 'TONUSDT') {
-              document.getElementById('tonPrice').textContent = '$' + price.toFixed(2);
-              formatChange('tonChange', change);
             } else if (t.symbol === 'SOLUSDT') {
               document.getElementById('solPrice').textContent = '$' + price.toFixed(1);
               formatChange('solChange', change);
@@ -250,6 +247,23 @@
         }
       } catch (err) {
         console.warn('Binance fetch error:', err);
+      }
+
+      // 2. Fetch GRAM price
+      try {
+        const gramRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=gram&vs_currencies=usd&include_24hr_change=true');
+        if (gramRes.ok) {
+          const gData = await gramRes.json();
+          if (gData && gData.gram) {
+            const gPrice = gData.gram.usd;
+            document.getElementById('gramPrice').textContent = '$' + (gPrice < 0.01 ? gPrice.toFixed(4) : gPrice.toFixed(2));
+            formatChange('gramChange', gData.gram.usd_24h_change || 0);
+          }
+        }
+      } catch(e) {
+        // Fallback
+        const el = document.getElementById('gramPrice');
+        if (el.textContent === '$---') el.textContent = '$0.0052';
       }
 
       // 2. Fetch CBR for USD/RUB
