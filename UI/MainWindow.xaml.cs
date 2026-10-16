@@ -217,11 +217,11 @@ public partial class MainWindow : Window
         int updates = catalog.Count(x => x.HasUpdate);
         if (updates > 0)
         {
-            MessageBox.Show($"Найдено обновлений: {updates}!\nНажмите кнопку «Обновить» на карточке виджета для установки.", "Обновления виджетов", MessageBoxButton.OK, MessageBoxImage.Information);
+            _trayIcon?.ShowNotification("Обновления виджетов", $"Найдено {updates} обновлений. Нажмите «Обновить» на карточке виджета.");
         }
         else
         {
-            MessageBox.Show("Все установленные виджеты обновлены до последней версии.", "Обновления виджетов", MessageBoxButton.OK, MessageBoxImage.Information);
+            _trayIcon?.ShowNotification("ChattyWidgets", "Все установленные виджеты актуальны.");
         }
     }
 
@@ -306,14 +306,15 @@ public partial class MainWindow : Window
                 {
                     await StoreService.Instance.InstallStoreItemAsync(item);
                     RefreshInstalledWidgets();
-                    TxtStatus.Text = $"Виджет '{item.Name}' успешно обновлен!";
-                    MessageBox.Show($"Виджет '{item.Name}' успешно обновлен до версии v{item.Version}!", "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                    await RefreshStoreCatalogAsync();
+                    TxtStatus.Text = $"Виджет '{item.Name}' успешно обновлен до v{item.Version}!";
+                    _trayIcon?.ShowNotification("Виджет обновлен", $"'{item.Name}' успешно обновлен до версии v{item.Version}!");
                 }
             }
             catch (Exception ex)
             {
                 TxtStatus.Text = $"Ошибка обновления: {ex.Message}";
-                MessageBox.Show($"Ошибка обновления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _trayIcon?.ShowNotification("Ошибка обновления", ex.Message);
             }
         }
     }
@@ -569,11 +570,11 @@ public partial class MainWindow : Window
         int updates = catalog?.Count(x => x.HasUpdate) ?? 0;
         if (updates > 0)
         {
-            MessageBox.Show($"Проверка завершена! Найдено обновлений: {updates}.\nКнопки «Обновить» активны в Магазине и на вкладке «Мои виджеты».", "Проверка обновлений", MessageBoxButton.OK, MessageBoxImage.Information);
+            _trayIcon?.ShowNotification("Обновления каталога", $"Найдено {updates} обновлений. Доступны в Магазине и Хабе.");
         }
         else
         {
-            MessageBox.Show("Все виджеты обновлены до актуальной версии из каталога.", "Проверка обновлений", MessageBoxButton.OK, MessageBoxImage.Information);
+            _trayIcon?.ShowNotification("ChattyWidgets", "Все виджеты обновлены до актуальной версии.");
         }
     }
 
@@ -602,12 +603,11 @@ public partial class MainWindow : Window
                     : $"'{manifest.Name}' успешно добавлен на рабочий стол.";
 
                 _trayIcon?.ShowNotification(title, msg);
-                MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Магазин", MessageBoxButton.OK, MessageBoxImage.Error);
-                TxtStatus.Text = "Ошибка установки виджета.";
+                _trayIcon?.ShowNotification("Ошибка", ex.Message);
+                TxtStatus.Text = $"Ошибка: {ex.Message}";
             }
         }
     }

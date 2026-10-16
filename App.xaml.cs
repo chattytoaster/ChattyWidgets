@@ -10,6 +10,16 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[CRITICAL UNHANDLED] {args.ExceptionObject}");
+        };
+        DispatcherUnhandledException += (s, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[DISPATCHER UNHANDLED] {args.Exception.Message}");
+            args.Handled = true; // Prevent crash on binding or async errors
+        };
+
         var allArgs = Environment.GetCommandLineArgs().Concat(e.Args).ToArray();
         // Check test argument
         if (allArgs.Any(a => a.Equals("--test", StringComparison.OrdinalIgnoreCase)))

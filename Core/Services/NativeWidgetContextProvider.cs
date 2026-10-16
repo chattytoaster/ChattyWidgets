@@ -81,10 +81,10 @@ public class CalendarWidgetViewModel : NativeViewModelBase
 {
     private DateTime _displayDate = DateTime.Today;
 
-    public string MonthYear => _displayDate.ToString("MMMM yyyy", new System.Globalization.CultureInfo("ru-RU")).ToUpper();
-    public string TodayFull => DateTime.Today.ToString("d MMMM, dddd", new System.Globalization.CultureInfo("ru-RU"));
-    public string CurrentDayNumber => DateTime.Today.Day.ToString();
-    public string CurrentWeekday => DateTime.Today.ToString("dddd", new System.Globalization.CultureInfo("ru-RU"));
+    public string MonthYear { get => _displayDate.ToString("MMMM yyyy", new System.Globalization.CultureInfo("ru-RU")).ToUpper(); set {} }
+    public string TodayFull { get => DateTime.Today.ToString("d MMMM, dddd", new System.Globalization.CultureInfo("ru-RU")); set {} }
+    public string CurrentDayNumber { get => DateTime.Today.Day.ToString(); set {} }
+    public string CurrentWeekday { get => DateTime.Today.ToString("dddd", new System.Globalization.CultureInfo("ru-RU")); set {} }
 
     public ObservableCollection<CalendarDayItem> Days { get; } = new();
 
@@ -155,10 +155,52 @@ public class CryptoWidgetViewModel : NativeViewModelBase
 public class GpuMonitorWidgetViewModel : NativeViewModelBase
 {
     public SystemMonitorService Monitor => SystemMonitorService.Instance;
-    public string GpuName => Monitor.CurrentMetrics.GpuName;
-    public double GpuPercent => Monitor.CurrentMetrics.GpuPercent;
-    public double GpuMemoryPercent => Monitor.CurrentMetrics.GpuMemoryPercent;
-    public double GpuTemp => Monitor.CurrentMetrics.GpuTemperature;
+
+    private double _gpuPercent;
+    public double GpuPercent
+    {
+        get => _gpuPercent;
+        set { _gpuPercent = value; OnPropertyChanged(); }
+    }
+
+    private double _gpuMemoryPercent;
+    public double GpuMemoryPercent
+    {
+        get => _gpuMemoryPercent;
+        set { _gpuMemoryPercent = value; OnPropertyChanged(); }
+    }
+
+    private double _gpuTemp;
+    public double GpuTemp
+    {
+        get => _gpuTemp;
+        set { _gpuTemp = value; OnPropertyChanged(); }
+    }
+
+    private string _gpuName = "GPU";
+    public string GpuName
+    {
+        get => _gpuName;
+        set { _gpuName = value; OnPropertyChanged(); }
+    }
+
+    public GpuMonitorWidgetViewModel()
+    {
+        UpdateFrom(Monitor.CurrentMetrics);
+        Monitor.MetricsUpdated += (metrics) =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() => UpdateFrom(metrics));
+        };
+    }
+
+    private void UpdateFrom(SystemMetrics metrics)
+    {
+        if (metrics == null) return;
+        GpuName = metrics.GpuName;
+        GpuPercent = metrics.GpuPercent;
+        GpuMemoryPercent = metrics.GpuMemoryPercent;
+        GpuTemp = metrics.GpuTemperature;
+    }
 }
 
 // 4. Media Frame ViewModel
@@ -309,10 +351,10 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     private bool _isRunning = false;
     private bool _isFocusMode = true;
 
-    public string TimeText => $"{_remainingSeconds / 60:D2}:{_remainingSeconds % 60:D2}";
-    public string ModeText => _isFocusMode ? "🎯 ФОКУС" : "☕ ОТДЫХ";
-    public string ActionButtonText => _isRunning ? "Пауза" : "Старт";
-    public string AccentColor => _isFocusMode ? "#EF4444" : "#10B981";
+    public string TimeText { get => $"{_remainingSeconds / 60:D2}:{_remainingSeconds % 60:D2}"; set {} }
+    public string ModeText { get => _isFocusMode ? "🎯 ФОКУС" : "☕ ОТДЫХ"; set {} }
+    public string ActionButtonText { get => _isRunning ? "Пауза" : "Старт"; set {} }
+    public string AccentColor { get => _isFocusMode ? "#EF4444" : "#10B981"; set {} }
 
     public double ProgressPercent
     {
@@ -321,6 +363,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             int total = (_isFocusMode ? 25 : 5) * 60;
             return total > 0 ? ((double)(total - _remainingSeconds) / total) * 100 : 0;
         }
+        set {}
     }
 
     public ICommand ToggleTimerCommand { get; }
@@ -504,13 +547,13 @@ public class ForecastDayItem
 
 public class WeatherWidgetViewModel : NativeViewModelBase
 {
-    public string City => "Москва";
-    public string Temperature => "+14°C";
-    public string Condition => "Переменная облачность";
-    public string WeatherIcon => "⛅";
-    public string Humidity => "64%";
-    public string WindSpeed => "3.4 м/с";
-    public string Pressure => "752 мм";
+    public string City { get => "Москва"; set {} }
+    public string Temperature { get => "+14°C"; set {} }
+    public string Condition { get => "Переменная облачность"; set {} }
+    public string WeatherIcon { get => "⛅"; set {} }
+    public string Humidity { get => "64%"; set {} }
+    public string WindSpeed { get => "3.4 м/с"; set {} }
+    public string Pressure { get => "752 мм"; set {} }
 
     public ObservableCollection<ForecastDayItem> Forecast { get; } = new();
 

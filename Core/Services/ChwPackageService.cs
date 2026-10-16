@@ -55,11 +55,25 @@ public class ChwPackageService
             var mediaFiles = Directory.Exists(destDir) ? Directory.GetFiles(destDir, "user_media.*") : Array.Empty<string>();
             var preservedMedia = mediaFiles.Select(f => (Path.GetFileName(f), File.ReadAllBytes(f))).ToList();
 
-            if (Directory.Exists(destDir))
+            if (!Directory.Exists(destDir))
             {
-                Directory.Delete(destDir, true);
+                Directory.CreateDirectory(destDir);
             }
-            Directory.CreateDirectory(destDir);
+            else
+            {
+                // Clean up old package files safely without touching user data or crashing on locks
+                try
+                {
+                    foreach (var file in Directory.GetFiles(destDir))
+                    {
+                        string fname = Path.GetFileName(file);
+                        if (fname == "storage.json" || fname.StartsWith("user_media."))
+                            continue;
+                        try { File.Delete(file); } catch { }
+                    }
+                }
+                catch { }
+            }
 
             // Copy all package files
             CopyDirectory(tempExtract, destDir);

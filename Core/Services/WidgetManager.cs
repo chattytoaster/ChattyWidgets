@@ -172,26 +172,29 @@ public class WidgetManager
 
     public void RestartWidgetInstances(string baseWidgetId)
     {
-        var matchingWindows = _activeWindows.Values
-            .Where(w => w.BaseWidgetId == baseWidgetId)
-            .Select(w => (w.InstanceId, w.Settings))
-            .ToList();
-
-        if (matchingWindows.Count == 0) return;
-
-        foreach (var (instId, _) in matchingWindows)
+        Application.Current?.Dispatcher?.Invoke(() =>
         {
-            if (_activeWindows.TryGetValue(instId, out var win))
+            var matchingWindows = _activeWindows.Values
+                .Where(w => w.BaseWidgetId == baseWidgetId)
+                .Select(w => (w.InstanceId, w.Settings))
+                .ToList();
+
+            if (matchingWindows.Count == 0) return;
+
+            foreach (var (instId, _) in matchingWindows)
             {
-                win.Close();
-                _activeWindows.Remove(instId);
+                if (_activeWindows.TryGetValue(instId, out var win))
+                {
+                    win.Close();
+                    _activeWindows.Remove(instId);
+                }
             }
-        }
 
-        foreach (var (instId, _) in matchingWindows)
-        {
-            StartWidget(baseWidgetId, instId);
-        }
+            foreach (var (instId, _) in matchingWindows)
+            {
+                StartWidget(baseWidgetId, instId);
+            }
+        });
     }
 
     public string? DuplicateWidget(string sourceId)
