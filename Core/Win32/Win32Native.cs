@@ -40,6 +40,18 @@ public static class Win32Native
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_RBUTTONUP = 0x0205;
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MARGINS
+    {
+        public int cxLeftWidth;
+        public int cxRightWidth;
+        public int cyTopHeight;
+        public int cyBottomHeight;
+    }
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
     [DllImport("user32.dll")]
     public static extern bool ReleaseCapture();
 

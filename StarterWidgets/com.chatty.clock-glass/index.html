@@ -121,10 +121,37 @@
       align-items: center;
       gap: 5px;
     }
+    .chatty-anchor-dot {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 12px;
+      height: 12px;
+      background: #3B82F6;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #60A5FA;
+      cursor: grab;
+      z-index: 99999;
+      transition: transform 0.15s ease;
+    }
+    .chatty-anchor-dot:hover {
+      transform: scale(1.25);
+    }
+    .chatty-anchor-dot::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 4px;
+      height: 4px;
+      background: #FFFFFF;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
   <div class="widget-card">
+    <div class="chatty-anchor-dot" title="ChattyWidgets: ЛКМ — переместить, ПКМ — меню"></div>
     <div class="top-bar">
       <div class="date-label" id="dateLabel">16 ОКТЯБРЯ</div>
       <div class="system-pill" id="systemPill">

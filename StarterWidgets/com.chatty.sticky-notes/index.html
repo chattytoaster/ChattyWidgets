@@ -138,10 +138,37 @@
       color: #EF4444;
       background: rgba(239, 68, 68, 0.1);
     }
+    .chatty-anchor-dot {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 12px;
+      height: 12px;
+      background: #3B82F6;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #60A5FA;
+      cursor: grab;
+      z-index: 99999;
+      transition: transform 0.15s ease;
+    }
+    .chatty-anchor-dot:hover {
+      transform: scale(1.25);
+    }
+    .chatty-anchor-dot::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 4px;
+      height: 4px;
+      background: #FFFFFF;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
   <div class="note-card">
+    <div class="chatty-anchor-dot" title="ChattyWidgets: ЛКМ — переместить, ПКМ — меню"></div>
     <div class="header">
       <div class="title">📌 ЗАМЕТКИ И ЗАДАЧИ</div>
       <div id="countBadge" style="font-size: 11px; color: #94A3B8;">0 задач</div>

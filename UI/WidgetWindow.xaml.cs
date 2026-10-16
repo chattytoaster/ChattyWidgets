@@ -71,7 +71,18 @@ public partial class WidgetWindow : Window
         _hwnd = new WindowInteropHelper(this).Handle;
 
         var source = HwndSource.FromHwnd(_hwnd);
-        source?.AddHook(WndProc);
+        if (source != null)
+        {
+            source.AddHook(WndProc);
+            if (source.CompositionTarget != null)
+            {
+                source.CompositionTarget.BackgroundColor = System.Windows.Media.Colors.Transparent;
+            }
+        }
+
+        // Enable DWM glass/transparent frame for frameless transparency without blocking WebView2 input
+        var margins = new Win32Native.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
+        Win32Native.DwmExtendFrameIntoClientArea(_hwnd, ref margins);
 
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
     }
@@ -181,28 +192,42 @@ public partial class WidgetWindow : Window
                     try { window.chatty.showContextMenu(); } catch(ex) {}
                 });
 
-                // Smooth non-blocking window dragging on empty surfaces
-                var isCardDragging = false;
+                // Smooth non-blocking window dragging with movement threshold
+                var isDragging = false;
+                var hasMoved = false;
                 var dragStartX = 0, dragStartY = 0;
+
+                function beginDrag(e) {
+                    if (e.button === 0) {
+                        isDragging = true;
+                        hasMoved = false;
+                        dragStartX = e.screenX;
+                        dragStartY = e.screenY;
+                    }
+                }
 
                 window.addEventListener('mousedown', function(e) {
                     if (e.button === 0) {
                         var target = e.target;
-                        var tag = target && target.tagName ? target.tagName.toLowerCase() : '';
-                        if (tag === 'button' || tag === 'input' || tag === 'textarea' || tag === 'a' || tag === 'select' || (target.closest && target.closest('button, input, textarea, a, select, [contenteditable=""true""]'))) {
-                            return;
+                        var isInteractive = target && (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'A' || target.tagName === 'SELECT' || (target.closest && target.closest('button, input, textarea, a, select, [contenteditable=""true""]')));
+                        if (isInteractive) return;
+
+                        // Allow drag on dot, top bar, header, or general widget card
+                        var isHeaderOrDot = target.closest && target.closest('.top-bar, .header, .chatty-anchor-dot, #chatty-control-dot, .widget-card, .crypto-card, .player-card, .note-card');
+                        if (isHeaderOrDot) {
+                            beginDrag(e);
                         }
-                        isCardDragging = true;
-                        dragStartX = e.screenX;
-                        dragStartY = e.screenY;
                     }
                 });
 
                 window.addEventListener('mousemove', function(e) {
-                    if (isCardDragging) {
+                    if (isDragging) {
                         var dx = e.screenX - dragStartX;
                         var dy = e.screenY - dragStartY;
-                        if (dx !== 0 || dy !== 0) {
+                        if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                            hasMoved = true;
+                        }
+                        if (hasMoved && (dx !== 0 || dy !== 0)) {
                             dragStartX = e.screenX;
                             dragStartY = e.screenY;
                             try { window.chatty.moveBy(dx, dy); } catch(ex) {}
@@ -211,50 +236,49 @@ public partial class WidgetWindow : Window
                 });
 
                 window.addEventListener('mouseup', function(e) {
-                    if (isCardDragging) {
-                        isCardDragging = false;
-                        try { window.chatty.snapToScreen(); } catch(ex) {}
+                    if (isDragging) {
+                        isDragging = false;
+                        if (hasMoved) {
+                            try { window.chatty.snapToScreen(); } catch(ex) {}
+                        }
                     }
                 });
 
-                // Inject guaranteed visible blue control dot in top-right corner
-                function injectChattyControlDot() {
-                    if (document.getElementById('chatty-control-dot')) return;
-                    var dot = document.createElement('div');
-                    dot.id = 'chatty-control-dot';
-                    dot.title = 'ChattyWidgets: ЛКМ — переместить, ПКМ — меню';
-                    dot.style.cssText = 'position:fixed!important;top:12px!important;right:12px!important;width:12px!important;height:12px!important;background:#3B82F6!important;border-radius:50%!important;box-shadow:0 0 8px #60A5FA!important;cursor:grab!important;z-index:2147483647!important;display:block!important;pointer-events:auto!important;box-sizing:border-box!important;';
-                    
-                    var inner = document.createElement('div');
-                    inner.style.cssText = 'position:absolute!important;top:4px!important;left:4px!important;width:4px!important;height:4px!important;background:#FFFFFF!important;border-radius:50%!important;pointer-events:none!important;';
-                    dot.appendChild(inner);
+                // Ensure the control dot is wired up
+                function setupChattyDot() {
+                    var dot = document.querySelector('.chatty-anchor-dot') || document.getElementById('chatty-control-dot');
+                    if (!dot && document.body) {
+                        dot = document.createElement('div');
+                        dot.className = 'chatty-anchor-dot';
+                        dot.id = 'chatty-control-dot';
+                        dot.title = 'ChattyWidgets: ЛКМ — переместить, ПКМ — меню';
+                        dot.style.cssText = 'position:fixed!important;top:12px!important;right:12px!important;width:12px!important;height:12px!important;background:#3B82F6!important;border-radius:50%!important;box-shadow:0 0 8px #60A5FA!important;cursor:grab!important;z-index:999999!important;display:block!important;box-sizing:border-box!important;';
+                        var inner = document.createElement('div');
+                        inner.style.cssText = 'position:absolute!important;top:4px!important;left:4px!important;width:4px!important;height:4px!important;background:#FFFFFF!important;border-radius:50%!important;pointer-events:none!important;';
+                        dot.appendChild(inner);
+                        document.body.appendChild(dot);
+                    }
 
-                    dot.addEventListener('mousedown', function(e) {
-                        if (e.button === 0) {
-                            isCardDragging = true;
-                            dragStartX = e.screenX;
-                            dragStartY = e.screenY;
-                            dot.style.cursor = 'grabbing';
+                    if (dot) {
+                        dot.addEventListener('mousedown', function(e) {
+                            if (e.button === 0) {
+                                beginDrag(e);
+                                dot.style.cursor = 'grabbing';
+                                e.stopPropagation();
+                            }
+                        });
+                        dot.addEventListener('contextmenu', function(e) {
                             e.preventDefault();
                             e.stopPropagation();
-                        }
-                    });
-
-                    dot.addEventListener('contextmenu', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        try { window.chatty.showContextMenu(); } catch(ex) {}
-                    });
-
-                    if (document.body) {
-                        document.body.appendChild(dot);
+                            try { window.chatty.showContextMenu(); } catch(ex) {}
+                        });
                     }
                 }
 
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', injectChattyControlDot);
+                    document.addEventListener('DOMContentLoaded', setupChattyDot);
                 } else {
-                    injectChattyControlDot();
+                    setupChattyDot();
                 }
             ";
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(initScript);
