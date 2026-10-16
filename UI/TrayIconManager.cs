@@ -94,9 +94,21 @@ public class TrayIconManager : IDisposable
         _notifyIcon.ContextMenuStrip = menu;
     }
 
-    private static Icon CreateApplicationIcon()
+    public static Icon CreateApplicationIcon()
     {
-        // Generate a clean program icon bitmap (rounded diamond badge with indigo glow)
+        string baseDirIco = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+        if (File.Exists(baseDirIco))
+        {
+            try { return new Icon(baseDirIco, 32, 32); } catch { }
+        }
+
+        string currDirIco = Path.Combine(Directory.GetCurrentDirectory(), "app.ico");
+        if (File.Exists(currDirIco))
+        {
+            try { return new Icon(currDirIco, 32, 32); } catch { }
+        }
+
+        // Generate clean fallback icon
         using var bmp = new Bitmap(32, 32);
         using (var g = Graphics.FromImage(bmp))
         {
