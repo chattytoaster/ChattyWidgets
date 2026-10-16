@@ -48,7 +48,7 @@ public class WidgetInstanceSettings
     public double Scale { get; set; } = 1.0;
 
     [JsonPropertyName("autoHideAnchorDot")]
-    public bool AutoHideAnchorDot { get; set; } = false;
+    public bool AutoHideAnchorDot { get; set; } = true;
 
     [JsonPropertyName("targetMonitor")]
     public int TargetMonitor { get; set; } = 0;

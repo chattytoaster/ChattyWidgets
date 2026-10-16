@@ -138,7 +138,11 @@ public partial class WidgetWindow : Window
             int cornerPref = Win32Native.DWMWCP_ROUND;
             Win32Native.DwmSetWindowAttribute(_hwnd, Win32Native.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPref, sizeof(int));
 
-            // Clip HWND to exact rounded rectangle so DWM never draws rectangular blurred corners
+            // Suppress Windows 11 1px DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
+            int noneColor = unchecked((int)0xFFFFFFFE);
+            Win32Native.DwmSetWindowAttribute(_hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noneColor, sizeof(int));
+
+            // Clip HWND to exact rounded rectangle so DWM never draws rectangular corners or borders
             double dpiScale = 1.0;
             try
             {
@@ -149,13 +153,13 @@ public partial class WidgetWindow : Window
 
             double currentW = ActualWidth > 0 ? ActualWidth : Width;
             double currentH = ActualHeight > 0 ? ActualHeight : Height;
-            int w = (int)Math.Ceiling(currentW * dpiScale);
-            int h = (int)Math.Ceiling(currentH * dpiScale);
+            int w = (int)Math.Round(currentW * dpiScale);
+            int h = (int)Math.Round(currentH * dpiScale);
             if (w <= 0 || h <= 0) return;
 
             // 20px radius in DIPs -> ellipse diameter in physical pixels
             int ellipseDiam = (int)Math.Round(40 * dpiScale);
-            IntPtr hRgn = Win32Native.CreateRoundRectRgn(0, 0, w + 1, h + 1, ellipseDiam, ellipseDiam);
+            IntPtr hRgn = Win32Native.CreateRoundRectRgn(0, 0, w, h, ellipseDiam, ellipseDiam);
             if (hRgn != IntPtr.Zero)
             {
                 Win32Native.SetWindowRgn(_hwnd, hRgn, true);
@@ -659,7 +663,7 @@ public partial class WidgetWindow : Window
 
                     if (element is FrameworkElement fe)
                     {
-                        fe.DataContext = SystemMonitorService.Instance;
+                        fe.DataContext = NativeWidgetContextProvider.GetContextFor(BaseWidgetId, InstanceId, fe);
                     }
                     ApplyBackgroundOpacity(Settings.Opacity);
                 }

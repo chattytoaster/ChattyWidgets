@@ -112,6 +112,7 @@ public class WidgetManager
                 Top = defaultTop,
                 Layer = WidgetLayer.Desktop,
                 IsClickThrough = false,
+                AutoHideAnchorDot = true,
                 Opacity = 1.0
             };
             Settings.Widgets[instId] = widgetSetting;
@@ -222,7 +223,7 @@ public class WidgetManager
                 Scale = sourceSettings?.Scale ?? 1.0,
                 IsClickThrough = false,
                 IsLocked = false,
-                AutoHideAnchorDot = sourceSettings?.AutoHideAnchorDot ?? false,
+                AutoHideAnchorDot = sourceSettings?.AutoHideAnchorDot ?? true,
                 TargetMonitor = sourceSettings?.TargetMonitor ?? 0
             };
 

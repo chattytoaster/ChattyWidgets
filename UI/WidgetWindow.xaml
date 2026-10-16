@@ -76,7 +76,7 @@
               MouseLeave="OnAnchorContainerMouseLeave">
             <Border x:Name="AnchorDot" Width="12" Height="12" Margin="0,12,12,0"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Background="#3B82F6" CornerRadius="6"
+                    Background="#3B82F6" CornerRadius="6" Opacity="0.0"
                     ToolTip="Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#60A5FA" Opacity="0.9"/>

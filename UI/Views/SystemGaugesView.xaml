@@ -6,8 +6,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <Border Background="#D0121622"
-            BorderBrush="#30FFFFFF"
-            BorderThickness="1"
+            BorderThickness="0"
             CornerRadius="20"
             Padding="16">
         <Border.Effect>
