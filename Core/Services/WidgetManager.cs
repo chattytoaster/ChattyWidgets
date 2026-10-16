@@ -78,7 +78,7 @@ public class WidgetManager
                 Height = item.Manifest.DefaultHeight,
                 Left = defaultLeft,
                 Top = defaultTop,
-                Layer = WidgetLayer.Normal,
+                Layer = WidgetLayer.Desktop,
                 IsClickThrough = false,
                 Opacity = 1.0
             };

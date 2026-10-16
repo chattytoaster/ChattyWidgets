@@ -49,13 +49,15 @@ public partial class WidgetWindow : Window
         else
             Top = settings.Top;
 
-        Opacity = settings.Opacity;
+        // Window itself stays fully opaque; opacity affects the background surfaces only
+        Opacity = 1.0;
 
         MinWidth = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
         MinHeight = manifest.MinHeight > 0 ? manifest.MinHeight : 50;
 
         MenuHeader.Header = $"{manifest.Name} (v{manifest.Version})";
         UpdateMenuChecks();
+        UpdateAnchorDotStyle();
 
         Loaded += OnLoaded;
         MouseLeftButtonDown += OnMouseLeftButtonDown;
@@ -68,11 +70,41 @@ public partial class WidgetWindow : Window
         base.OnSourceInitialized(e);
         _hwnd = new WindowInteropHelper(this).Handle;
 
+        var source = HwndSource.FromHwnd(_hwnd);
+        source?.AddHook(WndProc);
+
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
-        if (Settings.IsClickThrough)
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == Win32Native.WM_NCHITTEST)
         {
-            DesktopHostManager.SetClickThrough(_hwnd, true);
+            if (Settings.IsClickThrough)
+            {
+                int x = (short)(lParam.ToInt64() & 0xFFFF);
+                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+                var windowPt = PointFromScreen(new Point(x, y));
+
+                // Check if cursor is over AnchorDot
+                if (AnchorDot.IsVisible)
+                {
+                    var anchorPos = AnchorDot.TranslatePoint(new Point(0, 0), this);
+                    var anchorRect = new Rect(anchorPos.X - 4, anchorPos.Y - 4, AnchorDot.ActualWidth + 8, AnchorDot.ActualHeight + 8);
+
+                    if (anchorRect.Contains(windowPt))
+                    {
+                        handled = true;
+                        return (IntPtr)Win32Native.HTCLIENT;
+                    }
+                }
+
+                // Everywhere else on the widget: pass through clicks
+                handled = true;
+                return (IntPtr)Win32Native.HTTRANSPARENT;
+            }
         }
+        return IntPtr.Zero;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -91,27 +123,15 @@ public partial class WidgetWindow : Window
     {
         try
         {
-            var loadingBorder = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(200, 18, 22, 34)),
-                CornerRadius = new CornerRadius(16),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
-                BorderThickness = new Thickness(1),
-                Child = new TextBlock
-                {
-                    Text = $"✦ Загрузка {Manifest.Name}...",
-                    Foreground = Brushes.SlateGray,
-                    FontSize = 12,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-            WidgetContentHost.Content = loadingBorder;
+            TxtLoadingTitle.Text = $"✦ Загрузка {Manifest.Name}...";
+            LoadingIndicator.Visibility = Visibility.Visible;
 
             _webView = new WebView2
             {
                 DefaultBackgroundColor = System.Drawing.Color.Transparent
             };
+            // Put in visual tree so HWND is created for EnsureCoreWebView2Async
+            WidgetContentHost.Content = _webView;
 
             string userDataFolder = Path.Combine(ChwPackageService.AppDataDir, "webview_cache");
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
@@ -132,18 +152,22 @@ public partial class WidgetWindow : Window
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
 
-            // Add helper script so JS can access `window.chatty` directly without `chrome.webview.hostObjects.chatty`
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
                 console.log('ChattyWidgets Bridge Initialized');
             ";
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(initScript);
 
+            _webView.NavigationCompleted += (s, e) =>
+            {
+                LoadingIndicator.Visibility = Visibility.Collapsed;
+                ApplyBackgroundOpacity(Settings.Opacity);
+            };
+
             string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
             if (File.Exists(entryPath))
             {
                 _webView.CoreWebView2.Navigate(new Uri(entryPath).AbsoluteUri);
-                WidgetContentHost.Content = _webView;
             }
             else
             {
@@ -173,6 +197,7 @@ public partial class WidgetWindow : Window
                     {
                         fe.DataContext = SystemMonitorService.Instance;
                     }
+                    ApplyBackgroundOpacity(Settings.Opacity);
                 }
                 else
                 {
@@ -192,16 +217,17 @@ public partial class WidgetWindow : Window
 
     private void ShowErrorMessage(string message)
     {
+        LoadingIndicator.Visibility = Visibility.Collapsed;
         var border = new Border
         {
-            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(200, 30, 30, 40)),
+            Background = new SolidColorBrush(Color.FromArgb(200, 30, 30, 40)),
             CornerRadius = new CornerRadius(12),
             Padding = new Thickness(16)
         };
         var tb = new TextBlock
         {
             Text = message,
-            Foreground = System.Windows.Media.Brushes.OrangeRed,
+            Foreground = Brushes.OrangeRed,
             TextWrapping = TextWrapping.Wrap,
             FontSize = 13
         };
@@ -216,6 +242,23 @@ public partial class WidgetWindow : Window
             DragMove();
             SnapToScreen();
         }
+    }
+
+    private void OnAnchorDotLeftDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            DragMove();
+            SnapToScreen();
+            e.Handled = true;
+        }
+    }
+
+    private void OnAnchorDotRightClick(object sender, MouseButtonEventArgs e)
+    {
+        WidgetContextMenu.PlacementTarget = AnchorDot;
+        WidgetContextMenu.IsOpen = true;
+        e.Handled = true;
     }
 
     private void OnLocationChanged(object? sender, EventArgs e)
@@ -256,19 +299,57 @@ public partial class WidgetWindow : Window
     public void SetClickThrough(bool clickThrough)
     {
         Settings.IsClickThrough = clickThrough;
-        if (_hwnd != IntPtr.Zero)
-        {
-            DesktopHostManager.SetClickThrough(_hwnd, clickThrough);
-        }
         UpdateMenuChecks();
+        UpdateAnchorDotStyle();
         SettingsChanged?.Invoke(this);
+    }
+
+    private void UpdateAnchorDotStyle()
+    {
+        if (AnchorDot == null) return;
+
+        if (Settings.IsClickThrough)
+        {
+            AnchorDot.Background = new SolidColorBrush(Color.FromRgb(239, 68, 68)); // Red when ClickThrough is active
+            AnchorDot.ToolTip = "Режим клика насквозь ВКЛЮЧЕН (ПКМ — контекстное меню, ЛКМ — переместить)";
+        }
+        else
+        {
+            AnchorDot.Background = new SolidColorBrush(Color.FromRgb(99, 102, 241)); // Indigo when normal
+            AnchorDot.ToolTip = "Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)";
+        }
     }
 
     public void SetWidgetOpacity(double opacity)
     {
-        Settings.Opacity = Math.Clamp(opacity, 0.1, 1.0);
-        Opacity = Settings.Opacity;
+        Settings.Opacity = Math.Clamp(opacity, 0.15, 1.0);
+        ApplyBackgroundOpacity(Settings.Opacity);
         SettingsChanged?.Invoke(this);
+    }
+
+    private void ApplyBackgroundOpacity(double opacity)
+    {
+        // 1. For Native XAML Widgets (adjust background brush alpha, keep text sharp)
+        if (WidgetContentHost.Content is Border border)
+        {
+            byte alpha = (byte)Math.Clamp((int)(opacity * 255), 30, 255);
+            border.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
+        }
+
+        // 2. For Web Widgets (adjust CSS card background opacity, keep text sharp)
+        if (_webView?.CoreWebView2 != null)
+        {
+            string alphaStr = opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string js = $@"
+                try {{
+                    const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, body > div');
+                    cards.forEach(c => {{
+                        c.style.backgroundColor = 'rgba(18, 22, 34, {alphaStr})';
+                    }});
+                }} catch(e) {{}}
+            ";
+            _webView.CoreWebView2.ExecuteScriptAsync(js);
+        }
     }
 
     private void UpdateMenuChecks()
@@ -290,9 +371,9 @@ public partial class WidgetWindow : Window
     }
 
     private void OnOpacity100Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(1.0);
-    private void OnOpacity85Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.85);
-    private void OnOpacity70Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.70);
-    private void OnOpacity50Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.50);
+    private void OnOpacity85Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.75);
+    private void OnOpacity70Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.50);
+    private void OnOpacity50Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(0.25);
 
     private void OnOpenFolderClick(object sender, RoutedEventArgs e)
     {

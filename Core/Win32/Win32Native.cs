@@ -6,6 +6,12 @@ public static class Win32Native
 {
     public const int GWL_EXSTYLE = -20;
     public const int GWL_STYLE = -16;
+    public const int GWL_HWNDPARENT = -8;
+
+    public const int WM_NCHITTEST = 0x0084;
+    public const int HTTRANSPARENT = -1;
+    public const int HTCLIENT = 1;
+    public const int HTCAPTION = 2;
 
     public const uint WS_EX_TOPMOST = 0x00000008;
     public const uint WS_EX_TRANSPARENT = 0x00000020;

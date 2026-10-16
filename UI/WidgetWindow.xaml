@@ -5,7 +5,7 @@
         AllowsTransparency="True"
         Background="Transparent"
         ShowInTaskbar="False"
-        ResizeMode="CanResizeWithGrip"
+        ResizeMode="NoResize"
         Topmost="False"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display">
@@ -20,11 +20,11 @@
                 <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" Click="OnLayerTopClick"/>
             </MenuItem>
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" Click="OnClickThroughClick"/>
-            <MenuItem Header="Непрозрачность">
-                <MenuItem Header="100%" Click="OnOpacity100Click"/>
-                <MenuItem Header="85%" Click="OnOpacity85Click"/>
-                <MenuItem Header="70%" Click="OnOpacity70Click"/>
-                <MenuItem Header="50%" Click="OnOpacity50Click"/>
+            <MenuItem Header="Прозрачность фона">
+                <MenuItem Header="100% (Непрозрачный фон)" Click="OnOpacity100Click"/>
+                <MenuItem Header="75% фона" Click="OnOpacity85Click"/>
+                <MenuItem Header="50% фона" Click="OnOpacity70Click"/>
+                <MenuItem Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
             </MenuItem>
             <Separator/>
             <MenuItem Header="Открыть папку виджета" Click="OnOpenFolderClick"/>
@@ -37,5 +37,27 @@
     <Grid x:Name="MainRoot" Background="Transparent">
         <!-- Content placeholder for either Web or Native -->
         <ContentControl x:Name="WidgetContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+
+        <!-- Loading indicator -->
+        <Border x:Name="LoadingIndicator" Background="#E0121622" CornerRadius="16" BorderBrush="#30FFFFFF" BorderThickness="1"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="TxtLoadingTitle" Text="✦ Загрузка виджета..." Foreground="#94A3B8" FontSize="12" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Anchor dot for click-through control and moving -->
+        <Border x:Name="AnchorDot" Width="14" Height="14" Margin="0,7,7,0"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Background="#6366F1" CornerRadius="7" Cursor="Hand"
+                ToolTip="Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)"
+                MouseRightButtonUp="OnAnchorDotRightClick"
+                MouseLeftButtonDown="OnAnchorDotLeftDown">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="#818CF8" Opacity="0.8"/>
+            </Border.Effect>
+            <!-- Inner white dot -->
+            <Ellipse Width="4" Height="4" Fill="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
     </Grid>
 </Window>

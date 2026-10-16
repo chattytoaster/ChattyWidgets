@@ -53,6 +53,22 @@ public class DesktopHostManager
     }
 
     /// <summary>
+    /// Attaches window to Windows Desktop (Progman) as owner so it never hides when other apps or Hub minimize.
+    /// </summary>
+    public static void AttachToDesktop(IntPtr hwnd)
+    {
+        try
+        {
+            IntPtr progman = Win32Native.FindWindow("Progman", null);
+            if (progman != IntPtr.Zero)
+            {
+                Win32Native.SetWindowLongPtr(hwnd, Win32Native.GWL_HWNDPARENT, progman);
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>
     /// Configures window for desktop layering.
     /// </summary>
     public static void ApplyLayer(IntPtr hwnd, WidgetLayer layer)
@@ -60,6 +76,7 @@ public class DesktopHostManager
         if (hwnd == IntPtr.Zero) return;
 
         MakeToolWindow(hwnd);
+        AttachToDesktop(hwnd);
 
         // Always ensure top-level window (SetParent to WorkerW swallows WPF windows on modern Windows)
         Win32Native.SetParent(hwnd, IntPtr.Zero);

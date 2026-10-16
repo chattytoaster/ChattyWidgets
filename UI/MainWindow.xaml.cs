@@ -61,6 +61,15 @@ public partial class MainWindow : Window
         }
     }
 
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized)
+        {
+            Hide();
+        }
+    }
+
     public void SwitchToTab(string tabKey)
     {
         switch (tabKey.ToLowerInvariant())
