@@ -36,8 +36,19 @@ public partial class WidgetWindow : Window
         Title = manifest.Name;
         Width = settings.Width > 0 ? settings.Width : manifest.DefaultWidth;
         Height = settings.Height > 0 ? settings.Height : manifest.DefaultHeight;
-        Left = settings.Left;
-        Top = settings.Top;
+
+        double screenWidth = SystemParameters.PrimaryScreenWidth;
+        double screenHeight = SystemParameters.PrimaryScreenHeight;
+        if (settings.Left < 0 || settings.Left > screenWidth - 50)
+            Left = Math.Max(20, screenWidth - Width - 40);
+        else
+            Left = settings.Left;
+
+        if (settings.Top < 0 || settings.Top > screenHeight - 50)
+            Top = 60;
+        else
+            Top = settings.Top;
+
         Opacity = settings.Opacity;
 
         MinWidth = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
@@ -80,11 +91,27 @@ public partial class WidgetWindow : Window
     {
         try
         {
+            var loadingBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(200, 18, 22, 34)),
+                CornerRadius = new CornerRadius(16),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+                BorderThickness = new Thickness(1),
+                Child = new TextBlock
+                {
+                    Text = $"✦ Загрузка {Manifest.Name}...",
+                    Foreground = Brushes.SlateGray,
+                    FontSize = 12,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            WidgetContentHost.Content = loadingBorder;
+
             _webView = new WebView2
             {
                 DefaultBackgroundColor = System.Drawing.Color.Transparent
             };
-            WidgetContentHost.Content = _webView;
 
             string userDataFolder = Path.Combine(ChwPackageService.AppDataDir, "webview_cache");
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
@@ -116,6 +143,7 @@ public partial class WidgetWindow : Window
             if (File.Exists(entryPath))
             {
                 _webView.CoreWebView2.Navigate(new Uri(entryPath).AbsoluteUri);
+                WidgetContentHost.Content = _webView;
             }
             else
             {

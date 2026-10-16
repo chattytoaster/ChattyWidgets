@@ -61,31 +61,24 @@ public class DesktopHostManager
 
         MakeToolWindow(hwnd);
 
+        // Always ensure top-level window (SetParent to WorkerW swallows WPF windows on modern Windows)
+        Win32Native.SetParent(hwnd, IntPtr.Zero);
+
         switch (layer)
         {
             case WidgetLayer.Desktop:
-                IntPtr workerW = GetWorkerWHandle();
-                if (workerW != IntPtr.Zero)
-                {
-                    Win32Native.SetParent(hwnd, workerW);
-                }
-                else
-                {
-                    Win32Native.SetWindowPos(hwnd, Win32Native.HWND_BOTTOM, 0, 0, 0, 0,
-                        Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE);
-                }
+                Win32Native.SetWindowPos(hwnd, Win32Native.HWND_BOTTOM, 0, 0, 0, 0,
+                    Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE | Win32Native.SWP_SHOWWINDOW);
                 break;
 
             case WidgetLayer.Normal:
-                Win32Native.SetParent(hwnd, IntPtr.Zero);
                 Win32Native.SetWindowPos(hwnd, Win32Native.HWND_NOTOPMOST, 0, 0, 0, 0,
-                    Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE);
+                    Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_SHOWWINDOW);
                 break;
 
             case WidgetLayer.Top:
-                Win32Native.SetParent(hwnd, IntPtr.Zero);
                 Win32Native.SetWindowPos(hwnd, Win32Native.HWND_TOPMOST, 0, 0, 0, 0,
-                    Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE);
+                    Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_SHOWWINDOW);
                 break;
         }
     }

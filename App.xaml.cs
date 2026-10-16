@@ -162,6 +162,46 @@ public partial class App : System.Windows.Application
         }
         Log("PASS: Store catalog is populated.");
 
+        // Test 5: Launching widgets
+        Log("TEST 5: Starting widget windows...");
+        try
+        {
+            IntPtr workerW = ChattyWidgets.Core.Win32.DesktopHostManager.GetWorkerWHandle();
+            Log($" - WorkerW handle: 0x{workerW.ToInt64():X}");
+
+            bool nativeStarted = WidgetManager.Instance.StartWidget("com.chatty.system-gauges");
+            Log($" - Start native widget: {nativeStarted}");
+            var winNative = WidgetManager.Instance.GetActiveWindow("com.chatty.system-gauges");
+            Log($" - Native window handle: {winNative != null}");
+
+            bool webStarted = WidgetManager.Instance.StartWidget("com.chatty.clock-glass");
+            Log($" - Start web widget: {webStarted}");
+            var winWeb = WidgetManager.Instance.GetActiveWindow("com.chatty.clock-glass");
+            Log($" - Web window handle: {winWeb != null}");
+
+            if (winWeb != null)
+            {
+                var tcs = new TaskCompletionSource<string>();
+                winWeb.ContentRendered += (s, e) => {
+                    Log(" - winWeb ContentRendered fired!");
+                    tcs.TrySetResult("Rendered");
+                };
+                // Wait up to 3 seconds and pump dispatcher
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                timer.Tick += (s, e) => { frame.Continue = false; timer.Stop(); };
+                timer.Start();
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+                Log($" - winWeb IsVisible: {winWeb.IsVisible}, Opacity: {winWeb.Opacity}, Left: {winWeb.Left}, Top: {winWeb.Top}");
+            }
+
+            Log("PASS: Widget window instantiation tested.");
+        }
+        catch (Exception ex)
+        {
+            Log($"FAIL in StartWidget: {ex}");
+        }
+
         Log("=== ALL TESTS COMPLETED SUCCESSFULLY ===");
 
         // Write report to file

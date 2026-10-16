@@ -3,6 +3,8 @@ using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using ChattyWidgets.Core.Win32;
 
+using System.ComponentModel;
+
 namespace ChattyWidgets.Core.Services;
 
 public class SystemMetrics
@@ -20,10 +22,12 @@ public class SystemMetrics
     public DateTime Timestamp { get; set; } = DateTime.Now;
 }
 
-public class SystemMonitorService : IDisposable
+public class SystemMonitorService : IDisposable, INotifyPropertyChanged
 {
     private static SystemMonitorService? _instance;
     public static SystemMonitorService Instance => _instance ??= new SystemMonitorService();
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     private readonly System.Timers.Timer _timer;
     private long _prevIdleTime;
@@ -147,6 +151,10 @@ public class SystemMonitorService : IDisposable
 
             CurrentMetrics = metrics;
             MetricsUpdated?.Invoke(metrics);
+            Application.Current?.Dispatcher?.InvokeAsync(() =>
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentMetrics)));
+            });
         }
         catch
         {

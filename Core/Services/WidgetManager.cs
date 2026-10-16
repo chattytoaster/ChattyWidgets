@@ -50,8 +50,14 @@ public class WidgetManager
 
     public bool StartWidget(string widgetId)
     {
-        if (_activeWindows.ContainsKey(widgetId))
+        if (_activeWindows.TryGetValue(widgetId, out var existing))
+        {
+            existing.Show();
+            existing.Activate();
+            existing.Topmost = true;
+            existing.Topmost = false;
             return true;
+        }
 
         var installed = ChwPackageService.GetInstalledWidgets();
         var item = installed.FirstOrDefault(x => x.Manifest.Id == widgetId);
@@ -60,21 +66,20 @@ public class WidgetManager
 
         if (!Settings.Widgets.TryGetValue(widgetId, out var widgetSetting))
         {
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double defaultLeft = Math.Max(50, screenWidth - item.Manifest.DefaultWidth - 40);
+            double defaultTop = 60 + (_activeWindows.Count * 60);
+
             widgetSetting = new WidgetInstanceSettings
             {
                 Id = widgetId,
                 IsEnabled = true,
                 Width = item.Manifest.DefaultWidth,
                 Height = item.Manifest.DefaultHeight,
-                Left = 100 + (_activeWindows.Count * 40),
-                Top = 100 + (_activeWindows.Count * 40),
-                Layer = item.Manifest.DefaultLayer.ToLowerInvariant() switch
-                {
-                    "top" => WidgetLayer.Top,
-                    "normal" => WidgetLayer.Normal,
-                    _ => WidgetLayer.Desktop
-                },
-                IsClickThrough = item.Manifest.ClickThrough,
+                Left = defaultLeft,
+                Top = defaultTop,
+                Layer = WidgetLayer.Normal,
+                IsClickThrough = false,
                 Opacity = 1.0
             };
             Settings.Widgets[widgetId] = widgetSetting;
@@ -88,6 +93,7 @@ public class WidgetManager
 
         _activeWindows[widgetId] = window;
         window.Show();
+        window.Activate();
 
         SaveSettings();
         WidgetsChanged?.Invoke();
