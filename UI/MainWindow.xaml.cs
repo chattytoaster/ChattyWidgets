@@ -10,6 +10,12 @@ using Button = System.Windows.Controls.Button;
 using TextBlock = System.Windows.Controls.TextBlock;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using MenuItem = System.Windows.Controls.MenuItem;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
+using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
+using RadioButton = System.Windows.Controls.RadioButton;
+using CheckBox = System.Windows.Controls.CheckBox;
+using Border = System.Windows.Controls.Border;
+using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace ChattyWidgets.UI;
 
@@ -67,6 +73,8 @@ public partial class MainWindow : Window
         TxtGridSizeVal.Text = $"{currentGrid} px";
         SliderDefaultOpacity.Value = 100;
         TxtOpacityVal.Text = "100%";
+
+        ApplyTheme(WidgetManager.Instance.Settings.Theme);
 
         HotkeyService.Instance.Initialize(this);
         RenderPresetChips();
@@ -888,6 +896,198 @@ public partial class MainWindow : Window
         if (Directory.Exists(ChwPackageService.AppDataDir))
         {
             Process.Start(new ProcessStartInfo("explorer.exe", ChwPackageService.AppDataDir) { UseShellExecute = true });
+        }
+    }
+
+    private void OnThemeToggleClick(object sender, RoutedEventArgs e)
+    {
+        string cur = WidgetManager.Instance.Settings.Theme;
+        string nextTheme = cur.Equals("light", StringComparison.OrdinalIgnoreCase) ? "dark" : "light";
+        ApplyTheme(nextTheme);
+        WidgetManager.Instance.ApplyGlobalTheme(nextTheme);
+    }
+
+    private void OnComboHubThemeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ComboHubTheme?.SelectedItem is ComboBoxItem item && item.Tag is string t)
+        {
+            if (WidgetManager.Instance?.Settings != null && WidgetManager.Instance.Settings.Theme != t)
+            {
+                ApplyTheme(t);
+                WidgetManager.Instance.ApplyGlobalTheme(t);
+            }
+        }
+    }
+
+    public void ApplyTheme(string theme)
+    {
+        bool isLight = theme.Equals("light", StringComparison.OrdinalIgnoreCase);
+
+        if (BtnThemeToggle != null)
+        {
+            BtnThemeToggle.Content = isLight ? "☀️" : "🌙";
+            BtnThemeToggle.ToolTip = isLight ? "Тема: Светлая (Нажмите для переключения на тёмную)" : "Тема: Тёмная (Нажмите для переключения на светлую)";
+        }
+
+        if (ComboHubTheme != null)
+        {
+            ComboHubTheme.SelectedIndex = isLight ? 1 : 0;
+        }
+
+        var bgBrush = new SolidColorBrush(isLight ? Color.FromRgb(241, 245, 249) : Color.FromRgb(15, 17, 26));
+        var borderBrush = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(37, 42, 63));
+        var topBarBrush = new SolidColorBrush(isLight ? Color.FromRgb(255, 255, 255) : Color.FromRgb(18, 21, 34));
+        var topBarBorder = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(30, 35, 54));
+        var textPrimary = new SolidColorBrush(isLight ? Color.FromRgb(15, 23, 42) : Color.FromRgb(248, 250, 252));
+        var statusBg = new SolidColorBrush(isLight ? Color.FromRgb(241, 245, 249) : Color.FromRgb(12, 14, 21));
+        var statusBorder = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(26, 30, 44));
+
+        Background = bgBrush;
+        if (MainRootBorder != null)
+        {
+            MainRootBorder.Background = bgBrush;
+            MainRootBorder.BorderBrush = borderBrush;
+        }
+
+        if (TopHeaderBorder != null)
+        {
+            TopHeaderBorder.Background = topBarBrush;
+            TopHeaderBorder.BorderBrush = topBarBorder;
+        }
+
+        if (TxtAppTitle != null) TxtAppTitle.Foreground = textPrimary;
+        if (BottomStatusBar != null)
+        {
+            BottomStatusBar.Background = statusBg;
+            BottomStatusBar.BorderBrush = statusBorder;
+        }
+
+        ApplyHubThemeToTree(this, isLight);
+        RefreshInstalledWidgets();
+    }
+
+    private void ApplyHubThemeToTree(DependencyObject? node, bool isLight)
+    {
+        if (node == null) return;
+        int count = VisualTreeHelper.GetChildrenCount(node);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is TextBlock tb)
+            {
+                if (isLight)
+                {
+                    if (tb.Tag == null) tb.Tag = tb.Foreground;
+                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                    {
+                        int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                        int max = Math.Max(r, Math.Max(g, b));
+                        int min = Math.Min(r, Math.Min(g, b));
+                        bool isAccent = (max - min) > 70;
+                        if (!isAccent)
+                        {
+                            int brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                            if (brightness >= 180)
+                                tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                            else if (brightness >= 100)
+                                tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                        }
+                    }
+                }
+                else
+                {
+                    if (tb.Tag is Brush orig)
+                        tb.Foreground = orig;
+                    else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
+                        tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                }
+            }
+            else if (child is Button btn)
+            {
+                if (isLight)
+                {
+                    if (btn.Tag == null) btn.Tag = (btn.Foreground, btn.Background, btn.BorderBrush);
+                    if (btn.Foreground is SolidColorBrush fscb &&
+                        fscb.Color != (Color)ColorConverter.ConvertFromString("#EF4444") &&
+                        fscb.Color != (Color)ColorConverter.ConvertFromString("#10B981") &&
+                        fscb.Color != (Color)ColorConverter.ConvertFromString("#34D399"))
+                    {
+                        btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
+                    }
+                    if (btn.Background is SolidColorBrush bgScb &&
+                        (bgScb.Color == (Color)ColorConverter.ConvertFromString("#1E2333") ||
+                         bgScb.Color == (Color)ColorConverter.ConvertFromString("#2A3146") ||
+                         bgScb.Color == (Color)ColorConverter.ConvertFromString("#161928") ||
+                         bgScb.Color == Colors.Transparent))
+                    {
+                        if (btn != BtnThemeToggle && btn != BtnMaximizeRestore)
+                        {
+                            btn.Background = new SolidColorBrush(Color.FromRgb(226, 232, 240));
+                            btn.BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                        }
+                    }
+                }
+                else
+                {
+                    if (btn.Tag is ValueTuple<Brush, Brush, Brush> tuple)
+                    {
+                        btn.Foreground = tuple.Item1;
+                        btn.Background = tuple.Item2;
+                        btn.BorderBrush = tuple.Item3;
+                    }
+                }
+            }
+            else if (child is Border b && b != MainRootBorder && b != TopHeaderBorder && b != BottomStatusBar)
+            {
+                if (isLight)
+                {
+                    if (b.Tag == null) b.Tag = (b.Background, b.BorderBrush);
+                    if (b.Background is SolidColorBrush bgScb)
+                    {
+                        if (bgScb.Color == (Color)ColorConverter.ConvertFromString("#161928") ||
+                            bgScb.Color == (Color)ColorConverter.ConvertFromString("#1E2338"))
+                        {
+                            b.Background = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+                            b.BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240));
+                        }
+                        else if (bgScb.Color == (Color)ColorConverter.ConvertFromString("#10121C"))
+                        {
+                            b.Background = new SolidColorBrush(Color.FromRgb(241, 245, 249));
+                            b.BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                        }
+                    }
+                }
+                else
+                {
+                    if (b.Tag is ValueTuple<Brush, Brush> orig)
+                    {
+                        b.Background = orig.Item1;
+                        b.BorderBrush = orig.Item2;
+                    }
+                }
+            }
+            else if (child is RadioButton rb)
+            {
+                if (isLight)
+                {
+                    if (rb.Tag == null) rb.Tag = rb.Foreground;
+                    rb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                }
+                else
+                {
+                    if (rb.Tag is Brush orig)
+                        rb.Foreground = orig;
+                    else
+                        rb.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                }
+            }
+            else if (child is CheckBox cb)
+            {
+                cb.Foreground = isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(248, 250, 252));
+            }
+
+            ApplyHubThemeToTree(child, isLight);
         }
     }
 }

@@ -85,6 +85,67 @@ public partial class WidgetSettingsWindow : Window
                 BuildGenericSettings();
                 break;
         }
+
+        AddThemeSelectorCard();
+    }
+
+    private void AddThemeSelectorCard()
+    {
+        var card = CreateCard();
+        var sp = new StackPanel();
+        sp.Children.Add(new TextBlock
+        {
+            Text = "🎨 Тема оформления",
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+        sp.Children.Add(new TextBlock
+        {
+            Text = "Выберите тему для этого виджета или используйте глобальную настройку Хаба:",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            Margin = new Thickness(0, 0, 0, 8),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var cb = new ComboBox
+        {
+            Height = 32,
+            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255))
+        };
+        cb.Items.Add(new ComboBoxItem { Content = "✦ Как в Хабе (Автоматически)", Tag = "auto" });
+        cb.Items.Add(new ComboBoxItem { Content = "🌙 Тёмная тема (Dark)", Tag = "dark" });
+        cb.Items.Add(new ComboBoxItem { Content = "☀️ Светлая тема (Light)", Tag = "light" });
+
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        string curTheme = win?.Settings.Theme ?? "auto";
+        cb.SelectedIndex = curTheme switch
+        {
+            "dark" => 1,
+            "light" => 2,
+            _ => 0
+        };
+
+        cb.SelectionChanged += (s, e) =>
+        {
+            if (cb.SelectedItem is ComboBoxItem item && item.Tag is string t)
+            {
+                if (win != null)
+                {
+                    win.Settings.Theme = t;
+                    win.ApplyTheme();
+                    WidgetManager.Instance.SaveSettings();
+                }
+            }
+        };
+
+        sp.Children.Add(cb);
+        card.Child = sp;
+        SettingsPanel.Children.Add(card);
     }
 
     private void AddSectionHeader(string title, string subtitle)

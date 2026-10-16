@@ -87,6 +87,16 @@ public class WidgetManager
         return _activeWindows.Values.FirstOrDefault(w => w.BaseWidgetId == instanceOrBaseId);
     }
 
+    public void ApplyGlobalTheme(string theme)
+    {
+        Settings.Theme = theme;
+        SaveSettings();
+        foreach (var win in _activeWindows.Values)
+        {
+            try { win.ApplyTheme(); } catch { }
+        }
+    }
+
     public void MoveWidgetToMonitor(string instanceId, int monitorIndex)
     {
         if (_activeWindows.TryGetValue(instanceId, out var window))

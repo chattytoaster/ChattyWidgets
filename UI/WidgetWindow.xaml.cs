@@ -5,11 +5,16 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Markup;
+using System.Windows.Media;
 using ChattyWidgets.Core.Bridge;
 using ChattyWidgets.Core.Models;
 using ChattyWidgets.Core.Services;
 using ChattyWidgets.Core.Win32;
 using Microsoft.Web.WebView2.Wpf;
+using DragDropEffects = System.Windows.DragDropEffects;
+using UserControl = System.Windows.Controls.UserControl;
+using Button = System.Windows.Controls.Button;
+using VisualTreeHelper = System.Windows.Media.VisualTreeHelper;
 
 namespace ChattyWidgets.UI;
 
@@ -127,15 +132,6 @@ public partial class WidgetWindow : Window
                 source.CompositionTarget.BackgroundColor = System.Windows.Media.Colors.Transparent;
             }
         }
-
-        var margins = new Win32Native.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
-        Win32Native.DwmExtendFrameIntoClientArea(_hwnd, ref margins);
-
-        if (WidgetManager.Instance.Settings.AcrylicBlur)
-        {
-            ApplyAcrylicBlur();
-        }
-
         LogW($"OnSourceInitialized calling ApplyLayer for {InstanceId}");
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
         LogW($"OnSourceInitialized calling UpdateWindowShape for {InstanceId}");
@@ -148,21 +144,15 @@ public partial class WidgetWindow : Window
         if (_hwnd == IntPtr.Zero) return;
         try
         {
-            // Windows 11 rounded window preference
-            int cornerPref = Win32Native.DWMWCP_ROUND;
+            // Do not round HWND edges - WPF handles beautiful anti-aliased rounded borders via DirectX
+            int cornerPref = Win32Native.DWMWCP_DONOTROUND;
             Win32Native.DwmSetWindowAttribute(_hwnd, Win32Native.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPref, sizeof(int));
 
-            // Suppress Windows 11 1px DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
+            // Suppress Windows 11 DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
             int noneColor = unchecked((int)0xFFFFFFFE);
             Win32Native.DwmSetWindowAttribute(_hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noneColor, sizeof(int));
         }
         catch { }
-    }
-
-    private void ApplyAcrylicBlur()
-    {
-        // Safe no-op on modern Windows 11 to avoid KERNELBASE crashes and ugly rectangular straight blur edges.
-        UpdateWindowShape();
     }
 
     private Win32Native.SubclassProc? _subclassProc;
@@ -184,11 +174,41 @@ public partial class WidgetWindow : Window
         }, IntPtr.Zero);
     }
 
+    private bool _isFreeResizeEnabled = false;
     private const int RESIZE_BORDER_THICKNESS = 8;
+
+    private void OnWindowDragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void OnWindowDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+            {
+                if (WidgetContentHost.Content is FrameworkElement fe && fe.DataContext is MediaFrameWidgetViewModel photoVm)
+                {
+                    photoVm.HandleDropFiles(files);
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+    }
 
     private IntPtr CheckResizeHitTest(Point windowPt)
     {
-        if (ResizeMode != ResizeMode.CanResizeWithGrip && ResizeMode != ResizeMode.CanResize)
+        if (!_isFreeResizeEnabled)
             return IntPtr.Zero;
 
         double w = ActualWidth > 0 ? ActualWidth : Width;
@@ -305,6 +325,7 @@ public partial class WidgetWindow : Window
         {
             LoadNativeWidget();
         }
+        ApplyTheme();
         UpdateWindowShape();
     }
 
@@ -852,27 +873,223 @@ public partial class WidgetWindow : Window
 
     private void ApplyBackgroundOpacity(double opacity)
     {
-        // 1. For Native XAML Widgets (adjust background brush alpha, keep text sharp)
-        if (WidgetContentHost.Content is Border border)
+        ApplyTheme();
+    }
+
+    public void ApplyTheme(string? themeOverride = null)
+    {
+        string activeTheme = themeOverride ?? Settings.Theme;
+        if (activeTheme == "auto" || string.IsNullOrWhiteSpace(activeTheme))
         {
-            byte alpha = (byte)Math.Clamp((int)(opacity * 255), 30, 255);
-            border.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
+            activeTheme = WidgetManager.Instance.Settings.Theme;
+        }
+        bool isLight = activeTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
+
+        UpdateMenuChecks();
+
+        // 1. Locate root border
+        Border? rootBorder = null;
+        if (WidgetContentHost.Content is Border b) rootBorder = b;
+        else if (WidgetContentHost.Content is UserControl uc && uc.Content is Border ucb) rootBorder = ucb;
+        else if (WidgetContentHost.Content is FrameworkElement fe)
+        {
+            rootBorder = FindVisualChild<Border>(fe);
         }
 
-        // 2. For Web Widgets (adjust CSS card background opacity, keep text sharp)
+        if (rootBorder != null)
+        {
+            if (isLight)
+            {
+                byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 245), 30, 248);
+                rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 248, 250, 252));
+                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(45, 0, 0, 0));
+            }
+            else
+            {
+                byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 225), 30, 225);
+                rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
+                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+            }
+        }
+
+        // 2. If SystemGaugesView, apply theme to it directly
+        if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
+        {
+            gaugesView.ApplyTheme(isLight);
+        }
+
+        // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)
+        if (WidgetContentHost.Content is DependencyObject depObj)
+        {
+            ApplyThemeToVisualTree(depObj, isLight, rootBorder);
+        }
+
+        // 4. For Web widgets
         if (_webView?.CoreWebView2 != null)
         {
-            string alphaStr = opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string alphaStr = Settings.Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
             string js = $@"
                 try {{
+                    document.documentElement.classList.toggle('light-theme', {isLight.ToString().ToLower()});
+                    document.documentElement.classList.toggle('dark-theme', {(!isLight).ToString().ToLower()});
+                    if (document.body) {{
+                        document.body.classList.toggle('light-theme', {isLight.ToString().ToLower()});
+                        document.body.classList.toggle('dark-theme', {(!isLight).ToString().ToLower()});
+                    }}
                     const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, body > div');
                     cards.forEach(c => {{
-                        c.style.backgroundColor = 'rgba(18, 22, 34, {alphaStr})';
+                        c.style.backgroundColor = '{(isLight ? "rgba(248, 250, 252, " : "rgba(18, 22, 34, ")}' + {alphaStr} + ')';
                     }});
                 }} catch(e) {{}}
             ";
             _webView.CoreWebView2.ExecuteScriptAsync(js);
         }
+    }
+
+    private void ApplyThemeToVisualTree(DependencyObject? node, bool isLight, Border? rootBorder)
+    {
+        if (node == null) return;
+
+        int childrenCount = VisualTreeHelper.GetChildrenCount(node);
+        for (int i = 0; i < childrenCount; i++)
+        {
+            var child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is TextBlock tb)
+            {
+                if (isLight)
+                {
+                    if (tb.Tag == null) tb.Tag = tb.Foreground;
+                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                    {
+                        int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                        int max = Math.Max(r, Math.Max(g, b));
+                        int min = Math.Min(r, Math.Min(g, b));
+                        bool isAccent = (max - min) > 70;
+                        if (!isAccent)
+                        {
+                            int brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                            if (brightness >= 180)
+                            {
+                                tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // Dark primary / dark icon
+                            }
+                            else if (brightness >= 100)
+                            {
+                                tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)); // Dark secondary
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (tb.Tag is Brush origBrush)
+                    {
+                        tb.Foreground = origBrush;
+                    }
+                    else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
+                    {
+                        tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                    }
+                }
+            }
+            else if (child is Button btn)
+            {
+                if (isLight)
+                {
+                    if (btn.Tag == null) btn.Tag = (btn.Foreground, btn.Background, btn.BorderBrush);
+                    btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
+                    if (btn.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    {
+                        if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
+                        {
+                            btn.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
+                        }
+                    }
+                    if (btn.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
+                    {
+                        btn.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 0, 0, 0));
+                    }
+                }
+                else
+                {
+                    if (btn.Tag is ValueTuple<Brush, Brush, Brush> tuple)
+                    {
+                        btn.Foreground = tuple.Item1;
+                        btn.Background = tuple.Item2;
+                        btn.BorderBrush = tuple.Item3;
+                    }
+                    else
+                    {
+                        btn.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)); // LIGHT ICONS!
+                        btn.Background = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255));
+                        btn.BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
+                    }
+                }
+            }
+            else if (child is Border innerB && innerB != rootBorder)
+            {
+                if (isLight)
+                {
+                    if (innerB.Tag == null) innerB.Tag = (innerB.Background, innerB.BorderBrush);
+                    if (innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    {
+                        if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
+                        {
+                            innerB.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
+                        }
+                    }
+                    if (innerB.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
+                    {
+                        if (bbScb.Color.R > 200 && bbScb.Color.G > 200 && bbScb.Color.B > 200)
+                        {
+                            innerB.BorderBrush = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bbScb.Color.A), 0, 0, 0));
+                        }
+                    }
+                }
+                else
+                {
+                    if (innerB.Tag is ValueTuple<Brush, Brush> orig)
+                    {
+                        innerB.Background = orig.Item1;
+                        innerB.BorderBrush = orig.Item2;
+                    }
+                }
+            }
+            else if (child is System.Windows.Shapes.Shape shape)
+            {
+                if (isLight)
+                {
+                    if (shape.Tag == null) shape.Tag = (shape.Fill, shape.Stroke);
+                    if (shape.Fill is SolidColorBrush f && f.Color.R > 200 && f.Color.G > 200 && f.Color.B > 200)
+                        shape.Fill = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                    if (shape.Stroke is SolidColorBrush s && s.Color.R > 200 && s.Color.G > 200 && s.Color.B > 200)
+                        shape.Stroke = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                }
+                else
+                {
+                    if (shape.Tag is ValueTuple<Brush, Brush> orig)
+                    {
+                        shape.Fill = orig.Item1;
+                        shape.Stroke = orig.Item2;
+                    }
+                }
+            }
+
+            ApplyThemeToVisualTree(child, isLight, rootBorder);
+        }
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed) return typed;
+            var sub = FindVisualChild<T>(child);
+            if (sub != null) return sub;
+        }
+        return null;
     }
 
     private readonly Dictionary<string, MenuItem> _customMenuItems = new();
@@ -929,10 +1146,13 @@ public partial class WidgetWindow : Window
         MenuClickThrough.IsChecked = Settings.IsClickThrough;
         MenuLockPosition.IsChecked = Settings.IsLocked;
         MenuAutoHideDot.IsChecked = Settings.AutoHideAnchorDot;
-        MenuFreeResizeToggle.IsChecked = ResizeMode == ResizeMode.CanResizeWithGrip || ResizeMode == ResizeMode.CanResize;
+        if (MenuThemeAuto != null) MenuThemeAuto.IsChecked = Settings.Theme == "auto";
+        if (MenuThemeDark != null) MenuThemeDark.IsChecked = Settings.Theme == "dark";
+        if (MenuThemeLight != null) MenuThemeLight.IsChecked = Settings.Theme == "light";
+        MenuFreeResizeToggle.IsChecked = _isFreeResizeEnabled;
         if (ResizeGripHandle != null)
         {
-            ResizeGripHandle.Visibility = MenuFreeResizeToggle.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+            ResizeGripHandle.Visibility = _isFreeResizeEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -1174,12 +1394,32 @@ public partial class WidgetWindow : Window
 
     private void OnToggleFreeResizeClick(object sender, RoutedEventArgs e)
     {
-        bool isFree = MenuFreeResizeToggle.IsChecked;
-        ResizeMode = isFree ? ResizeMode.CanResizeWithGrip : ResizeMode.NoResize;
+        _isFreeResizeEnabled = MenuFreeResizeToggle.IsChecked;
         if (ResizeGripHandle != null)
         {
-            ResizeGripHandle.Visibility = isFree ? Visibility.Visible : Visibility.Collapsed;
+            ResizeGripHandle.Visibility = _isFreeResizeEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
+    }
+
+    private void OnThemeAutoClick(object sender, RoutedEventArgs e)
+    {
+        Settings.Theme = "auto";
+        ApplyTheme();
+        SettingsChanged?.Invoke(this);
+    }
+
+    private void OnThemeDarkClick(object sender, RoutedEventArgs e)
+    {
+        Settings.Theme = "dark";
+        ApplyTheme();
+        SettingsChanged?.Invoke(this);
+    }
+
+    private void OnThemeLightClick(object sender, RoutedEventArgs e)
+    {
+        Settings.Theme = "light";
+        ApplyTheme();
+        SettingsChanged?.Invoke(this);
     }
 
     private void OnResizeGripLeftDown(object sender, MouseButtonEventArgs e)

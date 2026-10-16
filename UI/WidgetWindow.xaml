@@ -3,12 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStartupLocation="Manual"
         WindowStyle="None"
+        AllowsTransparency="True"
         Background="Transparent"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         Topmost="False"
         UseLayoutRounding="True"
-        TextOptions.TextFormattingMode="Display">
+        TextOptions.TextFormattingMode="Display"
+        AllowDrop="True"
+        DragOver="OnWindowDragOver"
+        Drop="OnWindowDrop">
     
     <Window.ContextMenu>
         <ContextMenu x:Name="WidgetContextMenu">
@@ -22,6 +26,11 @@
                 <MenuItem x:Name="MenuLayerDesktop" Header="На рабочем столе (под всеми окнами)" Click="OnLayerDesktopClick"/>
                 <MenuItem x:Name="MenuLayerNormal" Header="Плавающее окно" Click="OnLayerNormalClick"/>
                 <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" Click="OnLayerTopClick"/>
+            </MenuItem>
+            <MenuItem Header="Тема оформления">
+                <MenuItem x:Name="MenuThemeAuto" Header="✦ Как в Хабе (Авто)" IsCheckable="True" Click="OnThemeAutoClick"/>
+                <MenuItem x:Name="MenuThemeDark" Header="🌙 Тёмная тема" IsCheckable="True" Click="OnThemeDarkClick"/>
+                <MenuItem x:Name="MenuThemeLight" Header="☀️ Светлая тема" IsCheckable="True" Click="OnThemeLightClick"/>
             </MenuItem>
             <MenuItem x:Name="MenuLockPosition" Header="Зафиксировать позицию" IsCheckable="True" Click="OnLockPositionClick"/>
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>

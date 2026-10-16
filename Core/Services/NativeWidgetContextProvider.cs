@@ -54,7 +54,7 @@ public static class NativeWidgetContextProvider
             "com.chatty.clock-glass" => new ClockWidgetViewModel(),
             "com.chatty.crypto-tracker" => new CryptoWidgetViewModel(),
             "com.chatty.gpu-monitor" => new GpuMonitorWidgetViewModel(),
-            "com.chatty.media-frame" => new MediaFrameWidgetViewModel(),
+            "com.chatty.media-frame" => new MediaFrameWidgetViewModel(instanceId),
             "com.chatty.music-player" => new MusicPlayerWidgetViewModel(),
             "com.chatty.pomodoro-timer" => new PomodoroWidgetViewModel(),
             "com.chatty.quick-dock" => new QuickDockWidgetViewModel(),
@@ -420,50 +420,157 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         set { _caption = value; OnPropertyChanged(); }
     }
 
+    private readonly string? _instanceId;
     private readonly List<string> _images = new();
     private int _index = 0;
 
     public ICommand NextCommand { get; }
     public ICommand PrevCommand { get; }
 
-    public MediaFrameWidgetViewModel()
+    public MediaFrameWidgetViewModel(string? instanceId = null)
     {
+        _instanceId = instanceId;
         NextCommand = new NativeRelayCommand(NextImage);
         PrevCommand = new NativeRelayCommand(PrevImage);
 
-        try
+        string? savedFolder = null;
+        if (!string.IsNullOrEmpty(_instanceId) &&
+            WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s) &&
+            s.CustomSettings.TryGetValue("mediaFolder", out var f) &&
+            Directory.Exists(f))
         {
-            string pics = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            if (Directory.Exists(pics))
-            {
-                foreach (var ext in new[] { "*.jpg", "*.png", "*.jpeg", "*.webp" })
-                {
-                    _images.AddRange(Directory.GetFiles(pics, ext));
-                }
-            }
+            savedFolder = f;
         }
-        catch { }
 
-        if (_images.Count > 0)
+        if (savedFolder != null)
         {
-            ShowImage(0);
+            SetCustomFolder(savedFolder);
         }
         else
         {
-            Caption = "Поместите изображения в папку «Изображения»";
+            try
+            {
+                string pics = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (Directory.Exists(pics))
+                {
+                    foreach (var ext in new[] { "*.jpg", "*.png", "*.jpeg", "*.webp" })
+                    {
+                        _images.AddRange(Directory.GetFiles(pics, ext));
+                    }
+                }
+            }
+            catch { }
+
+            if (_images.Count > 0)
+            {
+                ShowImage(0);
+            }
+            else
+            {
+                ShowImage(0);
+            }
         }
     }
 
+    public bool HasImage => !string.IsNullOrEmpty(_currentImage) && File.Exists(_currentImage);
+    public Visibility ImageVisibility => HasImage ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PlaceholderVisibility => HasImage ? Visibility.Collapsed : Visibility.Visible;
+
     private void ShowImage(int idx)
     {
-        if (_images.Count == 0) return;
+        if (_images.Count == 0)
+        {
+            CurrentImage = "";
+            Caption = "Перетащите сюда фото";
+            OnPropertyChanged(nameof(HasImage));
+            OnPropertyChanged(nameof(ImageVisibility));
+            OnPropertyChanged(nameof(PlaceholderVisibility));
+            return;
+        }
         _index = (idx + _images.Count) % _images.Count;
         CurrentImage = _images[_index];
         Caption = Path.GetFileNameWithoutExtension(_images[_index]);
+        OnPropertyChanged(nameof(HasImage));
+        OnPropertyChanged(nameof(ImageVisibility));
+        OnPropertyChanged(nameof(PlaceholderVisibility));
     }
 
     private void NextImage() => ShowImage(_index + 1);
     private void PrevImage() => ShowImage(_index - 1);
+
+    public void HandleDropFiles(string[] filePaths)
+    {
+        if (filePaths == null || filePaths.Length == 0) return;
+        var validExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"
+        };
+
+        var newImages = new List<string>();
+        string? targetImage = null;
+        string? rememberedFolder = null;
+
+        foreach (var path in filePaths)
+        {
+            if (Directory.Exists(path))
+            {
+                rememberedFolder ??= path;
+                foreach (var ext in validExts)
+                {
+                    try { newImages.AddRange(Directory.GetFiles(path, "*" + ext)); } catch { }
+                }
+            }
+            else if (File.Exists(path) && validExts.Contains(Path.GetExtension(path)))
+            {
+                if (targetImage == null)
+                {
+                    targetImage = path;
+                    rememberedFolder ??= Path.GetDirectoryName(path);
+                }
+                newImages.Add(path);
+            }
+        }
+
+        // If a single image was dropped, also scan its folder so user can flip through
+        if (targetImage != null && filePaths.Length == 1 && rememberedFolder != null && Directory.Exists(rememberedFolder))
+        {
+            try
+            {
+                var siblingImages = new List<string>();
+                foreach (var ext in validExts)
+                {
+                    try { siblingImages.AddRange(Directory.GetFiles(rememberedFolder, "*" + ext)); } catch { }
+                }
+                if (siblingImages.Count > 0)
+                {
+                    newImages = siblingImages.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                }
+            }
+            catch { }
+        }
+
+        if (newImages.Count > 0)
+        {
+            _images.Clear();
+            _images.AddRange(newImages);
+            if (targetImage != null && _images.Contains(targetImage))
+            {
+                _index = _images.IndexOf(targetImage);
+            }
+            else
+            {
+                _index = 0;
+            }
+            ShowImage(_index);
+
+            if (rememberedFolder != null && !string.IsNullOrEmpty(_instanceId) &&
+                WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+            {
+                s.CustomSettings["mediaFolder"] = rememberedFolder;
+                WidgetManager.Instance.SaveSettings();
+            }
+        }
+    }
 
     public void SetCustomFolder(string folderPath)
     {
@@ -481,6 +588,16 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         {
             CurrentImage = "";
             Caption = "В папке нет поддерживаемых изображений";
+            OnPropertyChanged(nameof(HasImage));
+            OnPropertyChanged(nameof(ImageVisibility));
+            OnPropertyChanged(nameof(PlaceholderVisibility));
+        }
+
+        if (!string.IsNullOrEmpty(_instanceId) &&
+            WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+        {
+            s.CustomSettings["mediaFolder"] = folderPath;
+            WidgetManager.Instance.SaveSettings();
         }
     }
 }

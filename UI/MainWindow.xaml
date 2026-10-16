@@ -174,20 +174,21 @@
             </Grid.RowDefinitions>
 
             <!-- Top Header Navigation / Custom Title Bar -->
-            <Border Grid.Row="0" Background="#121522" BorderBrush="#1E2336" BorderThickness="0,0,0,1" Padding="20,0,12,0">
+            <Border x:Name="TopHeaderBorder" Grid.Row="0" Background="#121522" BorderBrush="#1E2336" BorderThickness="0,0,0,1" Padding="20,0,12,0">
                 <DockPanel LastChildFill="True">
                     <!-- Logo & Brand (Draggable window caption) -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,28,0">
                         <Image Source="/app.png" Width="34" Height="34" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
-                            <TextBlock Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
+                            <TextBlock x:Name="TxtAppTitle" Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <TextBlock x:Name="TxtAppSubtitle" Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
                         </StackPanel>
                     </StackPanel>
 
                     <!-- Window Control Buttons (Far Right) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
                                 WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="BtnThemeToggle" Content="🌙" Style="{StaticResource CaptionBtnStyle}" Click="OnThemeToggleClick" ToolTip="Тема оформления (Тёмная / Светлая)"/>
                         <Button Content="—" Style="{StaticResource CaptionBtnStyle}" Click="OnMinimizeWindowClick" ToolTip="Свернуть"/>
                         <Button x:Name="BtnMaximizeRestore" Content="▢" Style="{StaticResource CaptionBtnStyle}" Click="OnMaximizeRestoreWindowClick" ToolTip="Развернуть"/>
                         <Button Content="✕" Style="{StaticResource CloseCaptionBtnStyle}" Click="OnCloseWindowClick" ToolTip="Закрыть в трей"/>
@@ -473,6 +474,23 @@
 
                                 <Separator Background="#252A3F" Margin="0,4,0,14"/>
 
+                                <!-- Theme Selection -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Тема оформления (Хаб и виджеты):" FontSize="13" Foreground="#94A3B8"/>
+                                        <TextBlock Text="При светлой теме иконки темные, при темной — светлые" FontSize="11" Foreground="#64748B"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="ComboHubTheme" Grid.Column="1" Width="260" Height="32" SelectionChanged="OnComboHubThemeChanged"
+                                              Background="#1E2333" Foreground="#F8FAFC" BorderBrush="#333B52">
+                                        <ComboBoxItem Content="🌙 Тёмная тема (Dark)" Tag="dark"/>
+                                        <ComboBoxItem Content="☀️ Светлая тема (Light)" Tag="light"/>
+                                    </ComboBox>
+                                </Grid>
+
                                 <!-- Grid Size Slider -->
                                 <Grid Margin="0,0,0,14">
                                     <Grid.ColumnDefinitions>
@@ -526,7 +544,7 @@
         </Grid>
 
         <!-- Bottom Status Bar -->
-        <Border Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
+        <Border x:Name="BottomStatusBar" Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="TxtStatus" Text="Готово" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
                 <TextBlock Text="ChattyWidgets Engine v1.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>

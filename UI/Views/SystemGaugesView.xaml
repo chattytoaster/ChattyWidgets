@@ -22,7 +22,7 @@
             <DockPanel Grid.Row="0" Margin="0,0,0,10">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <TextBlock Text="⚡ " FontSize="12" Foreground="#38BDF8"/>
-                    <TextBlock Text="СИСТЕМА" FontWeight="Bold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtHeaderTitle" Text="СИСТЕМА" FontWeight="Bold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
 

@@ -16,6 +16,7 @@ public partial class SystemGaugesView : UserControl
     private readonly string _instanceId;
     private SystemGaugesConfig _config = new();
     private readonly List<Action<SystemMetrics>> _updaters = new();
+    private bool _isLight = false;
 
     public SystemGaugesView(string instanceId)
     {
@@ -23,6 +24,32 @@ public partial class SystemGaugesView : UserControl
         _instanceId = instanceId;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+    }
+
+    public void ApplyTheme(bool isLight)
+    {
+        _isLight = isLight;
+        if (Content is Border rootBorder)
+        {
+            if (isLight)
+            {
+                rootBorder.Background = new SolidColorBrush(Color.FromArgb(242, 248, 250, 252));
+                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0));
+                rootBorder.BorderThickness = new Thickness(1);
+            }
+            else
+            {
+                rootBorder.Background = new SolidColorBrush(Color.FromArgb(208, 18, 22, 34));
+                rootBorder.BorderBrush = null;
+                rootBorder.BorderThickness = new Thickness(0);
+            }
+        }
+        if (TxtHeaderTitle != null)
+        {
+            TxtHeaderTitle.Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+        }
+        BuildDynamicUI();
+        UpdateView(SystemMonitorService.Instance.CurrentMetrics);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -45,6 +72,10 @@ public partial class SystemGaugesView : UserControl
     public void ReloadConfig()
     {
         _config = SystemGaugesConfig.Load(_instanceId);
+        if (TxtHeaderTitle != null)
+        {
+            TxtHeaderTitle.Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+        }
         BuildDynamicUI();
         UpdateView(SystemMonitorService.Instance.CurrentMetrics);
     }
@@ -181,7 +212,7 @@ public partial class SystemGaugesView : UserControl
             var border = new Border
             {
                 Margin = new Thickness(0, 3, 0, 4),
-                Background = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+                Background = _isLight ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(8, 6, 8, 6)
             };
@@ -193,7 +224,7 @@ public partial class SystemGaugesView : UserControl
                 Height = 46,
                 StrokeThickness = 4.0,
                 ProgressBrush = GetBrush(item.ColorHex),
-                TrackBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
                 Margin = new Thickness(0, 0, 10, 0)
             };
             DockPanel.SetDock(gauge, Dock.Left);
@@ -205,12 +236,12 @@ public partial class SystemGaugesView : UserControl
                 Text = item.Title,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromRgb(241, 245, 249))
+                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))
             };
             var txtRates = new TextBlock
             {
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 2, 0, 0)
             };
             sp.Children.Add(txtTitle);
@@ -233,7 +264,7 @@ public partial class SystemGaugesView : UserControl
             var border = new Border
             {
                 Margin = new Thickness(0, 6, 0, 2),
-                Background = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+                Background = _isLight ? new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(8, 5, 8, 5)
             };
@@ -252,7 +283,7 @@ public partial class SystemGaugesView : UserControl
             var txtDown = new TextBlock
             {
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240))
+                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
             };
             leftStack.Children.Add(arrowDown);
             leftStack.Children.Add(txtDown);
@@ -270,7 +301,7 @@ public partial class SystemGaugesView : UserControl
             var txtUp = new TextBlock
             {
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240))
+                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
             };
             rightStack.Children.Add(arrowUp);
             rightStack.Children.Add(txtUp);
@@ -308,7 +339,7 @@ public partial class SystemGaugesView : UserControl
         {
             Text = item.Title,
             FontSize = 11.5,
-            Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(203, 213, 225))
         };
         var txtVal = new TextBlock
         {
@@ -329,7 +360,7 @@ public partial class SystemGaugesView : UserControl
             Height = 6,
             Margin = new Thickness(0, 4, 0, 0),
             Foreground = GetBrush(item.ColorHex),
-            Background = GetBrush(item.ColorHex, 40),
+            Background = _isLight ? new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)) : GetBrush(item.ColorHex, 40),
             BorderThickness = new Thickness(0)
         };
         Grid.SetRow(pb, 1);
@@ -346,7 +377,7 @@ public partial class SystemGaugesView : UserControl
         var border = new Border
         {
             Margin = new Thickness(0, 3, 0, 4),
-            Background = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+            Background = _isLight ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
             CornerRadius = new CornerRadius(10),
             Padding = new Thickness(8, 6, 8, 6)
         };
@@ -358,7 +389,7 @@ public partial class SystemGaugesView : UserControl
             Height = 46,
             StrokeThickness = 4.0,
             ProgressBrush = GetBrush(item.ColorHex),
-            TrackBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
             Margin = new Thickness(0, 0, 10, 0)
         };
         DockPanel.SetDock(gauge, Dock.Left);
@@ -370,7 +401,7 @@ public partial class SystemGaugesView : UserControl
             Text = item.Title,
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(241, 245, 249))
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))
         };
         var txtDetail = new TextBlock
         {

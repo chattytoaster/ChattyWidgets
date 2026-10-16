@@ -52,6 +52,12 @@ public class WidgetInstanceSettings
 
     [JsonPropertyName("targetMonitor")]
     public int TargetMonitor { get; set; } = 0;
+
+    [JsonPropertyName("theme")]
+    public string Theme { get; set; } = "auto";
+
+    [JsonPropertyName("customSettings")]
+    public Dictionary<string, string> CustomSettings { get; set; } = new();
 }
 
 public class DesktopPreset
