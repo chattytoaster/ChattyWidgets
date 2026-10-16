@@ -41,6 +41,7 @@
                 <MenuItem Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
             </MenuItem>
             <MenuItem x:Name="MenuMonitors" Header="Переместить на монитор..."/>
+            <MenuItem x:Name="MenuGaugesConstructor" Header="🎨 Изменить формат (Конструктор)..." Visibility="Collapsed" Click="OnOpenGaugesConstructorClick"/>
             <Separator x:Name="MenuCustomSeparator" Visibility="Collapsed"/>
             <MenuItem x:Name="MenuCustomSettings" Header="Настройки виджета" Visibility="Collapsed"/>
             <Separator/>

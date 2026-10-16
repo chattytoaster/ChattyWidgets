@@ -2,41 +2,88 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pomodoro Focus Timer</title>
+    <title>Chatty Timer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="pomodoro-card">
-        <div class="mode-selector">
-            <button class="mode-btn active" id="btn-mode-work" onclick="setMode('work')">🍅 Фокус 25м</button>
-            <button class="mode-btn break" id="btn-mode-break" onclick="setMode('break')">☕ Отдых 5м</button>
+    <div class="timer-card">
+        <!-- Top Pill Nav: Focus vs Normal -->
+        <div class="top-nav">
+            <button class="nav-tab active" id="tab-focus" onclick="switchMainMode('focus')">🎯 Фокус</button>
+            <button class="nav-tab" id="tab-normal" onclick="switchMainMode('normal')">⏱ Обычный</button>
         </div>
 
-        <div class="timer-display">
-            <div class="time" id="timer-text">25:00</div>
-            <div class="session-info">
-                <span>Сессий завершено:</span>
-                <strong id="session-count" style="color:#F8FAFC;">0</strong>
+        <!-- 1. FOCUS VIEW (Pomodoro) -->
+        <div class="mode-view" id="view-focus">
+            <div class="mode-selector">
+                <button class="mode-btn active" id="btn-mode-work" onclick="setFocusSubMode('work')">🍅 Фокус 25м</button>
+                <button class="mode-btn break" id="btn-mode-break" onclick="setFocusSubMode('break')">☕ Отдых 5м</button>
+            </div>
+
+            <div class="timer-display">
+                <div class="time focus-time" id="focus-timer-text">25:00</div>
+                <div class="session-info">
+                    <span>Сессий завершено:</span>
+                    <strong id="session-count" style="color:#F8FAFC;">0</strong>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="action-btn btn-focus" id="btn-focus-toggle" onclick="toggleFocusTimer()">Старт</button>
+                <button class="action-btn btn-secondary" onclick="resetFocusTimer()">Сброс</button>
             </div>
         </div>
 
-        <div class="controls">
-            <button class="action-btn btn-primary" id="btn-toggle" onclick="toggleTimer()">Старт</button>
-            <button class="action-btn btn-secondary" onclick="resetTimer()">Сброс</button>
+        <!-- 2. NORMAL VIEW (Countdown & Presets) -->
+        <div class="mode-view" id="view-normal" style="display:none;">
+            <div class="preset-selector">
+                <button class="chip" onclick="addNormalTime(60)">+1м</button>
+                <button class="chip" onclick="addNormalTime(300)">+5м</button>
+                <button class="chip" onclick="addNormalTime(600)">+10м</button>
+                <button class="chip" onclick="addNormalTime(900)">+15м</button>
+                <button class="chip" onclick="addNormalTime(1800)">+30м</button>
+            </div>
+
+            <div class="timer-display">
+                <div class="time normal-time" id="normal-timer-text">05:00</div>
+                <div class="session-info">
+                    <span id="normal-status-label">Обратный отсчет</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="action-btn btn-normal" id="btn-normal-toggle" onclick="toggleNormalTimer()">Старт</button>
+                <button class="action-btn btn-secondary" onclick="resetNormalTimer()">Сброс</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let mode = 'work'; // 'work' or 'break'
-        let timeLeft = 25 * 60;
-        let isRunning = false;
-        let timerInterval = null;
+        let mainMode = 'focus'; // 'focus' or 'normal'
+
+        // --- Focus Mode State ---
+        let focusSubMode = 'work'; // 'work' (25m) or 'break' (5m)
+        let focusTimeLeft = 25 * 60;
+        let isFocusRunning = false;
+        let focusInterval = null;
         let sessionsCompleted = 0;
 
+        // --- Normal Mode State ---
+        let normalInitialTime = 5 * 60;
+        let normalTimeLeft = 5 * 60;
+        let isNormalRunning = false;
+        let normalInterval = null;
+
+        // Load persisted settings
         try {
             if (window.chatty && window.chatty.storageGet) {
                 sessionsCompleted = parseInt(window.chatty.storageGet('sessions', '0')) || 0;
                 document.getElementById('session-count').innerText = sessionsCompleted;
+
+                const savedMain = window.chatty.storageGet('main_mode', 'focus');
+                if (savedMain === 'normal') {
+                    switchMainMode('normal', false);
+                }
             }
         } catch (e) {}
 
@@ -57,51 +104,73 @@
             } catch (e) {}
         }
 
-        function updateDisplay() {
-            const min = Math.floor(timeLeft / 60);
-            const sec = timeLeft % 60;
-            const str = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-            const el = document.getElementById('timer-text');
-            el.innerText = str;
-            if (mode === 'break') {
+        function formatDisplay(totalSec) {
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            if (h > 0) {
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        // --- Main Mode Switching ---
+        function switchMainMode(mode, save = true) {
+            mainMode = mode;
+            document.getElementById('tab-focus').classList.toggle('active', mode === 'focus');
+            document.getElementById('tab-normal').classList.toggle('active', mode === 'normal');
+
+            document.getElementById('view-focus').style.display = mode === 'focus' ? 'flex' : 'none';
+            document.getElementById('view-normal').style.display = mode === 'normal' ? 'flex' : 'none';
+
+            if (save && window.chatty && window.chatty.storageSet) {
+                window.chatty.storageSet('main_mode', mode);
+            }
+        }
+
+        // --- Focus (Pomodoro) Logic ---
+        function updateFocusDisplay() {
+            const el = document.getElementById('focus-timer-text');
+            el.innerText = formatDisplay(focusTimeLeft);
+            if (focusSubMode === 'break') {
                 el.classList.add('break-time');
             } else {
                 el.classList.remove('break-time');
             }
         }
 
-        function setMode(m) {
-            if (isRunning) toggleTimer();
-            mode = m;
-            document.getElementById('btn-mode-work').classList.toggle('active', mode === 'work');
-            document.getElementById('btn-mode-break').classList.toggle('active', mode === 'break');
-            timeLeft = mode === 'work' ? 25 * 60 : 5 * 60;
-            updateDisplay();
+        function setFocusSubMode(sub) {
+            if (isFocusRunning) toggleFocusTimer();
+            focusSubMode = sub;
+            document.getElementById('btn-mode-work').classList.toggle('active', sub === 'work');
+            document.getElementById('btn-mode-break').classList.toggle('active', sub === 'break');
+            focusTimeLeft = sub === 'work' ? 25 * 60 : 5 * 60;
+            updateFocusDisplay();
         }
 
-        function toggleTimer() {
-            const btn = document.getElementById('btn-toggle');
-            if (isRunning) {
-                clearInterval(timerInterval);
-                isRunning = false;
+        function toggleFocusTimer() {
+            const btn = document.getElementById('btn-focus-toggle');
+            if (isFocusRunning) {
+                clearInterval(focusInterval);
+                isFocusRunning = false;
                 btn.innerText = 'Продолжить';
-                btn.style.background = mode === 'work' ? '#EF4444' : '#10B981';
+                btn.style.background = focusSubMode === 'work' ? '#EF4444' : '#10B981';
             } else {
-                isRunning = true;
+                isFocusRunning = true;
                 btn.innerText = 'Пауза';
                 btn.style.background = '#475569';
-                timerInterval = setInterval(() => {
-                    if (timeLeft > 0) {
-                        timeLeft--;
-                        updateDisplay();
+                focusInterval = setInterval(() => {
+                    if (focusTimeLeft > 0) {
+                        focusTimeLeft--;
+                        updateFocusDisplay();
                     } else {
-                        clearInterval(timerInterval);
-                        isRunning = false;
+                        clearInterval(focusInterval);
+                        isFocusRunning = false;
                         btn.innerText = 'Старт';
-                        btn.style.background = mode === 'work' ? '#EF4444' : '#10B981';
+                        btn.style.background = focusSubMode === 'work' ? '#EF4444' : '#10B981';
                         playChime();
 
-                        if (mode === 'work') {
+                        if (focusSubMode === 'work') {
                             sessionsCompleted++;
                             document.getElementById('session-count').innerText = sessionsCompleted;
                             if (window.chatty && window.chatty.storageSet) {
@@ -110,26 +179,82 @@
                             if (window.chatty && window.chatty.notify) {
                                 window.chatty.notify('🍅 Pomodoro завершён!', 'Отличная работа! Сделайте 5-минутный перерыв для отдыха.');
                             }
-                            setMode('break');
+                            setFocusSubMode('break');
                         } else {
                             if (window.chatty && window.chatty.notify) {
                                 window.chatty.notify('☕ Перерыв окончен!', 'Пора возвращаться к продуктивной работе.');
                             }
-                            setMode('work');
+                            setFocusSubMode('work');
                         }
                     }
                 }, 1000);
             }
         }
 
-        function resetTimer() {
-            if (isRunning) toggleTimer();
-            timeLeft = mode === 'work' ? 25 * 60 : 5 * 60;
-            updateDisplay();
-            document.getElementById('btn-toggle').innerText = 'Старт';
+        function resetFocusTimer() {
+            if (isFocusRunning) toggleFocusTimer();
+            focusTimeLeft = focusSubMode === 'work' ? 25 * 60 : 5 * 60;
+            updateFocusDisplay();
+            document.getElementById('btn-focus-toggle').innerText = 'Старт';
+            document.getElementById('btn-focus-toggle').style.background = focusSubMode === 'work' ? '#EF4444' : '#10B981';
         }
 
-        updateDisplay();
+        // --- Normal Mode Logic ---
+        function updateNormalDisplay() {
+            const el = document.getElementById('normal-timer-text');
+            el.innerText = formatDisplay(normalTimeLeft);
+        }
+
+        function addNormalTime(sec) {
+            if (normalTimeLeft === 0) {
+                normalTimeLeft = sec;
+            } else {
+                normalTimeLeft += sec;
+            }
+            normalInitialTime = normalTimeLeft;
+            updateNormalDisplay();
+        }
+
+        function toggleNormalTimer() {
+            const btn = document.getElementById('btn-normal-toggle');
+            if (isNormalRunning) {
+                clearInterval(normalInterval);
+                isNormalRunning = false;
+                btn.innerText = 'Продолжить';
+                btn.style.background = '#3B82F6';
+            } else {
+                if (normalTimeLeft <= 0) normalTimeLeft = 300;
+                isNormalRunning = true;
+                btn.innerText = 'Пауза';
+                btn.style.background = '#475569';
+                normalInterval = setInterval(() => {
+                    if (normalTimeLeft > 0) {
+                        normalTimeLeft--;
+                        updateNormalDisplay();
+                    } else {
+                        clearInterval(normalInterval);
+                        isNormalRunning = false;
+                        btn.innerText = 'Старт';
+                        btn.style.background = '#3B82F6';
+                        playChime();
+                        if (window.chatty && window.chatty.notify) {
+                            window.chatty.notify('⏱ Время вышло!', 'Обычный таймер завершил отсчет.');
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetNormalTimer() {
+            if (isNormalRunning) toggleNormalTimer();
+            normalTimeLeft = normalInitialTime > 0 ? normalInitialTime : 300;
+            updateNormalDisplay();
+            document.getElementById('btn-normal-toggle').innerText = 'Старт';
+            document.getElementById('btn-normal-toggle').style.background = '#3B82F6';
+        }
+
+        updateFocusDisplay();
+        updateNormalDisplay();
     </script>
 </body>
 </html>

@@ -131,7 +131,52 @@ public class DesktopHostManager
     }
 
     /// <summary>
-    /// Snaps a position to screen borders and grid.
+    /// Clamps a window position strictly within monitor screen boundaries so widgets never go off-screen.
+    /// </summary>
+    public static Point ClampToScreen(double left, double top, double width, double height)
+    {
+        var monitors = ScreenHelper.GetMonitors();
+        if (monitors.Count == 0) return new Point(left, top);
+
+        double centerX = left + width / 2;
+        double centerY = top + height / 2;
+
+        var currentMon = monitors.FirstOrDefault(m =>
+            centerX >= m.Left && centerX <= m.Left + m.Width &&
+            centerY >= m.Top && centerY <= m.Top + m.Height);
+
+        if (currentMon == null)
+        {
+            currentMon = monitors.OrderBy(m => {
+                double dx = Math.Max(0, Math.Max(m.Left - centerX, centerX - (m.Left + m.Width)));
+                double dy = Math.Max(0, Math.Max(m.Top - centerY, centerY - (m.Top + m.Height)));
+                return dx * dx + dy * dy;
+            }).FirstOrDefault() ?? monitors[0];
+        }
+
+        if (width <= currentMon.Width)
+        {
+            left = Math.Max(currentMon.Left, Math.Min(left, currentMon.Left + currentMon.Width - width));
+        }
+        else
+        {
+            left = currentMon.Left;
+        }
+
+        if (height <= currentMon.Height)
+        {
+            top = Math.Max(currentMon.Top, Math.Min(top, currentMon.Top + currentMon.Height - height));
+        }
+        else
+        {
+            top = currentMon.Top;
+        }
+
+        return new Point(left, top);
+    }
+
+    /// <summary>
+    /// Snaps a position to screen borders and grid, and strictly clamps within screen bounds.
     /// </summary>
     public static Point SnapToScreenAndGrid(double left, double top, double width, double height, double snapDistance = 15, int gridStep = 10)
     {
@@ -158,6 +203,7 @@ public class DesktopHostManager
             top = Math.Round(top / gridStep) * gridStep;
         }
 
-        return new Point(left, top);
+        // Strictly clamp within the screen boundaries
+        return ClampToScreen(left, top, width, height);
     }
 }

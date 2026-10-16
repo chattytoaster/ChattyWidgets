@@ -39,6 +39,8 @@ public static class Win32Native
     public const int WM_NCLBUTTONDOWN = 0x00A1;
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_RBUTTONUP = 0x0205;
+    public const int WM_SIZING = 0x0214;
+    public const int WM_MOVING = 0x0216;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct MARGINS

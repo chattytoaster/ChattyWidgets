@@ -61,6 +61,12 @@ public partial class WidgetWindow : Window
             Top = 60;
         }
 
+        var clamped = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
+        Left = clamped.X;
+        Top = clamped.Y;
+        settings.Left = Left;
+        settings.Top = Top;
+
         // Window itself stays fully opaque; opacity affects the background surfaces only
         Opacity = 1.0;
 
@@ -224,6 +230,20 @@ public partial class WidgetWindow : Window
                 handled = true;
                 return (IntPtr)Win32Native.HTTRANSPARENT;
             }
+        }
+        else if (msg == Win32Native.WM_MOVING)
+        {
+            var rect = System.Runtime.InteropServices.Marshal.PtrToStructure<Win32Native.RECT>(lParam);
+            int w = rect.Right - rect.Left;
+            int h = rect.Bottom - rect.Top;
+            var pt = DesktopHostManager.ClampToScreen(rect.Left, rect.Top, w, h);
+            rect.Left = (int)pt.X;
+            rect.Top = (int)pt.Y;
+            rect.Right = rect.Left + w;
+            rect.Bottom = rect.Top + h;
+            System.Runtime.InteropServices.Marshal.StructureToPtr(rect, lParam, true);
+            handled = true;
+            return (IntPtr)1;
         }
         else if (msg == Win32Native.WM_RBUTTONUP)
         {
@@ -523,6 +543,14 @@ public partial class WidgetWindow : Window
         AnchorDot.Visibility = Visibility.Visible;
         try
         {
+            if (BaseWidgetId == "com.chatty.system-gauges")
+            {
+                var gaugesView = new ChattyWidgets.UI.Views.SystemGaugesView(InstanceId);
+                WidgetContentHost.Content = gaugesView;
+                ApplyBackgroundOpacity(Settings.Opacity);
+                return;
+            }
+
             string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
             if (File.Exists(entryPath))
             {
@@ -611,6 +639,14 @@ public partial class WidgetWindow : Window
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!IsLoaded || WindowState != WindowState.Normal) return;
+        var pt = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
+        if (Math.Abs(pt.X - Left) > 0.5 || Math.Abs(pt.Y - Top) > 0.5)
+        {
+            Left = pt.X;
+            Top = pt.Y;
+        }
+        Settings.Left = Left;
+        Settings.Top = Top;
         Settings.Width = Width;
         Settings.Height = Height;
         SettingsChanged?.Invoke(this);
@@ -645,8 +681,9 @@ public partial class WidgetWindow : Window
     public void MoveBy(double deltaX, double deltaY)
     {
         if (Settings.IsClickThrough || Settings.IsLocked) return;
-        Left += deltaX;
-        Top += deltaY;
+        var pt = DesktopHostManager.ClampToScreen(Left + deltaX, Top + deltaY, Width, Height);
+        Left = pt.X;
+        Top = pt.Y;
         Settings.Left = Left;
         Settings.Top = Top;
         SettingsChanged?.Invoke(this);
@@ -933,6 +970,12 @@ public partial class WidgetWindow : Window
             MenuMonitors.Items.Add(item);
         }
 
+        if (BaseWidgetId == "com.chatty.system-gauges")
+        {
+            MenuGaugesConstructor.Visibility = Visibility.Visible;
+            MenuCustomSeparator.Visibility = Visibility.Visible;
+        }
+
         if (Settings.AutoHideAnchorDot)
         {
             if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
@@ -942,6 +985,19 @@ public partial class WidgetWindow : Window
             }
             ApplyMenuOpenDomState(true);
         }
+    }
+
+    private void OnOpenGaugesConstructorClick(object sender, RoutedEventArgs e)
+    {
+        var constructorWin = new GaugesConstructorWindow(InstanceId, () =>
+        {
+            if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
+            {
+                gaugesView.ReloadConfig();
+            }
+        });
+        constructorWin.Owner = this;
+        constructorWin.ShowDialog();
     }
 
     private void OnOpenDevToolsClick(object sender, RoutedEventArgs e) => OpenDevTools();
@@ -966,6 +1022,10 @@ public partial class WidgetWindow : Window
             if (_webView?.CoreWebView2 != null)
             {
                 _webView.CoreWebView2.Reload();
+            }
+            else if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
+            {
+                gaugesView.ReloadConfig();
             }
             else
             {
@@ -1005,6 +1065,11 @@ public partial class WidgetWindow : Window
         {
             Width = Math.Max(MinWidth, newWidth);
             Height = Math.Max(MinHeight, newHeight);
+            var clamped = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
+            Left = clamped.X;
+            Top = clamped.Y;
+            Settings.Left = Left;
+            Settings.Top = Top;
             Settings.Width = Width;
             Settings.Height = Height;
             SettingsChanged?.Invoke(this);

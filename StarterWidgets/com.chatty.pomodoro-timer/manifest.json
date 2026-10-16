@@ -1,9 +1,9 @@
 {
   "id": "com.chatty.pomodoro-timer",
-  "name": "Фокус-Таймер Pomodoro",
-  "version": "1.0.0",
+  "name": "Умный Таймер",
+  "version": "1.1.0",
   "author": "ChattyWidgets",
-  "description": "Таймер 25/5 мин для фокуса на делах с системными тост-уведомлениями и приятным звуковым сигналом.",
+  "description": "Таймер с двумя режимами: Фокус (Pomodoro 25/5 мин) и Обычный таймер обратного отсчета с быстрыми пресетами.",
   "type": "web",
   "entry": "index.html",
   "defaultWidth": 280,
