@@ -19,50 +19,80 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        // Single instance check: if another instance is running, pass command-line arguments to it and exit!
+        if (!SingleInstanceService.TryStartAsFirstInstance(OnSecondInstanceArgsReceived))
+        {
+            SingleInstanceService.SendArgsToRunningInstance(e.Args);
+            Shutdown(0);
+            return;
+        }
+
+        // Register .chw file association in Windows Registry so double-clicking installs widgets
+        FileAssociationService.EnsureFileAssociation();
+
         // 1. Unpack & prepare starter widgets
         StarterWidgetsManager.InitializeStarterWidgets();
 
-        // 2. Check command line args (e.g. file association install)
+        // 2. Initialize WidgetManager
+        WidgetManager.Instance.Initialize();
+
+        // 3. Create Main Hub Window
+        var mainWindow = new MainWindow();
+        MainWindow = mainWindow;
+
+        // Process any .chw passed on initial startup
         bool startMinimized = false;
-        for (int i = 0; i < e.Args.Length; i++)
+        foreach (var arg in e.Args)
         {
-            if (e.Args[i].Equals("--minimized", StringComparison.OrdinalIgnoreCase))
+            if (arg.Equals("--minimized", StringComparison.OrdinalIgnoreCase))
             {
                 startMinimized = true;
             }
-            else if (e.Args[i].Equals("--install", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            else if (arg.EndsWith(".chw", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(arg))
             {
-                string chwPath = e.Args[i + 1];
-                try
-                {
-                    ChwPackageService.InstallPackage(chwPath);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Не удалось установить пакет .chw: {ex.Message}", "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            else if (e.Args[i].EndsWith(".chw", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    ChwPackageService.InstallPackage(e.Args[i]);
-                }
-                catch { }
+                mainWindow.InstallChwFile(arg);
             }
         }
-
-        // 3. Initialize WidgetManager
-        WidgetManager.Instance.Initialize();
-
-        // 4. Create Main Hub Window
-        var mainWindow = new MainWindow();
-        MainWindow = mainWindow;
 
         if (!startMinimized)
         {
             mainWindow.Show();
         }
+    }
+
+    private void OnSecondInstanceArgsReceived(string rawArgs)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var lines = rawArgs.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                string path = line.Trim().Trim('"');
+                if (path.EndsWith(".chw", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+                {
+                    if (MainWindow is MainWindow mw)
+                    {
+                        mw.Show();
+                        mw.WindowState = WindowState.Normal;
+                        mw.Activate();
+                        mw.InstallChwFile(path);
+                    }
+                }
+            }
+
+            if (MainWindow != null && !MainWindow.IsVisible)
+            {
+                MainWindow.Show();
+                MainWindow.WindowState = WindowState.Normal;
+                MainWindow.Activate();
+            }
+        });
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        SingleInstanceService.Cleanup();
+        base.OnExit(e);
     }
 
     private void RunSelfTest()

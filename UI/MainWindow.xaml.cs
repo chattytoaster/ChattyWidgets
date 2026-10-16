@@ -64,9 +64,39 @@ public partial class MainWindow : Window
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
+        UpdateMaximizeButtonIcon();
         if (WindowState == WindowState.Minimized)
         {
             Hide();
+        }
+    }
+
+    private void OnMinimizeWindowClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void OnMaximizeRestoreWindowClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        UpdateMaximizeButtonIcon();
+    }
+
+    private void OnCloseWindowClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void UpdateMaximizeButtonIcon()
+    {
+        if (BtnMaximizeRestore != null)
+        {
+            BtnMaximizeRestore.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
+            BtnMaximizeRestore.ToolTip = WindowState == WindowState.Maximized ? "Восстановить" : "Развернуть";
+        }
+        if (MainRootBorder != null)
+        {
+            MainRootBorder.BorderThickness = WindowState == WindowState.Maximized ? new Thickness(0) : new Thickness(1);
         }
     }
 
@@ -295,7 +325,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void InstallChwFile(string chwPath)
+    public void InstallChwFile(string chwPath)
     {
         try
         {

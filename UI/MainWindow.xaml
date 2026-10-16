@@ -6,12 +6,17 @@
         Height="680" Width="980"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
         Background="#0F111A"
         Foreground="#F8FAFC"
         UseLayoutRounding="True"
         AllowDrop="True"
         Drop="OnWindowDrop"
         DragEnter="OnWindowDragEnter">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="64" ResizeBorderThickness="6" UseAeroCaptionButtons="False" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <!-- Modern ScrollViewer style -->
@@ -99,42 +104,114 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Window Caption Button Styles -->
+        <Style x:Key="CaptionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#1E2335"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#2E354F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseCaptionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#EF4444"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#DC2626"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <!-- Top App Bar -->
-            <RowDefinition Height="64"/>
-            <!-- Content Area -->
-            <RowDefinition Height="*"/>
-            <!-- Bottom Status Bar -->
-            <RowDefinition Height="32"/>
-        </Grid.RowDefinitions>
+    <Border x:Name="MainRootBorder" BorderBrush="#252A3F" BorderThickness="1" Background="#0F111A">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Top App Bar -->
+                <RowDefinition Height="64"/>
+                <!-- Content Area -->
+                <RowDefinition Height="*"/>
+                <!-- Bottom Status Bar -->
+                <RowDefinition Height="32"/>
+            </Grid.RowDefinitions>
 
-        <!-- Top Header Navigation -->
-        <Border Grid.Row="0" Background="#121522" BorderBrush="#1E2336" BorderThickness="0,0,0,1" Padding="24,0">
-            <DockPanel LastChildFill="True">
-                <!-- Logo & Brand -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,32,0">
-                    <Image Source="/app.png" Width="36" Height="36" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="ChattyWidgets" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC"/>
-                        <TextBlock Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
+            <!-- Top Header Navigation / Custom Title Bar -->
+            <Border Grid.Row="0" Background="#121522" BorderBrush="#1E2336" BorderThickness="0,0,0,1" Padding="20,0,12,0">
+                <DockPanel LastChildFill="True">
+                    <!-- Logo & Brand (Draggable window caption) -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,28,0">
+                        <Image Source="/app.png" Width="34" Height="34" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <TextBlock Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
 
-                <!-- Action Button in Header -->
-                <Button DockPanel.Dock="Right" Content="+ Импорт .chw" Style="{StaticResource PrimaryBtn}" Click="OnImportChwClick" VerticalAlignment="Center"/>
+                    <!-- Window Control Buttons (Far Right) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button Content="—" Style="{StaticResource CaptionBtnStyle}" Click="OnMinimizeWindowClick" ToolTip="Свернуть"/>
+                        <Button x:Name="BtnMaximizeRestore" Content="▢" Style="{StaticResource CaptionBtnStyle}" Click="OnMaximizeRestoreWindowClick" ToolTip="Развернуть"/>
+                        <Button Content="✕" Style="{StaticResource CloseCaptionBtnStyle}" Click="OnCloseWindowClick" ToolTip="Закрыть в трей"/>
+                    </StackPanel>
 
-                <!-- Navigation Tabs -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton x:Name="TabMyWidgets" Content="📱 Мои виджеты" Style="{StaticResource NavTabBtn}" IsChecked="True" Checked="OnTabChanged"/>
-                    <RadioButton x:Name="TabStore" Content="🛍 Магазин" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
-                    <RadioButton x:Name="TabWorkshop" Content="🛠 Мастерская" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
-                    <RadioButton x:Name="TabSettings" Content="⚙ Настройки" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
+                    <!-- Action Button in Header -->
+                    <Button DockPanel.Dock="Right" Content="+ Импорт .chw" Style="{StaticResource PrimaryBtn}" Click="OnImportChwClick" 
+                            VerticalAlignment="Center" Margin="0,0,12,0" WindowChrome.IsHitTestVisibleInChrome="True"/>
+
+                    <!-- Navigation Tabs -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <RadioButton x:Name="TabMyWidgets" Content="📱 Мои виджеты" Style="{StaticResource NavTabBtn}" IsChecked="True" Checked="OnTabChanged"/>
+                        <RadioButton x:Name="TabStore" Content="🛍 Магазин" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                        <RadioButton x:Name="TabWorkshop" Content="🛠 Мастерская" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                        <RadioButton x:Name="TabSettings" Content="⚙ Настройки" Style="{StaticResource NavTabBtn}" Checked="OnTabChanged"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
 
         <!-- Main Content Area -->
         <Grid Grid.Row="1" Margin="24">
@@ -388,4 +465,5 @@
             </DockPanel>
         </Border>
     </Grid>
+    </Border>
 </Window>
