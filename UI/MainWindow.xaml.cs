@@ -157,10 +157,11 @@ public partial class MainWindow : Window
     public void RefreshInstalledWidgets()
     {
         var installed = ChwPackageService.GetInstalledWidgets();
-        var starterCatalog = StoreService.Instance.GetStarterWidgetsCatalog();
+        var compareCatalog = StoreService.Instance.LastLoadedCatalog ?? StoreService.Instance.GetStarterWidgetsCatalog();
         var viewModels = new List<InstalledWidgetViewModel>();
 
         int totalActiveCopies = 0;
+        int updatesCount = 0;
         foreach (var (manifest, dir) in installed)
         {
             int copies = WidgetManager.Instance.GetActiveInstancesCount(manifest.Id);
@@ -171,11 +172,12 @@ public partial class MainWindow : Window
 
             bool hasUpdate = false;
             string newVer = "";
-            var catItem = starterCatalog.FirstOrDefault(x => x.Id == manifest.Id);
+            var catItem = compareCatalog.FirstOrDefault(x => x.Id.Equals(manifest.Id, StringComparison.OrdinalIgnoreCase));
             if (catItem != null && StoreService.IsNewerVersion(catItem.Version, manifest.Version))
             {
                 hasUpdate = true;
                 newVer = catItem.Version;
+                updatesCount++;
             }
 
             viewModels.Add(new InstalledWidgetViewModel
@@ -197,12 +199,30 @@ public partial class MainWindow : Window
 
         InstalledWidgetsList.ItemsSource = viewModels;
         TxtActiveCount.Text = $"{totalActiveCopies} активно из {installed.Count}";
-        TxtStatus.Text = $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}.";
+        if (updatesCount > 0)
+        {
+            TxtStatus.Text = $"Загружено {installed.Count} виджетов. Доступно обновлений: {updatesCount}!";
+        }
+        else
+        {
+            TxtStatus.Text = $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}.";
+        }
     }
 
-    private void OnRefreshInstalledClick(object sender, RoutedEventArgs e)
+    private async void OnRefreshInstalledClick(object sender, RoutedEventArgs e)
     {
+        TxtStatus.Text = "Проверка обновлений виджетов...";
+        var catalog = await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
         RefreshInstalledWidgets();
+        int updates = catalog.Count(x => x.HasUpdate);
+        if (updates > 0)
+        {
+            MessageBox.Show($"Найдено обновлений: {updates}!\nНажмите кнопку «Обновить» на карточке виджета для установки.", "Обновления виджетов", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show("Все установленные виджеты обновлены до последней версии.", "Обновления виджетов", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void OnDuplicateFromHubClick(object sender, RoutedEventArgs e)
@@ -479,6 +499,11 @@ public partial class MainWindow : Window
 
     public async void RefreshStoreCatalog()
     {
+        await RefreshStoreCatalogAsync();
+    }
+
+    public async Task RefreshStoreCatalogAsync()
+    {
         TxtStatus.Text = "Загрузка каталога магазина...";
         var catalog = await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
 
@@ -493,6 +518,17 @@ public partial class MainWindow : Window
                 ? new SolidColorBrush(Color.FromRgb(96, 165, 250))
                 : new SolidColorBrush(Color.FromRgb(52, 211, 153));
 
+            bool canAction = !item.IsInstalled || item.HasUpdate;
+            string actionText = item.HasUpdate
+                ? $"Обновить до v{item.Version} ⬆"
+                : (item.IsInstalled ? "Установлен ✓" : "Установить ⬇");
+
+            var actionBg = item.HasUpdate
+                ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) // Emerald green for update
+                : (item.IsInstalled
+                    ? new SolidColorBrush(Color.FromRgb(51, 65, 85)) // Slate
+                    : new SolidColorBrush(Color.FromRgb(99, 102, 241))); // Indigo
+
             return new StoreItemViewModel
             {
                 Item = item,
@@ -502,11 +538,9 @@ public partial class MainWindow : Window
                 Author = item.Author,
                 Category = item.Category,
                 Size = item.Size,
-                CanInstall = !item.IsInstalled,
-                ActionButtonText = item.IsInstalled ? "Установлен ✓" : "Установить ⬇",
-                ActionButtonBg = item.IsInstalled
-                    ? new SolidColorBrush(Color.FromRgb(51, 65, 85)) // Slate
-                    : new SolidColorBrush(Color.FromRgb(99, 102, 241)), // Indigo
+                CanInstall = canAction,
+                ActionButtonText = actionText,
+                ActionButtonBg = actionBg,
                 BadgeText = badgeText,
                 BadgeBg = badgeBg,
                 BadgeFg = badgeFg
@@ -514,12 +548,33 @@ public partial class MainWindow : Window
         }).ToList();
 
         StoreItemsList.ItemsSource = viewModels;
-        TxtStatus.Text = $"Магазин: доступно {catalog.Count} виджетов.";
+        int updatesCount = catalog.Count(x => x.HasUpdate);
+        if (updatesCount > 0)
+        {
+            TxtStatus.Text = $"Магазин: доступно {catalog.Count} виджетов. Доступно обновлений: {updatesCount}!";
+        }
+        else
+        {
+            TxtStatus.Text = $"Магазин: доступно {catalog.Count} виджетов.";
+        }
     }
 
-    private void OnRefreshStoreClick(object sender, RoutedEventArgs e)
+    private async void OnRefreshStoreClick(object sender, RoutedEventArgs e)
     {
-        RefreshStoreCatalog();
+        TxtStatus.Text = "Проверка обновлений каталога...";
+        await RefreshStoreCatalogAsync();
+        RefreshInstalledWidgets();
+
+        var catalog = StoreService.Instance.LastLoadedCatalog;
+        int updates = catalog?.Count(x => x.HasUpdate) ?? 0;
+        if (updates > 0)
+        {
+            MessageBox.Show($"Проверка завершена! Найдено обновлений: {updates}.\nКнопки «Обновить» активны в Магазине и на вкладке «Мои виджеты».", "Проверка обновлений", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show("Все виджеты обновлены до актуальной версии из каталога.", "Проверка обновлений", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private async void OnInstallStoreItemClick(object sender, RoutedEventArgs e)
@@ -528,19 +583,30 @@ public partial class MainWindow : Window
         {
             try
             {
-                TxtStatus.Text = $"Установка {vm.Name}...";
+                bool isUpdating = vm.Item.HasUpdate;
+                TxtStatus.Text = isUpdating ? $"Обновление {vm.Name}..." : $"Установка {vm.Name}...";
                 var manifest = await StoreService.Instance.InstallStoreItemAsync(vm.Item);
 
-                // Auto start after install
-                WidgetManager.Instance.StartWidget(manifest.Id);
+                // Auto start after fresh install if not yet running
+                if (!isUpdating)
+                {
+                    WidgetManager.Instance.StartWidget(manifest.Id);
+                }
 
                 RefreshInstalledWidgets();
-                RefreshStoreCatalog();
-                _trayIcon?.ShowNotification("Виджет установлен", $"'{manifest.Name}' успешно добавлен на рабочий стол.");
+                await RefreshStoreCatalogAsync();
+
+                string title = isUpdating ? "Виджет обновлен" : "Виджет установлен";
+                string msg = isUpdating
+                    ? $"'{manifest.Name}' успешно обновлен до версии v{manifest.Version}!"
+                    : $"'{manifest.Name}' успешно добавлен на рабочий стол.";
+
+                _trayIcon?.ShowNotification(title, msg);
+                MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка установки: {ex.Message}", "Магазин", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка: {ex.Message}", "Магазин", MessageBoxButton.OK, MessageBoxImage.Error);
                 TxtStatus.Text = "Ошибка установки виджета.";
             }
         }
@@ -831,4 +897,9 @@ public class StoreItemViewModel
     public string BadgeText { get; set; } = string.Empty;
     public Brush BadgeBg { get; set; } = Brushes.DarkSlateBlue;
     public Brush BadgeFg { get; set; } = Brushes.LightSkyBlue;
+
+    public bool HasUpdate => Item.HasUpdate;
+    public Visibility UpdateBadgeVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
+    public string UpdateBadgeText => $"▲ Доступно обновление v{Item.Version}";
+    public string DisplayVersion => Item.IsInstalled ? $"v{Item.InstalledVersion}" : $"v{Item.Version}";
 }
