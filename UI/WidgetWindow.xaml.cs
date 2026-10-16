@@ -1105,6 +1105,27 @@ public partial class WidgetWindow : Window
         constructorWin.ShowDialog();
     }
 
+    private void OnOpenWidgetSettingsClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var vm = (WidgetContentHost.Content as FrameworkElement)?.DataContext;
+            var settingsWin = new WidgetSettingsWindow(BaseWidgetId, InstanceId, vm, () =>
+            {
+                if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
+                {
+                    gaugesView.ReloadConfig();
+                }
+            });
+            settingsWin.Show();
+            settingsWin.Activate();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WidgetWindow] Failed to open widget settings: {ex.Message}");
+        }
+    }
+
     private void OnOpenDevToolsClick(object sender, RoutedEventArgs e) => OpenDevTools();
     private void OnReloadWidgetClick(object sender, RoutedEventArgs e) => ReloadWidget();
 

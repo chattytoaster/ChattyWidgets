@@ -292,6 +292,7 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="⚙️" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnConfigureWidgetFromHubClick" ToolTip="Настройки виджета"/>
                                             <Button Content="➕ Добавить" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="Добавить еще один экземпляр виджета на рабочий стол"/>
                                             <Button Content="Папка" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
                                             <Button Content="Удалить" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>

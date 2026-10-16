@@ -51,6 +51,7 @@ public static class NativeWidgetContextProvider
         return baseWidgetId switch
         {
             "com.chatty.calendar-glass" => new CalendarWidgetViewModel(),
+            "com.chatty.clock-glass" => new ClockWidgetViewModel(),
             "com.chatty.crypto-tracker" => new CryptoWidgetViewModel(),
             "com.chatty.gpu-monitor" => new GpuMonitorWidgetViewModel(),
             "com.chatty.media-frame" => new MediaFrameWidgetViewModel(),
@@ -62,6 +63,87 @@ public static class NativeWidgetContextProvider
             "com.chatty.weather-card" => new WeatherWidgetViewModel(),
             _ => SystemMonitorService.Instance
         };
+    }
+}
+
+// 0. Clock ViewModel
+public class ClockWidgetViewModel : NativeViewModelBase
+{
+    private readonly DispatcherTimer _timer;
+    private bool _is24Hour = true;
+    private bool _showSeconds = true;
+    private bool _showDayName = true;
+    private string _dateLabel = "";
+    private string _timeDigits = "";
+    private string _secondsBadge = "";
+    private string _dayName = "";
+    private string _weatherHint = "Синхронизировано";
+
+    public bool Is24Hour
+    {
+        get => _is24Hour;
+        set { _is24Hour = value; OnPropertyChanged(); UpdateTime(); }
+    }
+
+    public bool ShowSeconds
+    {
+        get => _showSeconds;
+        set { _showSeconds = value; OnPropertyChanged(); UpdateTime(); }
+    }
+
+    public bool ShowDayName
+    {
+        get => _showDayName;
+        set { _showDayName = value; OnPropertyChanged(); UpdateTime(); }
+    }
+
+    public string DateLabel
+    {
+        get => _dateLabel;
+        private set { _dateLabel = value; OnPropertyChanged(); }
+    }
+
+    public string TimeDigits
+    {
+        get => _timeDigits;
+        private set { _timeDigits = value; OnPropertyChanged(); }
+    }
+
+    public string SecondsBadge
+    {
+        get => _secondsBadge;
+        private set { _secondsBadge = value; OnPropertyChanged(); }
+    }
+
+    public string DayName
+    {
+        get => _dayName;
+        private set { _dayName = value; OnPropertyChanged(); }
+    }
+
+    public string WeatherHint
+    {
+        get => _weatherHint;
+        set { _weatherHint = value; OnPropertyChanged(); }
+    }
+
+    public ClockWidgetViewModel()
+    {
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _timer.Tick += (s, e) => UpdateTime();
+        _timer.Start();
+        UpdateTime();
+    }
+
+    private void UpdateTime()
+    {
+        var now = DateTime.Now;
+        var ru = new System.Globalization.CultureInfo("ru-RU");
+
+        TimeDigits = _is24Hour ? now.ToString("HH:mm") : now.ToString("hh:mm tt");
+        SecondsBadge = _showSeconds ? now.ToString(":ss") : "";
+        DateLabel = now.ToString("d MMMM, ddd", ru);
+        DayName = _showDayName ? ru.TextInfo.ToTitleCase(now.ToString("dddd", ru)) : "";
     }
 }
 
@@ -138,16 +220,134 @@ public class CryptoItem
 
 public class CryptoWidgetViewModel : NativeViewModelBase
 {
+    private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+    private readonly DispatcherTimer _timer;
+
     public ObservableCollection<CryptoItem> Items { get; } = new();
 
     public CryptoWidgetViewModel()
     {
-        Items.Add(new CryptoItem { Name = "Bitcoin", Symbol = "BTC", Price = "$68,450", Change = "+2.4%", IsPositive = true, Icon = "₿" });
-        Items.Add(new CryptoItem { Name = "Ethereum", Symbol = "ETH", Price = "$3,520", Change = "+1.8%", IsPositive = true, Icon = "Ξ" });
-        Items.Add(new CryptoItem { Name = "Solana", Symbol = "SOL", Price = "$182.40", Change = "-0.7%", IsPositive = false, Icon = "◎" });
-        Items.Add(new CryptoItem { Name = "Toncoin", Symbol = "TON", Price = "$5.35", Change = "+3.6%", IsPositive = true, Icon = "💎" });
-        Items.Add(new CryptoItem { Name = "Доллар США", Symbol = "USD/RUB", Price = "96.20 ₽", Change = "+0.15", IsPositive = true, Icon = "$" });
-        Items.Add(new CryptoItem { Name = "Евро", Symbol = "EUR/RUB", Price = "104.50 ₽", Change = "-0.22", IsPositive = false, Icon = "€" });
+        // Initial defaults
+        Items.Add(new CryptoItem { Name = "Bitcoin", Symbol = "BTC", Price = "$81,950", Change = "+1.8%", IsPositive = true, Icon = "₿" });
+        Items.Add(new CryptoItem { Name = "Ethereum", Symbol = "ETH", Price = "$2,460", Change = "+3.2%", IsPositive = true, Icon = "Ξ" });
+        Items.Add(new CryptoItem { Name = "Solana", Symbol = "SOL", Price = "$105.40", Change = "+2.5%", IsPositive = true, Icon = "◎" });
+        Items.Add(new CryptoItem { Name = "Toncoin", Symbol = "TON", Price = "$5.35", Change = "+1.2%", IsPositive = true, Icon = "💎" });
+        Items.Add(new CryptoItem { Name = "Доллар США", Symbol = "USD/RUB", Price = "83.76 ₽", Change = "-0.19", IsPositive = false, Icon = "$" });
+        Items.Add(new CryptoItem { Name = "Евро", Symbol = "EUR/RUB", Price = "93.77 ₽", Change = "-0.15", IsPositive = false, Icon = "€" });
+
+        _ = FetchPricesAsync();
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+        _timer.Tick += (s, e) => _ = FetchPricesAsync();
+        _timer.Start();
+    }
+
+    public async Task FetchPricesAsync()
+    {
+        try
+        {
+            // 1. Fetch Binance 24hr ticker
+            string binanceJson = await _httpClient.GetStringAsync("https://api.binance.com/api/v3/ticker/24hr?symbols=[\"BTCUSDT\",\"ETHUSDT\",\"SOLUSDT\"]");
+            using var bDoc = JsonDocument.Parse(binanceJson);
+            
+            decimal btcPrice = 0, btcChange = 0;
+            decimal ethPrice = 0, ethChange = 0;
+            decimal solPrice = 0, solChange = 0;
+
+            foreach (var elem in bDoc.RootElement.EnumerateArray())
+            {
+                string sym = elem.GetProperty("symbol").GetString() ?? "";
+                decimal p = decimal.TryParse(elem.GetProperty("lastPrice").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lp) ? lp : 0;
+                decimal c = decimal.TryParse(elem.GetProperty("priceChangePercent").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cp) ? cp : 0;
+
+                if (sym == "BTCUSDT") { btcPrice = p; btcChange = c; }
+                else if (sym == "ETHUSDT") { ethPrice = p; ethChange = c; }
+                else if (sym == "SOLUSDT") { solPrice = p; solChange = c; }
+            }
+
+            // 2. Fetch CBR
+            decimal usdVal = 0, usdDiff = 0;
+            decimal eurVal = 0, eurDiff = 0;
+            try
+            {
+                string cbrJson = await _httpClient.GetStringAsync("https://www.cbr-xml-daily.ru/daily_json.js");
+                using var cDoc = JsonDocument.Parse(cbrJson);
+                var valute = cDoc.RootElement.GetProperty("Valute");
+                if (valute.TryGetProperty("USD", out var usdElem))
+                {
+                    usdVal = usdElem.GetProperty("Value").GetDecimal();
+                    usdDiff = usdVal - usdElem.GetProperty("Previous").GetDecimal();
+                }
+                if (valute.TryGetProperty("EUR", out var eurElem))
+                {
+                    eurVal = eurElem.GetProperty("Value").GetDecimal();
+                    eurDiff = eurVal - eurElem.GetProperty("Previous").GetDecimal();
+                }
+            }
+            catch { }
+
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                Items.Clear();
+                if (btcPrice > 0)
+                {
+                    Items.Add(new CryptoItem
+                    {
+                        Name = "Bitcoin", Symbol = "BTC",
+                        Price = $"${btcPrice:N0}",
+                        Change = (btcChange >= 0 ? "+" : "") + $"{btcChange:F2}%",
+                        IsPositive = btcChange >= 0,
+                        Icon = "₿"
+                    });
+                }
+                if (ethPrice > 0)
+                {
+                    Items.Add(new CryptoItem
+                    {
+                        Name = "Ethereum", Symbol = "ETH",
+                        Price = $"${ethPrice:N0}",
+                        Change = (ethChange >= 0 ? "+" : "") + $"{ethChange:F2}%",
+                        IsPositive = ethChange >= 0,
+                        Icon = "Ξ"
+                    });
+                }
+                if (solPrice > 0)
+                {
+                    Items.Add(new CryptoItem
+                    {
+                        Name = "Solana", Symbol = "SOL",
+                        Price = $"${solPrice:F2}",
+                        Change = (solChange >= 0 ? "+" : "") + $"{solChange:F2}%",
+                        IsPositive = solChange >= 0,
+                        Icon = "◎"
+                    });
+                }
+                Items.Add(new CryptoItem { Name = "Toncoin", Symbol = "TON", Price = "$5.35", Change = "+1.4%", IsPositive = true, Icon = "💎" });
+                if (usdVal > 0)
+                {
+                    Items.Add(new CryptoItem
+                    {
+                        Name = "Доллар США", Symbol = "USD/RUB",
+                        Price = $"{usdVal:F2} ₽",
+                        Change = (usdDiff >= 0 ? "+" : "") + $"{usdDiff:F2}",
+                        IsPositive = usdDiff >= 0,
+                        Icon = "$"
+                    });
+                }
+                if (eurVal > 0)
+                {
+                    Items.Add(new CryptoItem
+                    {
+                        Name = "Евро", Symbol = "EUR/RUB",
+                        Price = $"{eurVal:F2} ₽",
+                        Change = (eurDiff >= 0 ? "+" : "") + $"{eurDiff:F2}",
+                        IsPositive = eurDiff >= 0,
+                        Icon = "€"
+                    });
+                }
+            });
+        }
+        catch { }
     }
 }
 
@@ -264,6 +464,25 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
     private void NextImage() => ShowImage(_index + 1);
     private void PrevImage() => ShowImage(_index - 1);
+
+    public void SetCustomFolder(string folderPath)
+    {
+        if (!Directory.Exists(folderPath)) return;
+        _images.Clear();
+        foreach (var ext in new[] { "*.jpg", "*.png", "*.jpeg", "*.webp", "*.bmp" })
+        {
+            try { _images.AddRange(Directory.GetFiles(folderPath, ext)); } catch { }
+        }
+        if (_images.Count > 0)
+        {
+            ShowImage(0);
+        }
+        else
+        {
+            CurrentImage = "";
+            Caption = "В папке нет поддерживаемых изображений";
+        }
+    }
 }
 
 // 5. Music Player ViewModel
@@ -386,6 +605,7 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
 public class PomodoroWidgetViewModel : NativeViewModelBase
 {
     private readonly DispatcherTimer _timer;
+    private int _focusMinutes = 25;
     private int _remainingSeconds = 25 * 60;
     private bool _isRunning = false;
     private bool _isFocusMode = true;
@@ -399,7 +619,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     {
         get
         {
-            int total = (_isFocusMode ? 25 : 5) * 60;
+            int total = (_isFocusMode ? _focusMinutes : 5) * 60;
             return total > 0 ? ((double)(total - _remainingSeconds) / total) * 100 : 0;
         }
         set {}
@@ -425,7 +645,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
                 _timer.Stop();
                 _isRunning = false;
                 _isFocusMode = !_isFocusMode;
-                _remainingSeconds = (_isFocusMode ? 25 : 5) * 60;
+                _remainingSeconds = (_isFocusMode ? _focusMinutes : 5) * 60;
                 OnPropertyChanged(nameof(TimeText));
                 OnPropertyChanged(nameof(ModeText));
                 OnPropertyChanged(nameof(ActionButtonText));
@@ -445,7 +665,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         {
             _timer.Stop();
             _isRunning = false;
-            _remainingSeconds = (_isFocusMode ? 25 : 5) * 60;
+            _remainingSeconds = (_isFocusMode ? _focusMinutes : 5) * 60;
             OnPropertyChanged(nameof(TimeText));
             OnPropertyChanged(nameof(ActionButtonText));
             OnPropertyChanged(nameof(ProgressPercent));
@@ -456,13 +676,27 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             _timer.Stop();
             _isRunning = false;
             _isFocusMode = !_isFocusMode;
-            _remainingSeconds = (_isFocusMode ? 25 : 5) * 60;
+            _remainingSeconds = (_isFocusMode ? _focusMinutes : 5) * 60;
             OnPropertyChanged(nameof(TimeText));
             OnPropertyChanged(nameof(ModeText));
             OnPropertyChanged(nameof(ActionButtonText));
             OnPropertyChanged(nameof(AccentColor));
             OnPropertyChanged(nameof(ProgressPercent));
         });
+    }
+
+    public void SetWorkMinutes(int mins)
+    {
+        _focusMinutes = Math.Max(1, mins);
+        if (_isFocusMode)
+        {
+            _timer.Stop();
+            _isRunning = false;
+            _remainingSeconds = _focusMinutes * 60;
+            OnPropertyChanged(nameof(TimeText));
+            OnPropertyChanged(nameof(ActionButtonText));
+            OnPropertyChanged(nameof(ProgressPercent));
+        }
     }
 }
 
@@ -562,6 +796,16 @@ public class RssWidgetViewModel : NativeViewModelBase
             OnPropertyChanged(nameof(CurrentArticle));
             OnPropertyChanged(nameof(CounterText));
         });
+
+        var autoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(12) };
+        autoTimer.Tick += (s, e) =>
+        {
+            if (Articles.Count == 0) return;
+            _currentIndex = (_currentIndex + 1) % Articles.Count;
+            OnPropertyChanged(nameof(CurrentArticle));
+            OnPropertyChanged(nameof(CounterText));
+        };
+        autoTimer.Start();
     }
 }
 
@@ -636,6 +880,17 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(ActiveCountText));
     }
 
+    public void ClearCompletedTasks()
+    {
+        var doneItems = Tasks.Where(t => t.IsDone).ToList();
+        foreach (var item in doneItems)
+        {
+            Tasks.Remove(item);
+        }
+        Save();
+        OnPropertyChanged(nameof(ActiveCountText));
+    }
+
     private void Save()
     {
         try
@@ -704,17 +959,35 @@ public class ForecastDayItem
 
 public class WeatherWidgetViewModel : NativeViewModelBase
 {
-    public string City { get => "Москва"; set {} }
-    public string Temperature { get => "+14°"; set {} }
-    public string Condition { get => "Ясно"; set {} }
-    public string WeatherIcon { get => "☀️"; set {} }
-    public string FeelsLike { get => "Ощущается как +12°"; set {} }
-    public string Humidity { get => "64%"; set {} }
-    public string WindSpeed { get => "3.4 м/с"; set {} }
-    public string Pressure { get => "752 мм"; set {} }
-    public string MinMax { get => "+8° / +16°"; set {} }
-    public string Rain { get => "0 мм"; set {} }
-    public string UpdateTime { get => "Обновлено в " + DateTime.Now.ToString("HH:mm"); set {} }
+    private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+    private readonly DispatcherTimer _timer;
+
+    private string _city = "Москва";
+    private double _lat = 55.7558;
+    private double _lon = 37.6173;
+
+    private string _temperature = "+14°";
+    private string _condition = "Ясно";
+    private string _weatherIcon = "☀️";
+    private string _feelsLike = "Ощущается как +12°";
+    private string _humidity = "64%";
+    private string _windSpeed = "3.4 м/с";
+    private string _pressure = "752 мм";
+    private string _minMax = "+8° / +16°";
+    private string _rain = "0 мм";
+    private string _updateTime = "Обновлено в " + DateTime.Now.ToString("HH:mm");
+
+    public string City { get => _city; set { _city = value; OnPropertyChanged(); } }
+    public string Temperature { get => _temperature; set { _temperature = value; OnPropertyChanged(); } }
+    public string Condition { get => _condition; set { _condition = value; OnPropertyChanged(); } }
+    public string WeatherIcon { get => _weatherIcon; set { _weatherIcon = value; OnPropertyChanged(); } }
+    public string FeelsLike { get => _feelsLike; set { _feelsLike = value; OnPropertyChanged(); } }
+    public string Humidity { get => _humidity; set { _humidity = value; OnPropertyChanged(); } }
+    public string WindSpeed { get => _windSpeed; set { _windSpeed = value; OnPropertyChanged(); } }
+    public string Pressure { get => _pressure; set { _pressure = value; OnPropertyChanged(); } }
+    public string MinMax { get => _minMax; set { _minMax = value; OnPropertyChanged(); } }
+    public string Rain { get => _rain; set { _rain = value; OnPropertyChanged(); } }
+    public string UpdateTime { get => _updateTime; set { _updateTime = value; OnPropertyChanged(); } }
 
     public ObservableCollection<ForecastDayItem> Forecast { get; } = new();
 
@@ -724,5 +997,126 @@ public class WeatherWidgetViewModel : NativeViewModelBase
         Forecast.Add(new ForecastDayItem { DayName = "ВС", Icon = "⛅", Temp = "+14°" });
         Forecast.Add(new ForecastDayItem { DayName = "ПН", Icon = "🌧️", Temp = "+11°" });
         Forecast.Add(new ForecastDayItem { DayName = "ВТ", Icon = "⛅", Temp = "+13°" });
+
+        _ = RefreshWeatherAsync();
+
+        // Periodic refresh every 15 minutes
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
+        _timer.Tick += (s, e) => _ = RefreshWeatherAsync();
+        _timer.Start();
+    }
+
+    public void SetCity(string cityName, double lat, double lon)
+    {
+        City = cityName;
+        _lat = lat;
+        _lon = lon;
+        _ = RefreshWeatherAsync();
+    }
+
+    public async Task RefreshWeatherAsync()
+    {
+        try
+        {
+            string url = FormattableString.Invariant(
+                $"https://api.open-meteo.com/v1/forecast?latitude={_lat:F4}&longitude={_lon:F4}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto"
+            );
+
+            string json = await _httpClient.GetStringAsync(url);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("current", out var cur))
+            {
+                double temp = cur.GetProperty("temperature_2m").GetDouble();
+                double apparent = cur.GetProperty("apparent_temperature").GetDouble();
+                int wCode = cur.GetProperty("weather_code").GetInt32();
+                int hum = cur.GetProperty("relative_humidity_2m").GetInt32();
+                double wind = cur.GetProperty("wind_speed_10m").GetDouble();
+                double pressHpa = cur.GetProperty("surface_pressure").GetDouble();
+                double prec = cur.GetProperty("precipitation").GetDouble();
+
+                var (wDesc, wIcon) = GetWmoInfo(wCode);
+                double windMs = wind / 3.6;
+                int pressMm = (int)Math.Round(pressHpa * 0.750062);
+
+                string minMaxStr = "";
+                var newForecast = new List<ForecastDayItem>();
+
+                if (root.TryGetProperty("daily", out var daily))
+                {
+                    var times = daily.GetProperty("time").EnumerateArray().ToList();
+                    var codes = daily.GetProperty("weather_code").EnumerateArray().ToList();
+                    var maxs = daily.GetProperty("temperature_2m_max").EnumerateArray().ToList();
+                    var mins = daily.GetProperty("temperature_2m_min").EnumerateArray().ToList();
+
+                    if (maxs.Count > 0 && mins.Count > 0)
+                    {
+                        double todayMin = mins[0].GetDouble();
+                        double todayMax = maxs[0].GetDouble();
+                        minMaxStr = $"{(todayMin > 0 ? "+" : "")}{Math.Round(todayMin)}° / {(todayMax > 0 ? "+" : "")}{Math.Round(todayMax)}°";
+                    }
+
+                    for (int i = 1; i < Math.Min(5, times.Count); i++)
+                    {
+                        if (DateTime.TryParse(times[i].GetString(), out var dt))
+                        {
+                            string dayName = dt.ToString("ddd", new System.Globalization.CultureInfo("ru-RU")).ToUpper();
+                            int c = codes[i].GetInt32();
+                            var (_, icon) = GetWmoInfo(c);
+                            double mx = maxs[i].GetDouble();
+                            newForecast.Add(new ForecastDayItem
+                            {
+                                DayName = dayName,
+                                Icon = icon,
+                                Temp = $"{(mx > 0 ? "+" : "")}{Math.Round(mx)}°"
+                            });
+                        }
+                    }
+                }
+
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    Temperature = $"{(temp > 0 ? "+" : "")}{Math.Round(temp)}°";
+                    FeelsLike = $"Ощущается как {(apparent > 0 ? "+" : "")}{Math.Round(apparent)}°";
+                    Condition = wDesc;
+                    WeatherIcon = wIcon;
+                    Humidity = $"{hum}%";
+                    WindSpeed = $"{windMs:F1} м/с";
+                    Pressure = $"{pressMm} мм";
+                    Rain = $"{prec:F1} мм";
+                    if (!string.IsNullOrEmpty(minMaxStr)) MinMax = minMaxStr;
+                    UpdateTime = "Обновлено в " + DateTime.Now.ToString("HH:mm");
+
+                    if (newForecast.Count > 0)
+                    {
+                        Forecast.Clear();
+                        foreach (var f in newForecast) Forecast.Add(f);
+                    }
+                });
+            }
+        }
+        catch { }
+    }
+
+    private static (string desc, string icon) GetWmoInfo(int code)
+    {
+        return code switch
+        {
+            0 => ("Ясно", "☀️"),
+            1 => ("Преимущественно ясно", "🌤️"),
+            2 => ("Переменная облачность", "⛅"),
+            3 => ("Пасмурно", "☁️"),
+            45 or 48 => ("Туман", "🌫️"),
+            51 or 53 or 55 => ("Морось", "🌦️"),
+            61 or 63 or 65 => ("Дождь", "🌧️"),
+            71 or 73 or 75 => ("Снегопад", "❄️"),
+            77 => ("Снег", "❄️"),
+            80 or 81 or 82 => ("Ливневый дождь", "🌧️"),
+            85 or 86 => ("Снежный ливень", "🌨️"),
+            95 => ("Гроза", "⛈️"),
+            96 or 99 => ("Гроза с градом", "⛈️"),
+            _ => ("Облачно", "⛅")
+        };
     }
 }

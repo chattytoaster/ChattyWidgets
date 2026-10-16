@@ -15,6 +15,7 @@
         <ContextMenu x:Name="WidgetContextMenu">
             <MenuItem x:Name="MenuHeader" Header="ChattyWidget" IsEnabled="False" FontWeight="Bold"/>
             <Separator/>
+            <MenuItem x:Name="MenuWidgetSettings" Header="⚙️ Настройки виджета..." Click="OnOpenWidgetSettingsClick"/>
             <MenuItem Header="📋 Скопировать виджет (Создать копию)" Click="OnDuplicateWidgetClick"/>
             <MenuItem Header="🗑 Удалить этот виджет" Click="OnDeleteInstanceClick" Foreground="#EF4444"/>
             <Separator/>

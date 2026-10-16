@@ -225,6 +225,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnConfigureWidgetFromHubClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement el && el.Tag is string id)
+        {
+            try
+            {
+                var activeWindow = WidgetManager.Instance.GetActiveWindows().FirstOrDefault(w => w.BaseWidgetId == id || w.InstanceId == id);
+                object? vm = activeWindow != null
+                    ? (activeWindow.WidgetContentHost.Content as FrameworkElement)?.DataContext
+                    : NativeWidgetContextProvider.GetContextFor(id, id);
+
+                var settingsWin = new WidgetSettingsWindow(id, activeWindow?.InstanceId ?? id, vm, () =>
+                {
+                    if (activeWindow != null && activeWindow.WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
+                    {
+                        gaugesView.ReloadConfig();
+                    }
+                });
+                settingsWin.Owner = this;
+                settingsWin.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] Error opening settings for widget {id}: {ex.Message}");
+            }
+        }
+    }
+
     private void OnDuplicateFromHubClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement el && el.Tag is string id)
