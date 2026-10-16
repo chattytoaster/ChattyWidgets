@@ -52,6 +52,10 @@ public partial class App : System.Windows.Application
             {
                 mainWindow.InstallChwFile(arg);
             }
+            else if (arg.EndsWith(".chwp", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(arg))
+            {
+                mainWindow.ImportPresetFile(arg);
+            }
         }
 
         if (!startMinimized)
@@ -76,6 +80,16 @@ public partial class App : System.Windows.Application
                         mw.WindowState = WindowState.Normal;
                         mw.Activate();
                         mw.InstallChwFile(path);
+                    }
+                }
+                else if (path.EndsWith(".chwp", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+                {
+                    if (MainWindow is MainWindow mw)
+                    {
+                        mw.Show();
+                        mw.WindowState = WindowState.Normal;
+                        mw.Activate();
+                        mw.ImportPresetFile(path);
                     }
                 }
             }
@@ -257,6 +271,46 @@ public partial class App : System.Windows.Application
         {
             Log($"FAIL in MainWindow tab test: {ex}");
             throw;
+        }
+
+        // Test 7: Custom presets & .chwp export/import
+        Log("TEST 7: Testing custom presets and .chwp packaging...");
+        string testChwp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TestPreset.chwp");
+        try
+        {
+            PresetService.Instance.CleanDefaultPresets();
+            Log($" - Default presets cleaned, count: {WidgetManager.Instance.Settings.Presets.Count}");
+
+            var savedPreset = PresetService.Instance.SaveCurrentAsPreset("Тестовый Стол", "🌟", "Тестовое описание", "Tester");
+            Log($" - Saved custom preset: {savedPreset.Name} (ID: {savedPreset.Id}, Widgets: {savedPreset.Widgets.Count})");
+
+            PresetService.Instance.ExportPresetToFile(savedPreset, testChwp);
+            Log($" - Exported preset to {testChwp} (Size: {new System.IO.FileInfo(testChwp).Length} bytes)");
+
+            PresetService.Instance.DeletePreset(savedPreset.Id);
+            Log(" - Deleted preset from memory.");
+
+            var imported = PresetService.Instance.ImportPresetFromFile(testChwp);
+            Log($" - Imported preset from .chwp: {imported.Name} (ID: {imported.Id})");
+
+            if (imported.Name.Contains("Тестовый Стол"))
+            {
+                Log("PASS: Custom presets and .chwp export/import verified.");
+            }
+            else
+            {
+                Log("FAIL: Preset name mismatch.");
+            }
+
+            PresetService.Instance.DeletePreset(imported.Id);
+        }
+        catch (Exception ex)
+        {
+            Log($"FAIL in Preset test: {ex.Message}");
+        }
+        finally
+        {
+            try { if (System.IO.File.Exists(testChwp)) System.IO.File.Delete(testChwp); } catch { }
         }
 
         Log("=== ALL TESTS COMPLETED SUCCESSFULLY ===");

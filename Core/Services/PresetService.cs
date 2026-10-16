@@ -1,3 +1,7 @@
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChattyWidgets.Core.Models;
 
 namespace ChattyWidgets.Core.Services;
@@ -13,71 +17,24 @@ public class PresetService
     {
     }
 
-    public void EnsureDefaultPresets()
+    public void EnsureDefaultPresets() => CleanDefaultPresets();
+
+    public void CleanDefaultPresets()
     {
         var settings = WidgetManager.Instance.Settings;
-        if (settings.Presets == null || settings.Presets.Count == 0)
-        {
-            settings.Presets = GetDefaultPresets();
-            WidgetManager.Instance.SaveSettings();
-        }
-    }
+        settings.Presets ??= new List<DesktopPreset>();
 
-    public List<DesktopPreset> GetDefaultPresets()
-    {
-        return new List<DesktopPreset>
+        // Remove old built-in presets so user has a clean slate
+        int removed = settings.Presets.RemoveAll(p => p.Id is "work" or "media" or "gaming" or "minimal");
+        if (removed > 0)
         {
-            new DesktopPreset
+            if (settings.ActivePresetId is "work" or "media" or "gaming" or "minimal")
             {
-                Id = "work",
-                Name = "Работа & Продуктивность",
-                Icon = "💼",
-                Description = "Календарь, Заметки ToDo, Погода и Финансы",
-                Widgets = new Dictionary<string, WidgetInstanceSettings>
-                {
-                    ["com.chatty.calendar-glass"] = new() { Id = "com.chatty.calendar-glass", IsEnabled = true, Left = 1580, Top = 80, Width = 310, Height = 340 },
-                    ["com.chatty.sticky-notes"] = new() { Id = "com.chatty.sticky-notes", IsEnabled = true, Left = 1580, Top = 440, Width = 310, Height = 360 },
-                    ["com.chatty.weather-card"] = new() { Id = "com.chatty.weather-card", IsEnabled = true, Left = 1240, Top = 80, Width = 320, Height = 210 },
-                    ["com.chatty.crypto-tracker"] = new() { Id = "com.chatty.crypto-tracker", IsEnabled = true, Left = 1240, Top = 310, Width = 320, Height = 250 }
-                }
-            },
-            new DesktopPreset
-            {
-                Id = "media",
-                Name = "Медиа & Релакс",
-                Icon = "🎵",
-                Description = "Музыкальный плеер, Фото/видео рамка и Часы",
-                Widgets = new Dictionary<string, WidgetInstanceSettings>
-                {
-                    ["com.chatty.music-player"] = new() { Id = "com.chatty.music-player", IsEnabled = true, Left = 1500, Top = 80, Width = 380, Height = 260 },
-                    ["com.chatty.media-frame"] = new() { Id = "com.chatty.media-frame", IsEnabled = true, Left = 1500, Top = 360, Width = 380, Height = 340 },
-                    ["com.chatty.clock-glass"] = new() { Id = "com.chatty.clock-glass", IsEnabled = true, Left = 1180, Top = 80, Width = 300, Height = 200 }
-                }
-            },
-            new DesktopPreset
-            {
-                Id = "gaming",
-                Name = "Гейминг & Мониторинг",
-                Icon = "🎮",
-                Description = "Системный монитор и компактные часы",
-                Widgets = new Dictionary<string, WidgetInstanceSettings>
-                {
-                    ["com.chatty.system-gauges"] = new() { Id = "com.chatty.system-gauges", IsEnabled = true, Left = 1580, Top = 60, Width = 310, Height = 400 },
-                    ["com.chatty.clock-glass"] = new() { Id = "com.chatty.clock-glass", IsEnabled = true, Left = 1580, Top = 480, Width = 310, Height = 200 }
-                }
-            },
-            new DesktopPreset
-            {
-                Id = "minimal",
-                Name = "Минимализм",
-                Icon = "✨",
-                Description = "Только стильные полупрозрачные часы",
-                Widgets = new Dictionary<string, WidgetInstanceSettings>
-                {
-                    ["com.chatty.clock-glass"] = new() { Id = "com.chatty.clock-glass", IsEnabled = true, Left = 1580, Top = 80, Width = 310, Height = 200 }
-                }
+                settings.ActivePresetId = string.Empty;
             }
-        };
+            WidgetManager.Instance.SaveSettings();
+            PresetsChanged?.Invoke();
+        }
     }
 
     public void ApplyPreset(string presetId)
@@ -142,9 +99,10 @@ public class PresetService
         PresetsChanged?.Invoke();
     }
 
-    public DesktopPreset SaveCurrentAsPreset(string name, string icon = "⭐", string description = "Пользовательский пресет")
+    public DesktopPreset SaveCurrentAsPreset(string name, string icon = "⭐", string description = "Пользовательский пресет", string author = "User")
     {
         var settings = WidgetManager.Instance.Settings;
+        settings.Presets ??= new List<DesktopPreset>();
         string id = "preset_" + Guid.NewGuid().ToString("N")[..8];
 
         var dict = new Dictionary<string, WidgetInstanceSettings>();
@@ -176,6 +134,8 @@ public class PresetService
             Name = name,
             Icon = icon,
             Description = description,
+            Author = author,
+            CreatedAt = DateTime.UtcNow.ToString("o"),
             Widgets = dict
         };
 
@@ -187,16 +147,57 @@ public class PresetService
         return newPreset;
     }
 
+    public void ExportPresetToFile(DesktopPreset preset, string filePath)
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+        string json = JsonSerializer.Serialize(preset, options);
+        File.WriteAllText(filePath, json, Encoding.UTF8);
+    }
+
+    public DesktopPreset ImportPresetFromFile(string filePath)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("Файл пресета не найден", filePath);
+
+        string json = File.ReadAllText(filePath, Encoding.UTF8);
+        var preset = JsonSerializer.Deserialize<DesktopPreset>(json);
+        if (preset == null || string.IsNullOrWhiteSpace(preset.Name))
+            throw new InvalidOperationException("Некорректный файл пресета .chwp.");
+
+        // Generate a new unique preset ID to avoid collisions
+        preset.Id = "preset_" + Guid.NewGuid().ToString("N")[..8];
+
+        var settings = WidgetManager.Instance.Settings;
+        settings.Presets ??= new List<DesktopPreset>();
+
+        // If a preset with this name already exists, add indicator
+        if (settings.Presets.Any(p => p.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            preset.Name = $"{preset.Name} (Импорт)";
+        }
+
+        settings.Presets.Add(preset);
+        settings.ActivePresetId = preset.Id;
+        WidgetManager.Instance.SaveSettings();
+        PresetsChanged?.Invoke();
+
+        return preset;
+    }
+
     public void DeletePreset(string presetId)
     {
         var settings = WidgetManager.Instance.Settings;
-        var p = settings.Presets.FirstOrDefault(x => x.Id == presetId);
+        var p = settings.Presets?.FirstOrDefault(x => x.Id == presetId);
         if (p != null)
         {
-            settings.Presets.Remove(p);
+            settings.Presets?.Remove(p);
             if (settings.ActivePresetId == presetId)
             {
-                settings.ActivePresetId = "all";
+                settings.ActivePresetId = string.Empty;
             }
             WidgetManager.Instance.SaveSettings();
             PresetsChanged?.Invoke();

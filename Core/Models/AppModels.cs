@@ -68,6 +68,12 @@ public class DesktopPreset
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
 
+    [JsonPropertyName("author")]
+    public string Author { get; set; } = "User";
+
+    [JsonPropertyName("createdAt")]
+    public string CreatedAt { get; set; } = string.Empty;
+
     [JsonPropertyName("widgets")]
     public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();
 }

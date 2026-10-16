@@ -7,6 +7,9 @@ using ChattyWidgets.Core.Models;
 using ChattyWidgets.Core.Services;
 using Microsoft.Win32;
 using Button = System.Windows.Controls.Button;
+using TextBlock = System.Windows.Controls.TextBlock;
+using ContextMenu = System.Windows.Controls.ContextMenu;
+using MenuItem = System.Windows.Controls.MenuItem;
 
 namespace ChattyWidgets.UI;
 
@@ -288,6 +291,20 @@ public partial class MainWindow : Window
         var presets = WidgetManager.Instance.Settings.Presets;
         string activeId = WidgetManager.Instance.Settings.ActivePresetId;
 
+        if (presets == null || presets.Count == 0)
+        {
+            var hint = new TextBlock
+            {
+                Text = "Пресеты не созданы. Расположите виджеты и нажмите «+ Сохранить текущий вид» или «📥 Импорт .chwp»",
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(4, 0, 0, 0)
+            };
+            PresetChipsPanel.Children.Add(hint);
+            return;
+        }
+
         foreach (var p in presets)
         {
             bool isCurrent = (p.Id == activeId);
@@ -299,19 +316,32 @@ public partial class MainWindow : Window
                 FontSize = 12,
                 FontWeight = isCurrent ? FontWeights.Bold : FontWeights.Normal,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                Tag = p.Id,
+                Tag = p,
+                ToolTip = $"ЛКМ: применить пресет\nПКМ: экспортировать в .chwp или удалить\nВиджетов в пресете: {p.Widgets.Count}",
                 Style = isCurrent ? (Style)FindResource("PrimaryBtn") : (Style)FindResource("SecondaryBtn")
             };
             btn.Click += OnPresetChipClick;
+
+            // Context Menu: Export to .chwp / Delete
+            var contextMenu = new ContextMenu();
+            var exportItem = new MenuItem { Header = "💾 Экспортировать в файл .chwp..." };
+            exportItem.Click += (s, e) => ExportPreset(p);
+            contextMenu.Items.Add(exportItem);
+
+            var deleteItem = new MenuItem { Header = "🗑 Удалить пресет" };
+            deleteItem.Click += (s, e) => DeletePreset(p);
+            contextMenu.Items.Add(deleteItem);
+
+            btn.ContextMenu = contextMenu;
             PresetChipsPanel.Children.Add(btn);
         }
     }
 
     private void OnPresetChipClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string presetId)
+        if (sender is Button btn && btn.Tag is DesktopPreset preset)
         {
-            PresetService.Instance.ApplyPreset(presetId);
+            PresetService.Instance.ApplyPreset(preset.Id);
             RefreshInstalledWidgets();
             RenderPresetChips();
         }
@@ -326,10 +356,110 @@ public partial class MainWindow : Window
             return;
         }
 
-        string presetName = $"Мой рабочий стол ({DateTime.Now:HH:mm})";
+        string defaultName = $"Стол {DateTime.Now:dd.MM HH:mm}";
+        string? presetName = InputDialog.Show(this, "Новый пресет стола", "Введите название пресета:", defaultName);
+        if (string.IsNullOrWhiteSpace(presetName))
+            return;
+
         var preset = PresetService.Instance.SaveCurrentAsPreset(presetName, "⭐", "Пользовательский набор виджетов");
         RenderPresetChips();
-        MessageBox.Show($"Пресет '{preset.Name}' успешно сохранён!", "Пресеты", MessageBoxButton.OK, MessageBoxImage.Information);
+
+        var res = MessageBox.Show(
+            $"Пресет «{preset.Name}» успешно сохранён!\n\nЭкспортировать его в файл .chwp прямо сейчас, чтобы поделиться с другими?",
+            "Пресет сохранён",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+
+        if (res == MessageBoxResult.Yes)
+        {
+            ExportPreset(preset);
+        }
+    }
+
+    private void OnImportPresetFileClick(object sender, RoutedEventArgs e)
+    {
+        var ofd = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Импорт пресета рабочего стола .chwp",
+            Filter = "Пакет пресета ChattyWidgets (*.chwp)|*.chwp|Все файлы (*.*)|*.*"
+        };
+
+        if (ofd.ShowDialog() == true)
+        {
+            ImportPresetFile(ofd.FileName);
+        }
+    }
+
+    public void ImportPresetFile(string filePath)
+    {
+        try
+        {
+            var preset = PresetService.Instance.ImportPresetFromFile(filePath);
+            RenderPresetChips();
+
+            var res = MessageBox.Show(
+                $"Пресет «{preset.Name}» успешно импортирован!\n(Виджетов: {preset.Widgets.Count})\n\nПрименить этот пресет на рабочий стол прямо сейчас?",
+                "Импорт пресета .chwp",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                PresetService.Instance.ApplyPreset(preset.Id);
+                RefreshInstalledWidgets();
+                RenderPresetChips();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка импорта пресета: {ex.Message}", "Ошибка импорта", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ExportPreset(DesktopPreset preset)
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Экспорт пресета рабочего стола .chwp",
+            Filter = "Пакет пресета ChattyWidgets (*.chwp)|*.chwp",
+            FileName = $"{SanitizeFileName(preset.Name)}.chwp"
+        };
+
+        if (sfd.ShowDialog() == true)
+        {
+            try
+            {
+                PresetService.Instance.ExportPresetToFile(preset, sfd.FileName);
+                TxtStatus.Text = $"Пресет '{preset.Name}' успешно экспортирован!";
+                MessageBox.Show($"Файл пресета сохранен:\n{sfd.FileName}\n\nВы можете отправить его друзьям или поделиться в сообществе!", "Экспорт .chwp", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка экспорта пресета: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void DeletePreset(DesktopPreset preset)
+    {
+        var res = MessageBox.Show($"Удалить пресет «{preset.Name}»?", "Удаление пресета", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (res == MessageBoxResult.Yes)
+        {
+            PresetService.Instance.DeletePreset(preset.Id);
+            RenderPresetChips();
+        }
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in name)
+        {
+            sb.Append(invalid.Contains(c) ? '_' : c);
+        }
+        string clean = sb.ToString().Trim();
+        return string.IsNullOrEmpty(clean) ? "Preset" : clean;
     }
 
     // --- TAB: STORE ---

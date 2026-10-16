@@ -47,22 +47,52 @@ public class TrayIconManager : IDisposable
         menu.Items.Add(new ToolStripSeparator());
 
         // Desktop Presets submenu
-        var presetsItem = new ToolStripMenuItem("Пресеты рабочих столов");
+        var presetsItem = new ToolStripMenuItem("Пресеты рабочих столов (.chwp)");
         var settings = WidgetManager.Instance.Settings;
-        foreach (var p in settings.Presets)
+        if (settings.Presets == null || settings.Presets.Count == 0)
         {
-            string pId = p.Id;
-            var pItem = new ToolStripMenuItem($"{p.Icon} {p.Name}")
-            {
-                Checked = (settings.ActivePresetId == p.Id)
-            };
-            pItem.Click += (s, e) =>
-            {
-                PresetService.Instance.ApplyPreset(pId);
-                BuildContextMenu();
-            };
-            presetsItem.DropDownItems.Add(pItem);
+            presetsItem.DropDownItems.Add(new ToolStripMenuItem("(Нет сохранённых пресетов)") { Enabled = false });
         }
+        else
+        {
+            foreach (var p in settings.Presets)
+            {
+                string pId = p.Id;
+                var pItem = new ToolStripMenuItem($"{p.Icon} {p.Name}")
+                {
+                    Checked = (settings.ActivePresetId == p.Id)
+                };
+                pItem.Click += (s, e) =>
+                {
+                    PresetService.Instance.ApplyPreset(pId);
+                    BuildContextMenu();
+                };
+                presetsItem.DropDownItems.Add(pItem);
+            }
+        }
+
+        presetsItem.DropDownItems.Add(new ToolStripSeparator());
+        var importChwpItem = new ToolStripMenuItem("Импортировать .chwp...");
+        importChwpItem.Click += (s, e) =>
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                var ofd = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Импорт пресета .chwp",
+                    Filter = "Пакет пресета ChattyWidgets (*.chwp)|*.chwp|Все файлы (*.*)|*.*"
+                };
+                if (ofd.ShowDialog() == true)
+                {
+                    if (System.Windows.Application.Current.MainWindow is MainWindow mw)
+                    {
+                        mw.Show();
+                        mw.ImportPresetFile(ofd.FileName);
+                    }
+                }
+            });
+        };
+        presetsItem.DropDownItems.Add(importChwpItem);
         menu.Items.Add(presetsItem);
 
         // Quick Hotkeys actions
