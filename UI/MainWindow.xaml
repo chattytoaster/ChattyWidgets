@@ -194,10 +194,6 @@
                         <Button Content="✕" Style="{StaticResource CloseCaptionBtnStyle}" Click="OnCloseWindowClick" ToolTip="Закрыть в трей"/>
                     </StackPanel>
 
-                    <!-- Action Button in Header -->
-                    <Button DockPanel.Dock="Right" Content="+ Импорт .chw" Style="{StaticResource PrimaryBtn}" Click="OnImportChwClick" 
-                            VerticalAlignment="Center" Margin="0,0,12,0" WindowChrome.IsHitTestVisibleInChrome="True"/>
-
                     <!-- Navigation Tabs -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
                         <RadioButton x:Name="TabMyWidgets" Content="📱 Мои виджеты" Style="{StaticResource NavTabBtn}" IsChecked="True" Checked="OnTabChanged"/>
@@ -296,7 +292,7 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Content="📋 +Копия" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="Создать еще одну копию этого виджета"/>
+                                            <Button Content="➕ Добавить" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="Добавить еще один экземпляр виджета на рабочий стол"/>
                                             <Button Content="Папка" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
                                             <Button Content="Удалить" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>
                                             <Button Content="{Binding ToggleButtonText}" Style="{StaticResource PrimaryBtn}" Background="{Binding ToggleButtonBg}" Tag="{Binding Manifest.Id}" Click="OnToggleWidgetClick"/>
@@ -505,7 +501,10 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Left" Click="OnOpenAppDataClick"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <Button Content="➕ Импортировать виджет (.chw)" Style="{StaticResource PrimaryBtn}" Margin="0,0,12,0" Click="OnImportChwClick"/>
+                                    <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" Click="OnOpenAppDataClick"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

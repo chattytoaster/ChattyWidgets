@@ -171,89 +171,97 @@ public class WidgetManager
 
     public string? DuplicateWidget(string sourceId)
     {
-        WidgetInstanceSettings? sourceSettings = null;
-        if (Settings.Widgets.TryGetValue(sourceId, out var s))
-        {
-            sourceSettings = s;
-        }
-        else if (_activeWindows.TryGetValue(sourceId, out var win))
-        {
-            sourceSettings = win.Settings;
-        }
-
-        string baseWidgetId = sourceSettings?.BaseWidgetId ?? (sourceId.Contains('#') ? sourceId.Split('#')[0] : sourceId);
-        var installed = ChwPackageService.GetInstalledWidgets();
-        var item = installed.FirstOrDefault(x => x.Manifest.Id == baseWidgetId);
-        if (item.Manifest == null)
-            return null;
-
-        string newInstanceId = $"{baseWidgetId}#inst_{Guid.NewGuid():N.Substring(0, 8)}";
-
-        int copyIndex = Settings.Widgets.Values.Count(w => w.BaseWidgetId == baseWidgetId) + 1;
-        string copyTitle = $"{item.Manifest.Name} (Копия {copyIndex})";
-
-        double newLeft = (sourceSettings != null ? sourceSettings.Left : 100) + 35;
-        double newTop = (sourceSettings != null ? sourceSettings.Top : 100) + 35;
-
-        double virtLeft = SystemParameters.VirtualScreenLeft;
-        double virtTop = SystemParameters.VirtualScreenTop;
-        double virtWidth = SystemParameters.VirtualScreenWidth;
-        double virtHeight = SystemParameters.VirtualScreenHeight;
-
-        if (newLeft > virtLeft + virtWidth - 120)
-            newLeft = virtLeft + 50;
-        if (newTop > virtTop + virtHeight - 120)
-            newTop = virtTop + 60;
-
-        var newSettings = new WidgetInstanceSettings
-        {
-            Id = newInstanceId,
-            WidgetId = baseWidgetId,
-            Title = copyTitle,
-            IsEnabled = true,
-            Left = newLeft,
-            Top = newTop,
-            Width = sourceSettings != null && sourceSettings.Width > 0 ? sourceSettings.Width : item.Manifest.DefaultWidth,
-            Height = sourceSettings != null && sourceSettings.Height > 0 ? sourceSettings.Height : item.Manifest.DefaultHeight,
-            Layer = sourceSettings?.Layer ?? WidgetLayer.Desktop,
-            Opacity = sourceSettings?.Opacity ?? 1.0,
-            Scale = sourceSettings?.Scale ?? 1.0,
-            IsClickThrough = false,
-            IsLocked = false,
-            AutoHideAnchorDot = sourceSettings?.AutoHideAnchorDot ?? false,
-            TargetMonitor = sourceSettings?.TargetMonitor ?? 0
-        };
-
-        // Copy instance data from source if it exists
-        string sourceDataDir = Path.Combine(ChwPackageService.DataDir, sourceId);
-        if (!Directory.Exists(sourceDataDir))
-        {
-            sourceDataDir = Path.Combine(ChwPackageService.DataDir, baseWidgetId);
-        }
-
-        string targetDataDir = Path.Combine(ChwPackageService.DataDir, newInstanceId);
         try
         {
-            if (Directory.Exists(sourceDataDir))
+            WidgetInstanceSettings? sourceSettings = null;
+            if (Settings.Widgets.TryGetValue(sourceId, out var s))
             {
-                Directory.CreateDirectory(targetDataDir);
-                foreach (var file in Directory.GetFiles(sourceDataDir))
+                sourceSettings = s;
+            }
+            else if (_activeWindows.TryGetValue(sourceId, out var win))
+            {
+                sourceSettings = win.Settings;
+            }
+
+            string baseWidgetId = sourceSettings?.BaseWidgetId ?? (sourceId.Contains('#') ? sourceId.Split('#')[0] : sourceId);
+            var installed = ChwPackageService.GetInstalledWidgets();
+            var item = installed.FirstOrDefault(x => x.Manifest.Id == baseWidgetId);
+            if (item.Manifest == null)
+                return null;
+
+            string newInstanceId = $"{baseWidgetId}#inst_{Guid.NewGuid().ToString("N")[..8]}";
+
+            int copyIndex = Settings.Widgets.Values.Count(w => w.BaseWidgetId == baseWidgetId) + 1;
+            string copyTitle = $"{item.Manifest.Name} (Копия {copyIndex})";
+
+            double newLeft = (sourceSettings != null ? sourceSettings.Left : 100) + 35;
+            double newTop = (sourceSettings != null ? sourceSettings.Top : 100) + 35;
+
+            double virtLeft = SystemParameters.VirtualScreenLeft;
+            double virtTop = SystemParameters.VirtualScreenTop;
+            double virtWidth = SystemParameters.VirtualScreenWidth;
+            double virtHeight = SystemParameters.VirtualScreenHeight;
+
+            if (newLeft > virtLeft + virtWidth - 120)
+                newLeft = virtLeft + 50;
+            if (newTop > virtTop + virtHeight - 120)
+                newTop = virtTop + 60;
+
+            var newSettings = new WidgetInstanceSettings
+            {
+                Id = newInstanceId,
+                WidgetId = baseWidgetId,
+                Title = copyTitle,
+                IsEnabled = true,
+                Left = Math.Round(newLeft),
+                Top = Math.Round(newTop),
+                Width = sourceSettings != null && sourceSettings.Width > 0 ? Math.Round(sourceSettings.Width) : item.Manifest.DefaultWidth,
+                Height = sourceSettings != null && sourceSettings.Height > 0 ? Math.Round(sourceSettings.Height) : item.Manifest.DefaultHeight,
+                Layer = sourceSettings?.Layer ?? WidgetLayer.Desktop,
+                Opacity = sourceSettings?.Opacity ?? 1.0,
+                Scale = sourceSettings?.Scale ?? 1.0,
+                IsClickThrough = false,
+                IsLocked = false,
+                AutoHideAnchorDot = sourceSettings?.AutoHideAnchorDot ?? false,
+                TargetMonitor = sourceSettings?.TargetMonitor ?? 0
+            };
+
+            // Copy instance data from source if it exists
+            string sourceDataDir = Path.Combine(ChwPackageService.DataDir, sourceId);
+            if (!Directory.Exists(sourceDataDir))
+            {
+                sourceDataDir = Path.Combine(ChwPackageService.DataDir, baseWidgetId);
+            }
+
+            string targetDataDir = Path.Combine(ChwPackageService.DataDir, newInstanceId);
+            try
+            {
+                if (Directory.Exists(sourceDataDir))
                 {
-                    string fileName = Path.GetFileName(file);
-                    File.Copy(file, Path.Combine(targetDataDir, fileName), true);
+                    Directory.CreateDirectory(targetDataDir);
+                    foreach (var file in Directory.GetFiles(sourceDataDir))
+                    {
+                        string fileName = Path.GetFileName(file);
+                        File.Copy(file, Path.Combine(targetDataDir, fileName), true);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WidgetManager] Failed copying instance data: {ex.Message}");
+            }
+
+            Settings.Widgets[newInstanceId] = newSettings;
+            SaveSettings();
+
+            StartWidget(baseWidgetId, newInstanceId);
+            return newInstanceId;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[WidgetManager] Failed copying instance data: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[WidgetManager] Error duplicating widget: {ex}");
+            return null;
         }
-
-        Settings.Widgets[newInstanceId] = newSettings;
-        SaveSettings();
-
-        StartWidget(baseWidgetId, newInstanceId);
-        return newInstanceId;
     }
 
     public void DeleteWidgetInstance(string instanceId)

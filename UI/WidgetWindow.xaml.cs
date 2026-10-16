@@ -25,6 +25,9 @@ public partial class WidgetWindow : Window
     public IntPtr Hwnd => _hwnd;
     private WebView2? _webView;
 
+    private static Microsoft.Web.WebView2.Core.CoreWebView2Environment? _sharedWebViewEnvironment;
+    private static readonly SemaphoreSlim _webViewEnvLock = new(1, 1);
+
     public event Action<WidgetWindow>? WidgetClosed;
     public event Action<WidgetWindow>? SettingsChanged;
 
@@ -123,6 +126,42 @@ public partial class WidgetWindow : Window
         }
 
         DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
+        UpdateWindowShape();
+    }
+
+    public void UpdateWindowShape()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        try
+        {
+            // Windows 11 rounded window preference
+            int cornerPref = Win32Native.DWMWCP_ROUND;
+            Win32Native.DwmSetWindowAttribute(_hwnd, Win32Native.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPref, sizeof(int));
+
+            // Clip HWND to exact rounded rectangle so DWM never draws rectangular blurred corners
+            double dpiScale = 1.0;
+            try
+            {
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+                if (dpi.DpiScaleX > 0) dpiScale = dpi.DpiScaleX;
+            }
+            catch { }
+
+            double currentW = ActualWidth > 0 ? ActualWidth : Width;
+            double currentH = ActualHeight > 0 ? ActualHeight : Height;
+            int w = (int)Math.Ceiling(currentW * dpiScale);
+            int h = (int)Math.Ceiling(currentH * dpiScale);
+            if (w <= 0 || h <= 0) return;
+
+            // 20px radius in DIPs -> ellipse diameter in physical pixels
+            int ellipseDiam = (int)Math.Round(40 * dpiScale);
+            IntPtr hRgn = Win32Native.CreateRoundRectRgn(0, 0, w + 1, h + 1, ellipseDiam, ellipseDiam);
+            if (hRgn != IntPtr.Zero)
+            {
+                Win32Native.SetWindowRgn(_hwnd, hRgn, true);
+            }
+        }
+        catch { }
     }
 
     private void ApplyAcrylicBlur()
@@ -148,6 +187,7 @@ public partial class WidgetWindow : Window
 
             Win32Native.SetWindowCompositionAttribute(_hwnd, ref data);
             System.Runtime.InteropServices.Marshal.FreeHGlobal(accentPtr);
+            UpdateWindowShape();
         }
         catch { }
     }
@@ -171,16 +211,49 @@ public partial class WidgetWindow : Window
         }, IntPtr.Zero);
     }
 
+    private const int RESIZE_BORDER_THICKNESS = 8;
+
+    private IntPtr CheckResizeHitTest(Point windowPt)
+    {
+        if (ResizeMode != ResizeMode.CanResizeWithGrip && ResizeMode != ResizeMode.CanResize)
+            return IntPtr.Zero;
+
+        double w = ActualWidth > 0 ? ActualWidth : Width;
+        double h = ActualHeight > 0 ? ActualHeight : Height;
+
+        bool left = windowPt.X >= 0 && windowPt.X <= RESIZE_BORDER_THICKNESS;
+        bool right = windowPt.X >= (w - RESIZE_BORDER_THICKNESS) && windowPt.X <= w;
+        bool top = windowPt.Y >= 0 && windowPt.Y <= RESIZE_BORDER_THICKNESS;
+        bool bottom = windowPt.Y >= (h - RESIZE_BORDER_THICKNESS) && windowPt.Y <= h;
+
+        if (bottom && right) return (IntPtr)Win32Native.HTBOTTOMRIGHT;
+        if (bottom && left) return (IntPtr)Win32Native.HTBOTTOMLEFT;
+        if (top && right) return (IntPtr)Win32Native.HTTOPRIGHT;
+        if (top && left) return (IntPtr)Win32Native.HTTOPLEFT;
+        if (bottom) return (IntPtr)Win32Native.HTBOTTOM;
+        if (right) return (IntPtr)Win32Native.HTRIGHT;
+        if (left) return (IntPtr)Win32Native.HTLEFT;
+        if (top) return (IntPtr)Win32Native.HTTOP;
+
+        return IntPtr.Zero;
+    }
+
     private IntPtr SubclassCallback(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, UIntPtr dwRefData)
     {
         if (uMsg == (uint)Win32Native.WM_NCHITTEST)
         {
+            int x = (short)(lParam.ToInt64() & 0xFFFF);
+            int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+            var pt = PointFromScreen(new Point(x, y));
+
+            var resizeHit = CheckResizeHitTest(pt);
+            if (resizeHit != IntPtr.Zero)
+            {
+                return (IntPtr)Win32Native.HTTRANSPARENT; // Let parent window handle the resize border
+            }
+
             if (Settings.IsClickThrough)
             {
-                int x = (short)(lParam.ToInt64() & 0xFFFF);
-                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
-                var pt = PointFromScreen(new Point(x, y));
-
                 // Anchor dot hotspot (top-right corner 36x36)
                 if (pt.X >= (Width - 36) && pt.X <= Width && pt.Y >= 0 && pt.Y <= 36)
                 {
@@ -213,12 +286,19 @@ public partial class WidgetWindow : Window
     {
         if (msg == Win32Native.WM_NCHITTEST)
         {
+            int x = (short)(lParam.ToInt64() & 0xFFFF);
+            int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+            var windowPt = PointFromScreen(new Point(x, y));
+
+            var resizeHit = CheckResizeHitTest(windowPt);
+            if (resizeHit != IntPtr.Zero)
+            {
+                handled = true;
+                return resizeHit;
+            }
+
             if (Settings.IsClickThrough)
             {
-                int x = (short)(lParam.ToInt64() & 0xFFFF);
-                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
-                var windowPt = PointFromScreen(new Point(x, y));
-
                 // Check if cursor is over AnchorDot (top-right corner 36x36)
                 if (windowPt.X >= (Width - 36) && windowPt.X <= Width && windowPt.Y >= 0 && windowPt.Y <= 36)
                 {
@@ -256,6 +336,7 @@ public partial class WidgetWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateWindowShape();
         if (Manifest.Type.Equals("web", StringComparison.OrdinalIgnoreCase))
         {
             await LoadWebWidget();
@@ -264,6 +345,7 @@ public partial class WidgetWindow : Window
         {
             LoadNativeWidget();
         }
+        UpdateWindowShape();
     }
 
     private async Task LoadWebWidget()
@@ -284,9 +366,24 @@ public partial class WidgetWindow : Window
             // Put in visual tree so HWND is created for EnsureCoreWebView2Async
             WidgetContentHost.Content = _webView;
 
-            string userDataFolder = Path.Combine(ChwPackageService.AppDataDir, "webview_cache");
-            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
-            await _webView.EnsureCoreWebView2Async(env);
+            if (_sharedWebViewEnvironment == null)
+            {
+                await _webViewEnvLock.WaitAsync();
+                try
+                {
+                    if (_sharedWebViewEnvironment == null)
+                    {
+                        string userDataFolder = Path.Combine(ChwPackageService.AppDataDir, "webview_cache");
+                        _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                    }
+                }
+                finally
+                {
+                    _webViewEnvLock.Release();
+                }
+            }
+            await _webView.EnsureCoreWebView2Async(_sharedWebViewEnvironment);
+
 
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
@@ -639,17 +736,29 @@ public partial class WidgetWindow : Window
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!IsLoaded || WindowState != WindowState.Normal) return;
+
+        double newW = Math.Round(e.NewSize.Width);
+        double newH = Math.Round(e.NewSize.Height);
+
+        if (newW < MinWidth) newW = MinWidth;
+        if (newH < MinHeight) newH = MinHeight;
+
+        Width = newW;
+        Height = newH;
+
         var pt = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
         if (Math.Abs(pt.X - Left) > 0.5 || Math.Abs(pt.Y - Top) > 0.5)
         {
-            Left = pt.X;
-            Top = pt.Y;
+            Left = Math.Round(pt.X);
+            Top = Math.Round(pt.Y);
         }
         Settings.Left = Left;
         Settings.Top = Top;
         Settings.Width = Width;
         Settings.Height = Height;
         SettingsChanged?.Invoke(this);
+
+        UpdateWindowShape();
     }
 
     private void OnWindowRightButtonUp(object sender, MouseButtonEventArgs e)
@@ -860,6 +969,10 @@ public partial class WidgetWindow : Window
         MenuLockPosition.IsChecked = Settings.IsLocked;
         MenuAutoHideDot.IsChecked = Settings.AutoHideAnchorDot;
         MenuFreeResizeToggle.IsChecked = ResizeMode == ResizeMode.CanResizeWithGrip || ResizeMode == ResizeMode.CanResize;
+        if (ResizeGripHandle != null)
+        {
+            ResizeGripHandle.Visibility = MenuFreeResizeToggle.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     // Context menu handlers
@@ -1063,16 +1176,17 @@ public partial class WidgetWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            Width = Math.Max(MinWidth, newWidth);
-            Height = Math.Max(MinHeight, newHeight);
+            Width = Math.Max(MinWidth, Math.Round(newWidth));
+            Height = Math.Max(MinHeight, Math.Round(newHeight));
             var clamped = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
-            Left = clamped.X;
-            Top = clamped.Y;
+            Left = Math.Round(clamped.X);
+            Top = Math.Round(clamped.Y);
             Settings.Left = Left;
             Settings.Top = Top;
             Settings.Width = Width;
             Settings.Height = Height;
             SettingsChanged?.Invoke(this);
+            UpdateWindowShape();
         });
     }
 
@@ -1080,6 +1194,20 @@ public partial class WidgetWindow : Window
     {
         bool isFree = MenuFreeResizeToggle.IsChecked;
         ResizeMode = isFree ? ResizeMode.CanResizeWithGrip : ResizeMode.NoResize;
+        if (ResizeGripHandle != null)
+        {
+            ResizeGripHandle.Visibility = isFree ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void OnResizeGripLeftDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsLocked)
+        {
+            Win32Native.ReleaseCapture();
+            Win32Native.SendMessage(_hwnd, Win32Native.WM_NCLBUTTONDOWN, (IntPtr)Win32Native.HTBOTTOMRIGHT, IntPtr.Zero);
+            e.Handled = true;
+        }
     }
 
     private void OnOpacity100Click(object sender, RoutedEventArgs e) => SetWidgetOpacity(1.0);
@@ -1107,7 +1235,14 @@ public partial class WidgetWindow : Window
 
     private void OnDuplicateWidgetClick(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.DuplicateWidget(InstanceId);
+        try
+        {
+            WidgetManager.Instance.DuplicateWidget(InstanceId);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[WidgetWindow] Duplicate error: {ex.Message}");
+        }
     }
 
     private void OnDeleteInstanceClick(object sender, RoutedEventArgs e)

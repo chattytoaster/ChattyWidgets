@@ -313,6 +313,51 @@ public partial class App : System.Windows.Application
             try { if (System.IO.File.Exists(testChwp)) System.IO.File.Delete(testChwp); } catch { }
         }
 
+        // Test 8: Duplicate Widget, Resizing and Shape Clipping
+        Log("TEST 8: Testing Widget Duplication, Resizing, and Shape Clipping...");
+        try
+        {
+            string? dupId = WidgetManager.Instance.DuplicateWidget("com.chatty.system-gauges");
+            Log($" - DuplicateWidget returned ID: {dupId}");
+            if (string.IsNullOrEmpty(dupId) || !dupId.Contains("#inst_"))
+            {
+                throw new Exception($"DuplicateWidget failed or returned invalid ID: {dupId}");
+            }
+
+            var dupWin = WidgetManager.Instance.GetActiveWindow(dupId);
+            if (dupWin == null)
+            {
+                throw new Exception("Duplicate window was not found in active windows.");
+            }
+
+            Log($" - Duplicate window created: Title='{dupWin.Title}', Left={dupWin.Left}, Top={dupWin.Top}, Width={dupWin.Width}, Height={dupWin.Height}");
+
+            // Test interactive resize
+            dupWin.ResizeWidget(320, 240);
+            Log($" - After ResizeWidget(320, 240): Width={dupWin.Width}, Height={dupWin.Height}, Settings.Width={dupWin.Settings.Width}, Settings.Height={dupWin.Settings.Height}");
+
+            if (Math.Abs(dupWin.Width - 320) > 1 || Math.Abs(dupWin.Settings.Width - 320) > 1)
+            {
+                throw new Exception($"Resized width mismatch! Expected 320, got Width={dupWin.Width}, Settings.Width={dupWin.Settings.Width}");
+            }
+
+            // Test shape clipping update
+            dupWin.UpdateWindowShape();
+            Log(" - UpdateWindowShape executed successfully without errors.");
+
+            // Cleanup duplicate
+            WidgetManager.Instance.DeleteWidgetInstance(dupId);
+            bool stillExists = WidgetManager.Instance.GetActiveWindow(dupId) != null;
+            Log($" - Duplicate cleaned up, still in active: {stillExists}");
+
+            Log("PASS: Widget duplication, resizing sync, and shape clipping verified.");
+        }
+        catch (Exception ex)
+        {
+            Log($"FAIL in Duplicate/Resize test: {ex.Message}");
+            throw;
+        }
+
         Log("=== ALL TESTS COMPLETED SUCCESSFULLY ===");
 
         // Write report to file

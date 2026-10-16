@@ -209,8 +209,21 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement el && el.Tag is string id)
         {
-            WidgetManager.Instance.DuplicateWidget(id);
-            RefreshInstalledWidgets();
+            try
+            {
+                TxtStatus.Text = $"Создание экземпляра виджета '{id}'...";
+                var newId = WidgetManager.Instance.DuplicateWidget(id);
+                RefreshInstalledWidgets();
+                if (newId != null)
+                {
+                    TxtStatus.Text = $"Экземпляр виджета успешно добавлен на рабочий стол!";
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtStatus.Text = $"Ошибка добавления виджета: {ex.Message}";
+                MessageBox.Show($"Не удалось добавить виджет: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 

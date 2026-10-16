@@ -111,7 +111,7 @@ public class AppSettings
     public bool EnableHotReload { get; set; } = true;
 
     [JsonPropertyName("acrylicBlur")]
-    public bool AcrylicBlur { get; set; } = true;
+    public bool AcrylicBlur { get; set; } = false;
 
     [JsonPropertyName("widgets")]
     public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();
