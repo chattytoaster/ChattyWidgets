@@ -59,10 +59,17 @@ public partial class App : System.Windows.Application
         // Single instance check: if another instance is running, pass command-line arguments to it and exit!
         if (!SingleInstanceService.TryStartAsFirstInstance(OnSecondInstanceArgsReceived))
         {
-            Log("Second instance detected, passing args and shutting down");
-            SingleInstanceService.SendArgsToRunningInstance(e.Args);
-            Shutdown(0);
-            return;
+            Log("Second instance detected, passing args to running instance...");
+            bool sent = SingleInstanceService.SendArgsToRunningInstance(e.Args);
+            if (sent)
+            {
+                Log("Args successfully passed to running instance. Exiting secondary instance.");
+                Shutdown(0);
+                return;
+            }
+
+            Log("Running instance did not respond on pipe (stale mutex or terminated process). Forcing takeover as primary instance.");
+            SingleInstanceService.ForceResetMutex(OnSecondInstanceArgsReceived);
         }
 
         Log("First instance confirmed, proceeding");
@@ -115,39 +122,60 @@ public partial class App : System.Windows.Application
 
     private void OnSecondInstanceArgsReceived(string rawArgs)
     {
+        Log($"OnSecondInstanceArgsReceived called. rawArgs: '{rawArgs}'");
         Dispatcher.BeginInvoke(() =>
         {
-            var lines = rawArgs.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
+            try
             {
-                string path = line.Trim().Trim('"');
-                if (path.EndsWith(".chw", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+                var lines = rawArgs.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in lines)
                 {
-                    if (MainWindow is MainWindow mw)
+                    string path = line.Trim().Trim('"');
+                    if (path.EndsWith(".chw", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
                     {
-                        mw.Show();
-                        mw.WindowState = WindowState.Normal;
-                        mw.Activate();
-                        mw.InstallChwFile(path);
+                        if (MainWindow is MainWindow mw)
+                        {
+                            mw.Show();
+                            mw.WindowState = WindowState.Normal;
+                            mw.Activate();
+                            mw.InstallChwFile(path);
+                        }
+                    }
+                    else if (path.EndsWith(".chwp", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+                    {
+                        if (MainWindow is MainWindow mw)
+                        {
+                            mw.Show();
+                            mw.WindowState = WindowState.Normal;
+                            mw.Activate();
+                            mw.ImportPresetFile(path);
+                        }
                     }
                 }
-                else if (path.EndsWith(".chwp", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+
+                if (MainWindow is MainWindow win)
                 {
-                    if (MainWindow is MainWindow mw)
+                    win.Show();
+                    if (win.WindowState == WindowState.Minimized)
                     {
-                        mw.Show();
-                        mw.WindowState = WindowState.Normal;
-                        mw.Activate();
-                        mw.ImportPresetFile(path);
+                        win.WindowState = WindowState.Normal;
+                    }
+                    win.Activate();
+                    win.Topmost = true;
+                    win.Topmost = false;
+                    win.Focus();
+
+                    var hwnd = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        ChattyWidgets.Core.Win32.Win32Native.ShowWindow(hwnd, 9 /*SW_RESTORE*/);
+                        ChattyWidgets.Core.Win32.Win32Native.SetForegroundWindow(hwnd);
                     }
                 }
             }
-
-            if (MainWindow != null && !MainWindow.IsVisible)
+            catch (Exception ex)
             {
-                MainWindow.Show();
-                MainWindow.WindowState = WindowState.Normal;
-                MainWindow.Activate();
+                Log($"Error in OnSecondInstanceArgsReceived: {ex}");
             }
         });
     }

@@ -12,7 +12,22 @@ public static class SingleInstanceService
 
     public static bool TryStartAsFirstInstance(Action<string> onCommandLineReceived)
     {
-        _mutex = new Mutex(true, MutexName, out bool isFirstInstance);
+        bool isFirstInstance = false;
+        try
+        {
+            _mutex = new Mutex(true, MutexName, out isFirstInstance);
+        }
+        catch (AbandonedMutexException)
+        {
+            // Previous instance process exited abruptly without releasing the mutex. We now own it!
+            isFirstInstance = true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SingleInstanceService] Mutex init error: {ex.Message}");
+            isFirstInstance = true;
+        }
+
         if (!isFirstInstance)
         {
             return false;
@@ -23,12 +38,31 @@ public static class SingleInstanceService
         return true;
     }
 
+    public static void ForceResetMutex(Action<string> onCommandLineReceived)
+    {
+        try
+        {
+            _cts?.Cancel();
+            _mutex?.Dispose();
+        }
+        catch { }
+
+        try
+        {
+            _mutex = new Mutex(true, MutexName);
+        }
+        catch { }
+
+        _cts = new CancellationTokenSource();
+        Task.Run(() => ListenForSecondaryInstances(onCommandLineReceived, _cts.Token));
+    }
+
     public static bool SendArgsToRunningInstance(string[] args)
     {
         try
         {
             using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
-            client.Connect(2000); // 2 second timeout
+            client.Connect(1000); // 1 second timeout
 
             using var writer = new StreamWriter(client) { AutoFlush = true };
             string payload = string.Join("\n", args);
