@@ -485,6 +485,14 @@ public class LocalizationService
         Add("QuickDock.NamePlaceholder", "Название приложения", "App Name");
         Add("QuickDock.IconPlaceholder", "Иконка / Emoji (напр. 🚀)", "Icon / Emoji (e.g. 🚀)");
         Add("QuickDock.PathPlaceholder", "Путь к файлу / URL (напр. https://...)", "File path / URL (e.g. https://...)");
+        Add("QuickDock.BrowseFile", "📁 Обзор...", "📁 Browse...");
+        Add("QuickDock.BrowseIcon", "🖼️ Обзор...", "🖼️ Browse...");
+        Add("QuickDock.SelectFileTitle", "Выберите исполняемый файл или документ", "Select executable file or document");
+        Add("QuickDock.SelectIconTitle", "Выберите иконку или изображение", "Select icon or image");
+        Add("QuickDock.FileFilter", "Приложения и файлы (*.exe;*.lnk;*.bat;*.cmd;*.*)|*.exe;*.lnk;*.bat;*.cmd;*.*|Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*", "Applications and files (*.exe;*.lnk;*.bat;*.cmd;*.*)|*.exe;*.lnk;*.bat;*.cmd;*.*|Applications (*.exe)|*.exe|All files (*.*)|*.*");
+        Add("QuickDock.IconFilter", "Иконки и изображения (*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe)|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe|Иконки (*.ico)|*.ico|Изображения (*.png;*.jpg)|*.png;*.jpg|Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*", "Icons and images (*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe)|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe|Icons (*.ico)|*.ico|Images (*.png;*.jpg)|*.png;*.jpg|Applications (*.exe)|*.exe|All files (*.*)|*.*");
+        Add("QuickDock.CurrentApps", "Текущие приложения в Доке:", "Current Apps in Dock:");
+        Add("QuickDock.DeleteApp", "Удалить", "Delete");
         Add("QuickDock.BtnAdd", "+ Добавить в Док", "+ Add to Dock");
         Add("QuickDock.BtnReset", "Сбросить к стандартным", "Reset to Defaults");
 

@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Xml.Linq;
 
@@ -2358,13 +2359,65 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
 }
 
 // 7. Quick Dock ViewModel
-public class DockAppItem
+public class DockAppItem : INotifyPropertyChanged
 {
-    public string Name { get; set; } = "";
-    public string Icon { get; set; } = "";
-    public string Tooltip { get; set; } = "";
-    public string TargetPath { get; set; } = "";
-    public ICommand LaunchCommand { get; set; } = null!;
+    private string _name = "";
+    private string _icon = "";
+    private ImageSource? _iconImage;
+    private string _tooltip = "";
+    private string _targetPath = "";
+    private ICommand _launchCommand = null!;
+
+    public string Name
+    {
+        get => _name;
+        set { _name = value; OnPropertyChanged(); }
+    }
+
+    public string Icon
+    {
+        get => _icon;
+        set { _icon = value; OnPropertyChanged(); }
+    }
+
+    public ImageSource? IconImage
+    {
+        get => _iconImage;
+        set
+        {
+            _iconImage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasIconImage));
+            OnPropertyChanged(nameof(ImageIconVisibility));
+            OnPropertyChanged(nameof(TextIconVisibility));
+        }
+    }
+
+    public bool HasIconImage => IconImage != null;
+    public Visibility ImageIconVisibility => HasIconImage ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TextIconVisibility => HasIconImage ? Visibility.Collapsed : Visibility.Visible;
+
+    public string Tooltip
+    {
+        get => _tooltip;
+        set { _tooltip = value; OnPropertyChanged(); }
+    }
+
+    public string TargetPath
+    {
+        get => _targetPath;
+        set { _targetPath = value; OnPropertyChanged(); }
+    }
+
+    public ICommand LaunchCommand
+    {
+        get => _launchCommand;
+        set { _launchCommand = value; OnPropertyChanged(); }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
 }
 
 public class QuickDockWidgetViewModel : NativeViewModelBase
@@ -2428,6 +2481,23 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
         WidgetManager.Instance.SaveSettings();
     }
 
+    public class CustomDockItem
+    {
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Path { get; set; } = "";
+    }
+
+    public List<CustomDockItem> GetCustomItems()
+    {
+        var custom = LoadCustomItems();
+        if (custom.Count == 0 && !File.Exists(_storageFile))
+        {
+            return GetDefaultCustomItems();
+        }
+        return custom;
+    }
+
     public void PopulateApps()
     {
         Apps.Clear();
@@ -2454,9 +2524,28 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
     public void AddCustomApp(string name, string icon, string targetPath)
     {
         var items = LoadCustomItems();
+        if (items.Count == 0 && !File.Exists(_storageFile))
+        {
+            items = GetDefaultCustomItems();
+        }
         items.Add(new CustomDockItem { Name = name, Icon = icon, Path = targetPath });
         SaveCustomItems(items);
         PopulateApps();
+    }
+
+    public void RemoveCustomApp(int index)
+    {
+        var items = LoadCustomItems();
+        if (items.Count == 0 && !File.Exists(_storageFile))
+        {
+            items = GetDefaultCustomItems();
+        }
+        if (index >= 0 && index < items.Count)
+        {
+            items.RemoveAt(index);
+            SaveCustomItems(items);
+            PopulateApps();
+        }
     }
 
     public void ResetDefaults()
@@ -2465,11 +2554,18 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
         PopulateApps();
     }
 
-    private class CustomDockItem
+    private List<CustomDockItem> GetDefaultCustomItems()
     {
-        public string Name { get; set; } = "";
-        public string Icon { get; set; } = "";
-        public string Path { get; set; } = "";
+        var loc = LocalizationService.Instance;
+        return new List<CustomDockItem>
+        {
+            new() { Name = loc.T("QuickDock.Explorer", "Проводник"), Icon = "📁", Path = "explorer.exe" },
+            new() { Name = loc.T("QuickDock.Terminal", "Терминал"), Icon = "💻", Path = "wt.exe" },
+            new() { Name = loc.T("QuickDock.Browser", "Браузер"), Icon = "🌐", Path = "https://google.com" },
+            new() { Name = loc.T("QuickDock.Notepad", "Блокнот"), Icon = "📝", Path = "notepad.exe" },
+            new() { Name = loc.T("QuickDock.Calc", "Калькулятор"), Icon = "🔢", Path = "calc.exe" },
+            new() { Name = loc.T("QuickDock.TaskMgr", "Диспетчер задач"), Icon = "⚡", Path = "taskmgr.exe" }
+        };
     }
 
     private List<CustomDockItem> LoadCustomItems()
@@ -2495,12 +2591,74 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
         catch { }
     }
 
+    public static ImageSource? ResolveIconImage(string? iconPath, string? targetPath = null)
+    {
+        try
+        {
+            string? pathToUse = null;
+            if (!string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath))
+            {
+                pathToUse = iconPath;
+            }
+            else if (!string.IsNullOrWhiteSpace(targetPath) && File.Exists(targetPath) && (string.IsNullOrWhiteSpace(iconPath) || iconPath == "🚀"))
+            {
+                pathToUse = targetPath;
+            }
+
+            if (string.IsNullOrEmpty(pathToUse))
+                return null;
+
+            string ext = Path.GetExtension(pathToUse).ToLowerInvariant();
+
+            if (ext == ".exe" || ext == ".dll" || ext == ".lnk")
+            {
+                using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(pathToUse);
+                if (sysIcon != null)
+                {
+                    var bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                        sysIcon.Handle,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                    bs.Freeze();
+                    return bs;
+                }
+            }
+            else if (ext == ".ico")
+            {
+                using var fs = new FileStream(pathToUse, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var decoder = new IconBitmapDecoder(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count > 0)
+                {
+                    var frame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault() ?? decoder.Frames[0];
+                    frame.Freeze();
+                    return frame;
+                }
+            }
+            else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif")
+            {
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.UriSource = new Uri(pathToUse, UriKind.Absolute);
+                bi.EndInit();
+                bi.Freeze();
+                return bi;
+            }
+        }
+        catch
+        {
+        }
+        return null;
+    }
+
     private void AddApp(string name, string icon, string tip, string path, Action? customAction = null)
     {
+        var iconImg = ResolveIconImage(icon, path);
         Apps.Add(new DockAppItem
         {
             Name = name,
             Icon = icon,
+            IconImage = iconImg,
             Tooltip = tip,
             TargetPath = path,
             LaunchCommand = new NativeRelayCommand(() =>

@@ -12,6 +12,7 @@ using ComboBox = System.Windows.Controls.ComboBox;
 using Cursors = System.Windows.Input.Cursors;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;
+using Image = System.Windows.Controls.Image;
 
 namespace ChattyWidgets.UI;
 
@@ -2464,34 +2465,7 @@ public partial class WidgetSettingsWindow : Window
         });
         spAdd.Children.Add(txtName);
 
-        var txtIcon = new TextBox
-        {
-            Height = 30,
-            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
-            Foreground = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
-            Padding = new Thickness(6, 4, 6, 4),
-            Text = "🚀",
-            Margin = new Thickness(0, 0, 0, 6)
-        };
-        spAdd.Children.Add(new TextBlock
-        {
-            Text = loc.T("QuickDock.IconPlaceholder", "Иконка / Emoji (напр. 🚀)"),
-            FontSize = 10.5,
-            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-            Margin = new Thickness(0, 0, 0, 2)
-        });
-        spAdd.Children.Add(txtIcon);
-
-        var txtPath = new TextBox
-        {
-            Height = 30,
-            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
-            Foreground = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
-            Padding = new Thickness(6, 4, 6, 4),
-            Margin = new Thickness(0, 0, 0, 10)
-        };
+        // Path field with Explorer Browse button
         spAdd.Children.Add(new TextBlock
         {
             Text = loc.T("QuickDock.PathPlaceholder", "Путь к файлу / URL (напр. https://...)"),
@@ -2499,7 +2473,120 @@ public partial class WidgetSettingsWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             Margin = new Thickness(0, 0, 0, 2)
         });
-        spAdd.Children.Add(txtPath);
+
+        var gridPath = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        gridPath.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        gridPath.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var txtPath = new TextBox
+        {
+            Height = 30,
+            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+            Padding = new Thickness(6, 4, 6, 4)
+        };
+        Grid.SetColumn(txtPath, 0);
+        gridPath.Children.Add(txtPath);
+
+        var btnBrowsePath = new Button
+        {
+            Content = loc.T("QuickDock.BrowseFile", "📁 Обзор..."),
+            Height = 30,
+            Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Cursor = Cursors.Hand,
+            Padding = new Thickness(10, 0, 10, 0),
+            Margin = new Thickness(6, 0, 0, 0)
+        };
+        Grid.SetColumn(btnBrowsePath, 1);
+        gridPath.Children.Add(btnBrowsePath);
+        spAdd.Children.Add(gridPath);
+
+        // Icon field with Explorer Browse button
+        spAdd.Children.Add(new TextBlock
+        {
+            Text = loc.T("QuickDock.IconPlaceholder", "Иконка / Emoji (напр. 🚀)"),
+            FontSize = 10.5,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            Margin = new Thickness(0, 0, 0, 2)
+        });
+
+        var gridIcon = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+        gridIcon.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        gridIcon.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var txtIcon = new TextBox
+        {
+            Height = 30,
+            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+            Padding = new Thickness(6, 4, 6, 4),
+            Text = "🚀"
+        };
+        Grid.SetColumn(txtIcon, 0);
+        gridIcon.Children.Add(txtIcon);
+
+        var btnBrowseIcon = new Button
+        {
+            Content = loc.T("QuickDock.BrowseIcon", "🖼️ Обзор..."),
+            Height = 30,
+            Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Cursor = Cursors.Hand,
+            Padding = new Thickness(10, 0, 10, 0),
+            Margin = new Thickness(6, 0, 0, 0)
+        };
+        Grid.SetColumn(btnBrowseIcon, 1);
+        gridIcon.Children.Add(btnBrowseIcon);
+        spAdd.Children.Add(gridIcon);
+
+        btnBrowsePath.Click += (s, e) =>
+        {
+            try
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = loc.T("QuickDock.SelectFileTitle", "Выберите исполняемый файл или документ"),
+                    Filter = loc.T("QuickDock.FileFilter", "Приложения и файлы (*.exe;*.lnk;*.bat;*.cmd;*.*)|*.exe;*.lnk;*.bat;*.cmd;*.*|Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*")
+                };
+                if (dlg.ShowDialog(this) == true)
+                {
+                    txtPath.Text = dlg.FileName;
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        txtName.Text = Path.GetFileNameWithoutExtension(dlg.FileName);
+                    }
+                    if (string.IsNullOrWhiteSpace(txtIcon.Text) || txtIcon.Text == "🚀")
+                    {
+                        txtIcon.Text = dlg.FileName;
+                    }
+                }
+            }
+            catch { }
+        };
+
+        btnBrowseIcon.Click += (s, e) =>
+        {
+            try
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = loc.T("QuickDock.SelectIconTitle", "Выберите иконку или изображение"),
+                    Filter = loc.T("QuickDock.IconFilter", "Иконки и изображения (*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe)|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe|Иконки (*.ico)|*.ico|Изображения (*.png;*.jpg)|*.png;*.jpg|Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*")
+                };
+                if (dlg.ShowDialog(this) == true)
+                {
+                    txtIcon.Text = dlg.FileName;
+                }
+            }
+            catch { }
+        };
 
         var btnAdd = new Button
         {
@@ -2511,6 +2598,138 @@ public partial class WidgetSettingsWindow : Window
             BorderThickness = new Thickness(0),
             Cursor = Cursors.Hand
         };
+        spAdd.Children.Add(btnAdd);
+
+        cardAdd.Child = spAdd;
+        SettingsPanel.Children.Add(cardAdd);
+
+        // Card 3: Current apps list
+        var cardApps = CreateCard();
+        var spApps = new StackPanel();
+
+        spApps.Children.Add(new TextBlock
+        {
+            Text = loc.T("QuickDock.CurrentApps", "Текущие приложения в Доке:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        var spItemsContainer = new StackPanel();
+        spApps.Children.Add(spItemsContainer);
+
+        Action populateItemsList = null!;
+        populateItemsList = () =>
+        {
+            spItemsContainer.Children.Clear();
+            if (dockVm == null) return;
+
+            var items = dockVm.GetCustomItems();
+            for (int i = 0; i < items.Count; i++)
+            {
+                int idx = i;
+                var item = items[i];
+
+                var row = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(8, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 0, 6)
+                };
+
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var iconImg = QuickDockWidgetViewModel.ResolveIconImage(item.Icon, item.Path);
+                if (iconImg != null)
+                {
+                    var img = new Image
+                    {
+                        Source = iconImg,
+                        Width = 20,
+                        Height = 20,
+                        Stretch = Stretch.Uniform,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    Grid.SetColumn(img, 0);
+                    grid.Children.Add(img);
+                }
+                else
+                {
+                    var tbIcon = new TextBlock
+                    {
+                        Text = string.IsNullOrEmpty(item.Icon) ? "🚀" : item.Icon,
+                        FontSize = 14,
+                        Foreground = Brushes.White,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    Grid.SetColumn(tbIcon, 0);
+                    grid.Children.Add(tbIcon);
+                }
+
+                var textSp = new StackPanel
+                {
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(4, 0, 4, 0)
+                };
+                textSp.Children.Add(new TextBlock
+                {
+                    Text = item.Name,
+                    FontWeight = FontWeights.SemiBold,
+                    FontSize = 11.5,
+                    Foreground = Brushes.White,
+                    TextTrimming = TextTrimming.CharacterEllipsis
+                });
+                textSp.Children.Add(new TextBlock
+                {
+                    Text = item.Path,
+                    FontSize = 9.5,
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    TextTrimming = TextTrimming.CharacterEllipsis
+                });
+                Grid.SetColumn(textSp, 1);
+                grid.Children.Add(textSp);
+
+                var btnDel = new Button
+                {
+                    Content = "✕",
+                    ToolTip = loc.T("QuickDock.DeleteApp", "Удалить"),
+                    Width = 24,
+                    Height = 24,
+                    Background = new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+                    Foreground = new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                    BorderThickness = new Thickness(0),
+                    Cursor = Cursors.Hand,
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 11
+                };
+                btnDel.Click += (s, e) =>
+                {
+                    dockVm.RemoveCustomApp(idx);
+                    populateItemsList();
+                    TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
+                    _onSettingsChanged?.Invoke();
+                };
+                Grid.SetColumn(btnDel, 2);
+                grid.Children.Add(btnDel);
+
+                row.Child = grid;
+                spItemsContainer.Children.Add(row);
+            }
+        };
+
+        populateItemsList();
+        cardApps.Child = spApps;
+        SettingsPanel.Children.Add(cardApps);
+
         btnAdd.Click += (s, e) =>
         {
             if (dockVm != null && !string.IsNullOrWhiteSpace(txtName.Text) && !string.IsNullOrWhiteSpace(txtPath.Text))
@@ -2519,16 +2738,14 @@ public partial class WidgetSettingsWindow : Window
                 dockVm.AddCustomApp(txtName.Text.Trim(), icon, txtPath.Text.Trim());
                 txtName.Text = "";
                 txtPath.Text = "";
+                txtIcon.Text = "🚀";
+                populateItemsList();
                 TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
                 _onSettingsChanged?.Invoke();
             }
         };
-        spAdd.Children.Add(btnAdd);
 
-        cardAdd.Child = spAdd;
-        SettingsPanel.Children.Add(cardAdd);
-
-        // Card 3: Reset
+        // Card 4: Reset
         var cardReset = CreateCard();
         var spReset = new StackPanel();
 
@@ -2547,6 +2764,7 @@ public partial class WidgetSettingsWindow : Window
             if (dockVm != null)
             {
                 dockVm.ResetDefaults();
+                populateItemsList();
                 TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
                 _onSettingsChanged?.Invoke();
             }
