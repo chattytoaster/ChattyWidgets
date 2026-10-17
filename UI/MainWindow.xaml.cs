@@ -968,8 +968,8 @@ public partial class MainWindow : Window
         bool isRu = lang.Equals("ru", StringComparison.OrdinalIgnoreCase);
         if (BtnLanguageToggle != null)
         {
-            BtnLanguageToggle.Content = isRu ? "🇷🇺" : "🇬🇧";
-            BtnLanguageToggle.ToolTip = isRu ? "Язык: Русский (Нажмите для переключения на English)" : "Language: English (Click to switch to Russian)";
+            BtnLanguageToggle.Content = isRu ? "RU" : "EN";
+            BtnLanguageToggle.ToolTip = isRu ? "Язык: Русский (Нажмите для переключения на EN)" : "Language: English (Click to switch to RU)";
         }
         if (ComboHubLanguage != null)
         {

@@ -695,6 +695,11 @@ public partial class WidgetWindow : Window
                     {
                         fe.DataContext = NativeWidgetContextProvider.GetContextFor(BaseWidgetId, InstanceId, fe);
                     }
+
+                    // Ensure root border has no DropShadowEffect to prevent straight corner artifacts
+                    if (element is Border rootB) rootB.Effect = null;
+                    else if (element is FrameworkElement feB) FindVisualChild<Border>(feB)?.SetValue(UIElement.EffectProperty, null);
+
                     ApplyBackgroundOpacity(Settings.Opacity);
                 }
                 else
@@ -951,6 +956,9 @@ public partial class WidgetWindow : Window
 
         if (rootBorder != null)
         {
+            // Strictly eliminate any DropShadowEffect on the root border to completely eliminate transparent straight corner artifacts
+            rootBorder.Effect = null;
+
             if (isLight)
             {
                 byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 245), 30, 248);

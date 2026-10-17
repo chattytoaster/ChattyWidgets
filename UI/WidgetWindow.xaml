@@ -63,7 +63,7 @@
         </ContextMenu>
     </Window.ContextMenu>
 
-    <Grid x:Name="MainRoot" Background="Transparent" MouseRightButtonUp="OnWindowRightButtonUp">
+    <Grid x:Name="MainRoot" Background="{x:Null}" MouseRightButtonUp="OnWindowRightButtonUp">
         <!-- Content placeholder for either Web or Native -->
         <ContentControl x:Name="WidgetContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
 
