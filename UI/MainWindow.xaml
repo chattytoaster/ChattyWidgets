@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:ChattyWidgets.UI.Controls"
         Title="ChattyWidgets Hub"
+        Icon="/app.ico"
         Height="680" Width="980"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterScreen"
@@ -181,10 +182,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,28,0">
                         <Image Source="/app.png" Width="34" Height="34" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <StackPanel VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="TxtAppTitle" Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" ✔" FontSize="13" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center" ToolTip="Официально верифицировано / Verified Official"/>
-                            </StackPanel>
+                            <TextBlock x:Name="TxtAppTitle" Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
                             <TextBlock x:Name="TxtAppSubtitle" Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
                         </StackPanel>
                     </StackPanel>
@@ -277,8 +275,24 @@
                                                 </Border>
                                                 <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <controls:MarqueeText Text="{Binding Manifest.DisplayDescription}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0"/>
-                                            <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding AuthorPrefix}" FontSize="11" Foreground="#64748B" Margin="0,0,4,0"/>
+                                                <TextBlock Text="{Binding DisplayAuthor}" FontSize="11" Foreground="#94A3B8" FontWeight="Medium"/>
+                                                <Border Visibility="{Binding VerifiedBadgeVisibility}"
+                                                        Width="14" Height="14" CornerRadius="7"
+                                                        Background="#5A58EC"
+                                                        Margin="5,0,0,0" VerticalAlignment="Center"
+                                                        ToolTip="Официальный разработчик ChattyWidgets / Verified Official Author">
+                                                    <Path Data="M 3.8,7.2 L 5.8,9.4 L 10.2,4.8"
+                                                          Stroke="#FFFFFF"
+                                                          StrokeThickness="1.6"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
 
                                             <!-- Update available badge -->
                                             <Border Background="#163326" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
@@ -364,8 +378,24 @@
                                                     <TextBlock Text="{Binding UpdateBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
                                                 </Border>
                                             </StackPanel>
-                                            <controls:MarqueeText Text="{Binding DisplayDescription}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0"/>
-                                            <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding AuthorPrefix}" FontSize="11" Foreground="#64748B" Margin="0,0,4,0"/>
+                                                <TextBlock Text="{Binding DisplayAuthor}" FontSize="11" Foreground="#94A3B8" FontWeight="Medium"/>
+                                                <Border Visibility="{Binding VerifiedBadgeVisibility}"
+                                                        Width="14" Height="14" CornerRadius="7"
+                                                        Background="#5A58EC"
+                                                        Margin="5,0,0,0" VerticalAlignment="Center"
+                                                        ToolTip="Официальный разработчик ChattyWidgets / Verified Official Author">
+                                                    <Path Data="M 3.8,7.2 L 5.8,9.4 L 10.2,4.8"
+                                                          Stroke="#FFFFFF"
+                                                          StrokeThickness="1.6"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">

@@ -9,8 +9,13 @@ public partial class App : System.Windows.Application
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int dwProcessId);
 
+    [System.Runtime.InteropServices.DllImport("shell32.dll", SetLastError = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)] string AppID);
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        try { SetCurrentProcessExplicitAppUserModelID("ChattyWidgets.App"); } catch {}
+
         string logDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
         System.IO.Directory.CreateDirectory(logDir);
         string appLog = System.IO.Path.Combine(logDir, "app.log");

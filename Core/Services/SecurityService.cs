@@ -111,7 +111,7 @@ eERxo3Zh0OJyr+kP1Dn4FmSeLc/OBskAX/S1xR7P0jSaAVhoOAryJ1GYFwAEF9bN
         if ((hasValidSignature && claimsOfficialId) || (isBundledStarter && claimsOfficialId))
         {
             info.Level = WidgetTrustLevel.Official;
-            info.DisplayAuthor = "ChattyWidgets ✔";
+            info.DisplayAuthor = "ChattyWidgets";
             info.BadgeText = "✦ Официальный";
             info.BadgeBg = "#1E2A4A";
             info.BadgeFg = "#60A5FA";

@@ -24,6 +24,32 @@ public partial class MainWindow : Window
 {
     private TrayIconManager? _trayIcon;
     private bool _isExplicitExit = false;
+    private System.Drawing.Icon? _hIconBigHolder;
+    private System.Drawing.Icon? _hIconSmallHolder;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetClassLongPtr")]
+    private static extern IntPtr SetClassLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetClassLong")]
+    private static extern IntPtr SetClassLong32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    private static void SetClassIcon(IntPtr hwnd, IntPtr hIconBig, IntPtr hIconSmall)
+    {
+        try
+        {
+            if (IntPtr.Size == 8)
+            {
+                SetClassLongPtr64(hwnd, -14 /*GCLP_HICON*/, hIconBig);
+                SetClassLongPtr64(hwnd, -34 /*GCLP_HICONSM*/, hIconSmall);
+            }
+            else
+            {
+                SetClassLong32(hwnd, -14 /*GCLP_HICON*/, hIconBig);
+                SetClassLong32(hwnd, -34 /*GCLP_HICONSM*/, hIconSmall);
+            }
+        }
+        catch { }
+    }
 
     public MainWindow()
     {
@@ -31,22 +57,22 @@ public partial class MainWindow : Window
 
         try
         {
-            string pngPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
-            if (System.IO.File.Exists(pngPath))
+            string icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+            if (System.IO.File.Exists(icoPath))
             {
-                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(pngPath));
+                var decoder = new System.Windows.Media.Imaging.IconBitmapDecoder(
+                    new Uri(icoPath, UriKind.Absolute),
+                    System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                var bestFrame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault();
+                if (bestFrame != null) Icon = bestFrame;
             }
             else
             {
-                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
-                if (System.IO.File.Exists(iconPath))
+                string pngPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
+                if (System.IO.File.Exists(pngPath))
                 {
-                    var decoder = new System.Windows.Media.Imaging.IconBitmapDecoder(
-                        new Uri(iconPath),
-                        System.Windows.Media.Imaging.BitmapCreateOptions.None,
-                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-                    var bestFrame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault();
-                    if (bestFrame != null) Icon = bestFrame;
+                    Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(pngPath, UriKind.Absolute));
                 }
             }
         }
@@ -60,10 +86,11 @@ public partial class MainWindow : Window
                 string icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
                 if (System.IO.File.Exists(icoPath))
                 {
-                    using var iconBig = new System.Drawing.Icon(icoPath, 64, 64);
-                    using var iconSmall = new System.Drawing.Icon(icoPath, 32, 32);
-                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)1 /*ICON_BIG*/, iconBig.Handle);
-                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)0 /*ICON_SMALL*/, iconSmall.Handle);
+                    _hIconBigHolder = new System.Drawing.Icon(icoPath, 64, 64);
+                    _hIconSmallHolder = new System.Drawing.Icon(icoPath, 32, 32);
+                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)1 /*ICON_BIG*/, _hIconBigHolder.Handle);
+                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)0 /*ICON_SMALL*/, _hIconSmallHolder.Handle);
+                    SetClassIcon(hwnd, _hIconBigHolder.Handle, _hIconSmallHolder.Handle);
                 }
             }
             catch { }
@@ -127,6 +154,11 @@ public partial class MainWindow : Window
             e.Cancel = true;
             Hide();
             _trayIcon?.ShowNotification("ChattyWidgets свернут в трей", "Виджеты продолжают работать на рабочем столе.");
+        }
+        else
+        {
+            try { _hIconBigHolder?.Dispose(); } catch {}
+            try { _hIconSmallHolder?.Dispose(); } catch {}
         }
     }
 
@@ -1333,7 +1365,10 @@ public class InstalledWidgetViewModel
     public Brush BadgeBg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeBg)!;
     public Brush BadgeFg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeFg)!;
     public string DisplayAuthor => Trust.DisplayAuthor;
-    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Автор: {DisplayAuthor}" : $"Author: {DisplayAuthor}";
+    public string AuthorPrefix => LocalizationService.Instance.IsRussian ? "Автор:" : "Author:";
+    public bool IsVerifiedAuthor => Trust.Level == WidgetTrustLevel.Official || (DisplayAuthor != null && DisplayAuthor.StartsWith("ChattyWidgets", StringComparison.OrdinalIgnoreCase));
+    public Visibility VerifiedBadgeVisibility => IsVerifiedAuthor ? Visibility.Visible : Visibility.Collapsed;
+    public string AuthorLabel => $"{AuthorPrefix} {DisplayAuthor}";
     public string AddInstanceButtonText => LocalizationService.Instance.IsRussian ? "➕ Добавить" : "➕ Add";
     public string AddInstanceTooltip => LocalizationService.Instance.IsRussian ? "Добавить еще один экземпляр виджета на рабочий стол" : "Add another instance of this widget to the desktop";
     public string FolderButtonText => LocalizationService.Instance.IsRussian ? "Папка" : "Folder";
@@ -1356,8 +1391,11 @@ public class StoreItemViewModel
     public string DisplayName => Item.DisplayName;
     public string DisplayDescription => Item.DisplayDescription;
     public string Author { get; set; } = string.Empty;
-    public string DisplayAuthor => Author.Equals("ChattyWidgets", StringComparison.OrdinalIgnoreCase) ? "ChattyWidgets ✔" : Author;
-    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Разработчик: {DisplayAuthor}" : $"Developer: {DisplayAuthor}";
+    public string DisplayAuthor => Author;
+    public string AuthorPrefix => LocalizationService.Instance.IsRussian ? "Разработчик:" : "Developer:";
+    public bool IsVerifiedAuthor => Author.Equals("ChattyWidgets", StringComparison.OrdinalIgnoreCase) || (Item != null && Item.IsOfficial);
+    public Visibility VerifiedBadgeVisibility => IsVerifiedAuthor ? Visibility.Visible : Visibility.Collapsed;
+    public string AuthorLabel => $"{AuthorPrefix} {DisplayAuthor}";
     public string Category { get; set; } = string.Empty;
     public string Size { get; set; } = string.Empty;
     public bool CanInstall { get; set; } = true;
