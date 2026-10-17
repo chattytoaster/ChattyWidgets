@@ -24,6 +24,7 @@ public partial class MainWindow : Window
 {
     private TrayIconManager? _trayIcon;
     private bool _isExplicitExit = false;
+    private bool _isSuppressingSettingsEvents = false;
     private System.Drawing.Icon? _hIconBigHolder;
     private System.Drawing.Icon? _hIconSmallHolder;
 
@@ -53,6 +54,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        _isSuppressingSettingsEvents = true;
         InitializeComponent();
 
         try
@@ -119,18 +121,26 @@ public partial class MainWindow : Window
             }
         );
 
-        // Preload settings state into UI
-        CheckAutostart.IsChecked = WidgetManager.Instance.Settings.StartWithWindows;
-        CheckSnapGrid.IsChecked = WidgetManager.Instance.Settings.SnapToGrid;
-        CheckHotkeys.IsChecked = WidgetManager.Instance.Settings.EnableHotkeys;
-        CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
-        CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
-        CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
-        int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
-        SliderGridSize.Value = currentGrid;
-        TxtGridSizeVal.Text = $"{currentGrid} px";
-        SliderDefaultOpacity.Value = 100;
-        TxtOpacityVal.Text = "100%";
+        // Preload settings state into UI safely without firing change handlers
+        _isSuppressingSettingsEvents = true;
+        try
+        {
+            CheckAutostart.IsChecked = WidgetManager.Instance.Settings.StartWithWindows;
+            CheckSnapGrid.IsChecked = WidgetManager.Instance.Settings.SnapToGrid;
+            CheckHotkeys.IsChecked = WidgetManager.Instance.Settings.EnableHotkeys;
+            CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
+            CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
+            CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+            int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
+            SliderGridSize.Value = currentGrid;
+            TxtGridSizeVal.Text = $"{currentGrid} px";
+            SliderDefaultOpacity.Value = 100;
+            TxtOpacityVal.Text = "100%";
+        }
+        finally
+        {
+            _isSuppressingSettingsEvents = false;
+        }
 
         ApplyTheme(WidgetManager.Instance.Settings.Theme);
         LocalizationService.Instance.Initialize(WidgetManager.Instance.Settings.Language);
@@ -234,6 +244,10 @@ public partial class MainWindow : Window
         else if (TabWorkshop.IsChecked == true)
         {
             UpdateAgentSkillStatus();
+        }
+        else if (TabSettings.IsChecked == true)
+        {
+            SyncSettingsTab();
         }
     }
 
@@ -1088,47 +1102,109 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
     // --- TAB: SETTINGS ---
 
+    private void SyncSettingsTab()
+    {
+        _isSuppressingSettingsEvents = true;
+        try
+        {
+            if (CheckAutostart != null) CheckAutostart.IsChecked = WidgetManager.Instance.Settings.StartWithWindows;
+            if (CheckSnapGrid != null) CheckSnapGrid.IsChecked = WidgetManager.Instance.Settings.SnapToGrid;
+            if (CheckHotkeys != null) CheckHotkeys.IsChecked = WidgetManager.Instance.Settings.EnableHotkeys;
+            if (CheckAcrylic != null) CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
+            if (CheckHotReload != null) CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
+            if (CheckDevMode != null) CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+            if (SliderGridSize != null)
+            {
+                int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
+                SliderGridSize.Value = currentGrid;
+                if (TxtGridSizeVal != null) TxtGridSizeVal.Text = $"{currentGrid} px";
+            }
+        }
+        finally
+        {
+            _isSuppressingSettingsEvents = false;
+        }
+    }
+
     private void OnAutostartChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.SetAutostart(CheckAutostart.IsChecked == true);
+        if (_isSuppressingSettingsEvents) return;
+        bool enabled = CheckAutostart.IsChecked == true;
+        WidgetManager.Instance.SetAutostart(enabled);
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (enabled ? "Автозапуск с Windows включен" : "Автозапуск с Windows выключен")
+            : (enabled ? "Start with Windows enabled" : "Start with Windows disabled");
     }
 
     private void OnSnapGridChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.Settings.SnapToGrid = CheckSnapGrid.IsChecked == true;
+        if (_isSuppressingSettingsEvents) return;
+        bool snap = CheckSnapGrid.IsChecked == true;
+        WidgetManager.Instance.Settings.SnapToGrid = snap;
         WidgetManager.Instance.SaveSettings();
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (snap ? "Прилипание к сетке включено" : "Прилипание к сетке выключено")
+            : (snap ? "Snap to grid enabled" : "Snap to grid disabled");
     }
 
     private void OnHotkeysChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.Settings.EnableHotkeys = CheckHotkeys.IsChecked == true;
+        if (_isSuppressingSettingsEvents) return;
+        bool hotkeys = CheckHotkeys.IsChecked == true;
+        WidgetManager.Instance.Settings.EnableHotkeys = hotkeys;
         WidgetManager.Instance.SaveSettings();
-        if (CheckHotkeys.IsChecked == true)
+        if (hotkeys)
             HotkeyService.Instance.RegisterHotkeys();
         else
             HotkeyService.Instance.UnregisterHotkeys();
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (hotkeys ? "Глобальные хоткеи включены" : "Глобальные хоткеи выключены")
+            : (hotkeys ? "Global hotkeys enabled" : "Global hotkeys disabled");
     }
 
     private void OnAcrylicChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.Settings.AcrylicBlur = CheckAcrylic.IsChecked == true;
+        if (_isSuppressingSettingsEvents) return;
+        bool acrylic = CheckAcrylic.IsChecked == true;
+        WidgetManager.Instance.Settings.AcrylicBlur = acrylic;
         WidgetManager.Instance.SaveSettings();
+        foreach (var win in WidgetManager.Instance.GetActiveWindows())
+        {
+            try { win.ApplyTheme(); } catch { }
+        }
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (acrylic ? "Размытие Acrylic включено" : "Размытие Acrylic выключено")
+            : (acrylic ? "Acrylic blur enabled" : "Acrylic blur disabled");
     }
 
     private void OnHotReloadChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.Settings.EnableHotReload = CheckHotReload.IsChecked == true;
+        if (_isSuppressingSettingsEvents) return;
+        bool hr = CheckHotReload.IsChecked == true;
+        WidgetManager.Instance.Settings.EnableHotReload = hr;
         WidgetManager.Instance.SaveSettings();
-        if (CheckHotReload.IsChecked == true)
+        if (hr)
             HotReloadService.Instance.Start();
         else
             HotReloadService.Instance.Stop();
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (hr ? "Hot Reload включен" : "Hot Reload выключен")
+            : (hr ? "Hot Reload enabled" : "Hot Reload disabled");
     }
 
     private void OnDevModeChanged(object sender, RoutedEventArgs e)
     {
-        WidgetManager.Instance.Settings.EnableDevMode = CheckDevMode.IsChecked == true;
+        if (_isSuppressingSettingsEvents) return;
+        bool devMode = CheckDevMode.IsChecked == true;
+        WidgetManager.Instance.Settings.EnableDevMode = devMode;
         WidgetManager.Instance.SaveSettings();
+        foreach (var win in WidgetManager.Instance.GetActiveWindows())
+        {
+            try { win.UpdateDevMode(devMode); } catch { }
+        }
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (devMode ? "Режим разработчика (F12) включен" : "Режим разработчика (F12) выключен")
+            : (devMode ? "Developer Mode (F12) enabled" : "Developer Mode (F12) disabled");
     }
 
     private void OnGridSizeSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

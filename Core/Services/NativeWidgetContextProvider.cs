@@ -387,6 +387,7 @@ public class CalendarWidgetViewModel : NativeViewModelBase
             {
                 _firstDayOfWeek = val;
                 OnPropertyChanged();
+                SaveCustomSettings();
                 BuildMonth();
             }
         }
@@ -402,6 +403,7 @@ public class CalendarWidgetViewModel : NativeViewModelBase
                 _showWeekNumbers = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ColumnCount));
+                SaveCustomSettings();
                 BuildMonth();
             }
         }
@@ -416,9 +418,21 @@ public class CalendarWidgetViewModel : NativeViewModelBase
             {
                 _highlightToday = value;
                 OnPropertyChanged();
+                SaveCustomSettings();
                 BuildMonth();
             }
         }
+    }
+
+    public void SaveCustomSettings()
+    {
+        if (string.IsNullOrEmpty(_instanceId)) return;
+        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+
+        s.CustomSettings["calFirstDayOfWeek"] = _firstDayOfWeek;
+        s.CustomSettings["calShowWeekNumbers"] = _showWeekNumbers ? "true" : "false";
+        s.CustomSettings["calHighlightToday"] = _highlightToday ? "true" : "false";
+        WidgetManager.Instance.SaveSettings();
     }
 
     public int ColumnCount => _showWeekNumbers ? 8 : 7;

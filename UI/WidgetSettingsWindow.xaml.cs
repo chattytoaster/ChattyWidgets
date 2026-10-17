@@ -44,6 +44,28 @@ public partial class WidgetSettingsWindow : Window
         LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
     }
 
+    private void SaveWidgetCustomSetting(string key, string value)
+    {
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        if (win != null)
+        {
+            win.Settings.CustomSettings[key] = value;
+        }
+        else if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+        {
+            s.CustomSettings[key] = value;
+        }
+        WidgetManager.Instance.SaveSettings();
+    }
+
+    private Dictionary<string, string> GetWidgetCustomSettings()
+    {
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        if (win != null) return win.Settings.CustomSettings;
+        if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return s.CustomSettings;
+        return new Dictionary<string, string>();
+    }
+
     private void OnTitleBarMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left)
@@ -2122,8 +2144,10 @@ public partial class WidgetSettingsWindow : Window
             Tag = "sunday"
         });
 
+        var customSettings = GetWidgetCustomSettings();
+
         string currentFirstDay = "monday";
-        if (win != null && win.Settings.CustomSettings.TryGetValue("calFirstDayOfWeek", out var savedFdw) && !string.IsNullOrEmpty(savedFdw))
+        if (customSettings.TryGetValue("calFirstDayOfWeek", out var savedFdw) && !string.IsNullOrEmpty(savedFdw))
         {
             currentFirstDay = savedFdw.ToLowerInvariant();
         }
@@ -2137,11 +2161,7 @@ public partial class WidgetSettingsWindow : Window
         {
             if (comboFirstDay.SelectedItem is ComboBoxItem item && item.Tag is string val)
             {
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["calFirstDayOfWeek"] = val;
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("calFirstDayOfWeek", val);
                 if (calVm != null)
                 {
                     calVm.FirstDayOfWeek = val;
@@ -2178,7 +2198,7 @@ public partial class WidgetSettingsWindow : Window
         };
 
         bool currentHighlight = true;
-        if (win != null && win.Settings.CustomSettings.TryGetValue("calHighlightToday", out var savedHt) && bool.TryParse(savedHt, out var bHt))
+        if (customSettings.TryGetValue("calHighlightToday", out var savedHt) && bool.TryParse(savedHt, out var bHt))
         {
             currentHighlight = bHt;
         }
@@ -2190,14 +2210,14 @@ public partial class WidgetSettingsWindow : Window
 
         cbHighlightToday.Checked += (s, e) =>
         {
-            if (win != null) { win.Settings.CustomSettings["calHighlightToday"] = "true"; WidgetManager.Instance.SaveSettings(); }
+            SaveWidgetCustomSetting("calHighlightToday", "true");
             if (calVm != null) calVm.HighlightToday = true;
             TxtStatus.Text = loc.T("Calendar.SettingsSaved", "Настройки календаря сохранены");
             _onSettingsChanged?.Invoke();
         };
         cbHighlightToday.Unchecked += (s, e) =>
         {
-            if (win != null) { win.Settings.CustomSettings["calHighlightToday"] = "false"; WidgetManager.Instance.SaveSettings(); }
+            SaveWidgetCustomSetting("calHighlightToday", "false");
             if (calVm != null) calVm.HighlightToday = false;
             TxtStatus.Text = loc.T("Calendar.SettingsSaved", "Настройки календаря сохранены");
             _onSettingsChanged?.Invoke();
@@ -2214,7 +2234,7 @@ public partial class WidgetSettingsWindow : Window
         };
 
         bool currentWeekNumbers = false;
-        if (win != null && win.Settings.CustomSettings.TryGetValue("calShowWeekNumbers", out var savedSwn) && bool.TryParse(savedSwn, out var bSwn))
+        if (customSettings.TryGetValue("calShowWeekNumbers", out var savedSwn) && bool.TryParse(savedSwn, out var bSwn))
         {
             currentWeekNumbers = bSwn;
         }
@@ -2226,14 +2246,14 @@ public partial class WidgetSettingsWindow : Window
 
         cbWeekNumbers.Checked += (s, e) =>
         {
-            if (win != null) { win.Settings.CustomSettings["calShowWeekNumbers"] = "true"; WidgetManager.Instance.SaveSettings(); }
+            SaveWidgetCustomSetting("calShowWeekNumbers", "true");
             if (calVm != null) calVm.ShowWeekNumbers = true;
             TxtStatus.Text = loc.T("Calendar.SettingsSaved", "Настройки календаря сохранены");
             _onSettingsChanged?.Invoke();
         };
         cbWeekNumbers.Unchecked += (s, e) =>
         {
-            if (win != null) { win.Settings.CustomSettings["calShowWeekNumbers"] = "false"; WidgetManager.Instance.SaveSettings(); }
+            SaveWidgetCustomSetting("calShowWeekNumbers", "false");
             if (calVm != null) calVm.ShowWeekNumbers = false;
             TxtStatus.Text = loc.T("Calendar.SettingsSaved", "Настройки календаря сохранены");
             _onSettingsChanged?.Invoke();

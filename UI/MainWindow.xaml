@@ -567,7 +567,7 @@
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,0,0,16">
                             <StackPanel>
                                 <CheckBox x:Name="CheckAutostart" Content="Запускать ChattyWidgets автоматически при старте Windows" FontSize="14" Foreground="#F8FAFC" Checked="OnAutostartChanged" Unchecked="OnAutostartChanged" Margin="0,0,0,14"/>
-                                <CheckBox x:Name="CheckSnapGrid" Content="Включить прилипание виджетов к краям экрана и сетке" FontSize="14" Foreground="#F8FAFC" IsChecked="True" Checked="OnSnapGridChanged" Unchecked="OnSnapGridChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckSnapGrid" Content="Включить прилипание виджетов к краям экрана и сетке" FontSize="14" Foreground="#F8FAFC" Checked="OnSnapGridChanged" Unchecked="OnSnapGridChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckHotkeys" Content="Включить глобальные хоткеи (Win+Alt+W: скрыть/показать, Win+Alt+P: «Быстрый взгляд»)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotkeysChanged" Unchecked="OnHotkeysChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckAcrylic" Content="Включить эффект размытия Acrylic / Mica для прозрачных виджетов" FontSize="14" Foreground="#F8FAFC" Checked="OnAcrylicChanged" Unchecked="OnAcrylicChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckHotReload" Content="Включить Hot Reload (авто-перезагрузка при изменении кода виджета)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotReloadChanged" Unchecked="OnHotReloadChanged" Margin="0,0,0,14"/>

@@ -150,7 +150,11 @@ public partial class WidgetWindow : Window
         if (MenuGaugesConstructor != null) MenuGaugesConstructor.Header = loc.T("Menu.GaugesConstructor", "🎨 Изменить формат (Конструктор)...");
         if (MenuCustomSettings != null) MenuCustomSettings.Header = loc.T("Menu.CustomSettings", "Настройки виджета");
         if (MenuReloadWidget != null) MenuReloadWidget.Header = loc.T("Menu.Reload", "⟳ Перезагрузить виджет");
-        if (MenuDevTools != null) MenuDevTools.Header = loc.T("Menu.DevTools", "🛠 Открыть DevTools (F12)");
+        if (MenuDevTools != null)
+        {
+            MenuDevTools.Header = loc.T("Menu.DevTools", "🛠 Открыть DevTools (F12)");
+            MenuDevTools.Visibility = WidgetManager.Instance.Settings.EnableDevMode ? Visibility.Visible : Visibility.Collapsed;
+        }
         if (MenuOpenFolder != null) MenuOpenFolder.Header = loc.T("Menu.OpenFolder", "Открыть папку виджета");
         if (MenuOpenHub != null) MenuOpenHub.Header = loc.T("Menu.OpenHub", "Открыть Хаб ChattyWidgets");
         if (MenuCloseWidget != null) MenuCloseWidget.Header = loc.T("Menu.Close", "Скрыть виджет");
@@ -426,7 +430,7 @@ public partial class WidgetWindow : Window
 
 
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-            _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            _webView.CoreWebView2.Settings.AreDevToolsEnabled = WidgetManager.Instance.Settings.EnableDevMode;
             _webView.CoreWebView2.Settings.IsZoomControlEnabled = false;
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
 
@@ -1337,6 +1341,10 @@ public partial class WidgetWindow : Window
         {
             ResizeGripHandle.Visibility = _isFreeResizeEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
+        if (MenuDevTools != null)
+        {
+            MenuDevTools.Visibility = WidgetManager.Instance.Settings.EnableDevMode ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     // Context menu handlers
@@ -1505,6 +1513,7 @@ public partial class WidgetWindow : Window
 
     public void OpenDevTools()
     {
+        if (!WidgetManager.Instance.Settings.EnableDevMode) return;
         Dispatcher.Invoke(() =>
         {
             if (_webView?.CoreWebView2 != null)
@@ -1513,6 +1522,34 @@ public partial class WidgetWindow : Window
                 _webView.CoreWebView2.OpenDevToolsWindow();
             }
         });
+    }
+
+    public void UpdateDevMode(bool enableDevMode)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (MenuDevTools != null)
+            {
+                MenuDevTools.Visibility = enableDevMode ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_webView?.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.Settings.AreDevToolsEnabled = enableDevMode;
+            }
+        });
+    }
+
+    protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Key == System.Windows.Input.Key.F12)
+        {
+            if (WidgetManager.Instance.Settings.EnableDevMode)
+            {
+                OpenDevTools();
+            }
+            e.Handled = true;
+        }
     }
 
     public void ReloadWidget()
