@@ -19,11 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Page Remove="StarterWidgets\**\*.xaml" />
-    <Compile Remove="StarterWidgets\**\*.cs" />
-    <None Include="StarterWidgets\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <Resource Include="app.ico" />
     <Resource Include="app.png" />
     <None Include="app.ico">

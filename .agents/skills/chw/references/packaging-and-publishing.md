@@ -6,28 +6,26 @@ This document defines the strict, multi-stage pipeline for developing, locally t
 
 ```mermaid
 flowchart TD
-    A["1. Scaffold in StarterWidgets & Library"] --> B["2. Pack & Sign with build_catalog.py"]
+    A["1. Scaffold in Library (ChattyWidgetsLibrary)"] --> B["2. Pack & Sign with build_catalog.py"]
     B --> C["3. Deploy to %LocalAppData% and Compile App"]
     C --> D["4. Launch App & Present to User on Desktop"]
     D --> E{"5. User Verification Checkpoint"}
     E -- "Changes Requested" --> A
     E -- "Approved" --> F["6. Commit & Push to ChattyWidgetsLibrary (main)"]
-    F --> G["7. Sync StarterWidgets & Push to ChattyWidgets (master)"]
+    F --> G["7. Push Engine Updates to ChattyWidgets (master)"]
     G --> H["8. Widget Live in Store & Catalog"]
 ```
 
 ---
 
-## Stage 1: Scaffolding and Directory Sync
+## Stage 1: Scaffolding in Widget Library
 
-Place the source files in both the engine starter widgets folder and the official library:
+Place the source files in the official library:
 
-1. `C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\<widget-id>\`
-   - `manifest.json`
-   - `Widget.xaml`
-   - Assets/icons (if any)
-2. `C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary\widgets\<widget-id>\`
-   - Same files mirrored.
+`C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary\widgets\<widget-id>\`
+- `manifest.json`
+- `Widget.xaml`
+- Assets/icons (if any)
 
 ---
 
@@ -53,10 +51,8 @@ This script:
 Copy the generated `.chw` package to the active runtime locations:
 
 ```powershell
-# 1. Sync .chw to StarterWidgets and installed local folder
-Copy-Item "packages\<widget-id>.chw" "C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\" -Force
+# 1. Install .chw package directly into local widgets folder
 Copy-Item "packages\<widget-id>.chw" "$env:LOCALAPPDATA\ChattyWidgets\widgets\" -Force
-Copy-Item "catalog.json" "C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\catalog.json" -Force
 
 # 2. Build the main solution
 cd C:\Users\ChattyNB\Projects\chattywidgets
@@ -102,11 +98,11 @@ git commit -m "feat(widgets): add <widget-id> (<widget-name>)"
 git push origin main
 ```
 
-### 2. Push to `ChattyWidgets`
+### 2. Push to `ChattyWidgets` (if engine, settings, or localization were updated)
 
 ```powershell
 cd C:\Users\ChattyNB\Projects\chattywidgets
 git add .
-git commit -m "feat(widgets): bundle <widget-id> into starter widgets and update catalog"
+git commit -m "feat(engine): support <widget-id> settings and localization"
 git push origin master
 ```

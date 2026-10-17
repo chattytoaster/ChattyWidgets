@@ -279,11 +279,25 @@ public partial class MainWindow : Window
             });
         }
 
-        InstalledWidgetsList.ItemsSource = viewModels;
+        bool hasWidgets = installed.Count > 0;
+        if (InstalledEmptyState != null)
+        {
+            InstalledEmptyState.Visibility = hasWidgets ? Visibility.Collapsed : Visibility.Visible;
+        }
+        if (InstalledWidgetsList != null)
+        {
+            InstalledWidgetsList.Visibility = hasWidgets ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (InstalledWidgetsList != null)
+        {
+            InstalledWidgetsList.ItemsSource = viewModels;
+        }
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
             bool isLight = WidgetManager.Instance?.Settings?.Theme?.Equals("light", StringComparison.OrdinalIgnoreCase) ?? false;
             ApplyHubThemeToTree(InstalledWidgetsList, isLight);
+            if (InstalledEmptyState != null) ApplyHubThemeToTree(InstalledEmptyState, isLight);
         }), System.Windows.Threading.DispatcherPriority.Loaded);
 
         bool isRu = LocalizationService.Instance.IsRussian;
@@ -302,6 +316,11 @@ public partial class MainWindow : Window
                 ? $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}." 
                 : $"Loaded {installed.Count} widgets. Active instances: {totalActiveCopies}.";
         }
+    }
+
+    private void OnGoToStoreClick(object sender, RoutedEventArgs e)
+    {
+        SwitchToTab("store");
     }
 
     private async void OnRefreshInstalledClick(object sender, RoutedEventArgs e)
@@ -1079,6 +1098,15 @@ public partial class MainWindow : Window
             BtnSavePreset.Content = LocalizationService.Instance.T("Hub.SavePresetBtn", "+ Сохранить текущий вид");
             BtnSavePreset.ToolTip = LocalizationService.Instance.T("Hub.SavePresetTip", "Сохранить текущее расположение виджетов на экране как пресет");
         }
+        if (TxtEmptyInstalledTitle != null) TxtEmptyInstalledTitle.Text = isRu 
+            ? "У вас пока нет установленных виджетов" 
+            : "No widgets installed yet";
+        if (TxtEmptyInstalledDesc != null) TxtEmptyInstalledDesc.Text = isRu
+            ? "Откройте каталог виджетов, чтобы выбрать и установить часы, монитор ресурсов, плеер, заметки и другие виджеты."
+            : "Open the Widget Store to discover and install clocks, system gauges, media player, notes and more.";
+        if (BtnGoToStore != null) BtnGoToStore.Content = isRu
+            ? "🛍️ Открыть Каталог Виджетов"
+            : "🛍️ Open Widget Store";
 
         // Tab 2: Store
         if (TxtStoreTitle != null) TxtStoreTitle.Text = isRu ? "Магазин Виджетов" : "Widget Store";

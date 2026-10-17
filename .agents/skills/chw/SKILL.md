@@ -37,7 +37,6 @@ Follow this 6-step sequential pipeline:
    - Set `"isTransparent": true`, `"entryPoint": "Widget.xaml"`.
    - Declare default `customSettings` keys.
 3. Save to:
-   - `C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\<widget-id>\manifest.json`
    - `C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary\widgets\<widget-id>\manifest.json`
 
 ---
@@ -66,7 +65,7 @@ Create `Widget.xaml` following [XAML Glass Patterns](file:///C:/Users/ChattyNB/.
 3. **Running Marquee Text**: For titles or dynamic labels that might overflow, wrap in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
 4. **Button Templates**: Never use default WPF gray buttons. Use flat rounded vector templates.
 5. **Photo / Image Opacity**: If images are displayed, bind `Opacity="{Binding PhotoOpacity}"` and apply an `OpacityMask` for rounded corners.
-6. Save `Widget.xaml` in both `StarterWidgets\<widget-id>\` and `ChattyWidgetsLibrary\widgets\<widget-id>\`.
+6. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
 
 ---
 
@@ -91,11 +90,9 @@ In `UI/WidgetSettingsWindow.xaml.cs`:
    cd C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary
    python scripts/build_catalog.py
    ```
-2. **Sync `.chw` packages**:
+2. **Install package locally for testing**:
    ```powershell
-   Copy-Item "packages\<widget-id>.chw" "C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\" -Force
    Copy-Item "packages\<widget-id>.chw" "$env:LOCALAPPDATA\ChattyWidgets\widgets\" -Force
-   Copy-Item "catalog.json" "C:\Users\ChattyNB\Projects\chattywidgets\StarterWidgets\catalog.json" -Force
    ```
 3. **Compile host solution**:
    ```powershell
@@ -125,11 +122,11 @@ Once the user replies with approval to publish:
    git commit -m "feat(widgets): add <widget-id>"
    git push origin main
    ```
-2. **Commit and push to `ChattyWidgets` (`origin/master`)**:
+2. **Commit and push engine changes to `ChattyWidgets` (`origin/master`) if any**:
    ```powershell
    cd C:\Users\ChattyNB\Projects\chattywidgets
    git add .
-   git commit -m "feat(widgets): bundle <widget-id> starter package and update catalog"
+   git commit -m "feat(engine): support settings and localization for <widget-id>"
    git push origin master
    ```
 3. Reference: [Packaging & Publishing Guide](file:///C:/Users/ChattyNB/.agents/skills/chw/references/packaging-and-publishing.md).

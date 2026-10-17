@@ -70,11 +70,7 @@ public partial class App : System.Windows.Application
         // Register .chw file association in Windows Registry so double-clicking installs widgets
         try { FileAssociationService.EnsureFileAssociation(); } catch (Exception ex) { Log($"FileAssociation error: {ex.Message}"); }
 
-        // 1. Unpack & prepare starter widgets
-        Log("Initializing StarterWidgets");
-        try { StarterWidgetsManager.InitializeStarterWidgets(); } catch (Exception ex) { Log($"StarterWidgets error: {ex.Message}"); }
-
-        // 2. Initialize WidgetManager
+        // 1. Initialize WidgetManager
         Log("Initializing WidgetManager");
         try { WidgetManager.Instance.Initialize(); } catch (Exception ex) { Log($"WidgetManager error: {ex.Message}"); }
 
@@ -179,24 +175,15 @@ public partial class App : System.Windows.Application
 
         Log("=== CHATTYWIDGETS SELF-TEST STARTED ===");
 
-        // Test 1: Starter widgets initialization & packaging
-        Log("TEST 1: Initializing starter widgets and packaging to .chw...");
-        StarterWidgetsManager.InitializeStarterWidgets();
+        // Test 1: Package service and widgets directory readiness
+        Log("TEST 1: Checking package service and widgets directory readiness...");
         var installed = ChwPackageService.GetInstalledWidgets();
-        Log($"Installed widgets count: {installed.Count}");
+        Log($"Current installed widgets count: {installed.Count}");
         foreach (var (m, dir) in installed)
         {
             Log($" - Widget: {m.Name} ({m.Id}), Type: {m.Type}, Entry: {m.Entry}");
         }
-
-        if (installed.Count < 8)
-        {
-            Log($"WARNING: Expected at least 8 starter widgets, found {installed.Count}");
-        }
-        else
-        {
-            Log("PASS: All 8 starter widgets successfully deployed and registered.");
-        }
+        Log("PASS: ChwPackageService initialized cleanly.");
 
         // Test 2: System Monitor metrics
         Log("TEST 2: Checking SystemMonitorService metrics...");

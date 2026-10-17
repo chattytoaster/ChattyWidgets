@@ -3,7 +3,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20x64-blue.svg)](https://microsoft.com)
 [![Framework](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Widgets](https://img.shields.io/badge/official%20widgets-12%20native-orange.svg)](StarterWidgets/)
+[![Widgets](https://img.shields.io/badge/official%20widgets-12%20native-orange.svg)](https://github.com/chattytoaster/ChattyWidgetsLibrary)
 
 **ChattyWidgets 1.0.0** — сверхлегковесный, производительный и визуально безупречный движок виджетов для рабочего стола Windows с поддержкой нативного XAML/.NET 8 рантайма, веб-виджетов (HTML5/CSS3/JS WebView2), формата защищенных пакетов **`.chw`** с RSA-4096 криптографической подписью и официального облачного каталога.
 
@@ -38,7 +38,7 @@
 
 ## 📦 Каталог из 12 официальных нативных виджетов
 
-В дистрибутив и стартовую поставку входят **12 нативных виджетов**, готовых к работе сразу после запуска:
+В официальную облачную библиотеку [**ChattyWidgetsLibrary**](https://github.com/chattytoaster/ChattyWidgetsLibrary) входят **12 нативных виджетов**, доступных для установки в 1 клик прямо из встроенного Магазина:
 
 | Иконка | Виджет | ID | Описание и возможности |
 | :---: | :--- | :--- | :--- |

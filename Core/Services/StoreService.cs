@@ -57,15 +57,6 @@ public class StoreService
         if (remoteItems != null && remoteItems.Count > 0)
         {
             items.AddRange(remoteItems);
-
-            // Add any local starter widgets that are not present in remote catalog
-            foreach (var starter in GetStarterWidgetsCatalog())
-            {
-                if (!items.Any(x => x.Id.Equals(starter.Id, StringComparison.OrdinalIgnoreCase)))
-                {
-                    items.Add(starter);
-                }
-            }
         }
         else
         {
@@ -131,159 +122,195 @@ public class StoreService
         {
             new StoreItem
             {
-                Id = "com.chatty.clock-glass",
-                Name = "Стеклянные Часы",
-                Version = "1.0.0",
+                Id = "com.chatty.calendar-glass",
+                Name = "Glass Calendar",
+                NameRu = "Календарь",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Часы и Время",
-                Description = "Элегантные цифровые и аналоговые часы с неоморфизмом, эффектом матового стекла и датой.",
-                Type = "web",
-                Size = "18 KB",
+                Category = "General",
+                Description = "Elegant desktop month calendar with smooth navigation, today highlight, and customizable first day of week.",
+                DescriptionRu = "Элегантный настольный календарь с переключением месяцев, подсветкой сегодня и нативным плавным рендерингом.",
+                Type = "native",
+                Size = "9 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.calendar-glass.chw"
             },
             new StoreItem
             {
-                Id = "com.chatty.system-gauges",
-                Name = "Датчики Ресурсов",
-                Version = "1.0.0",
+                Id = "com.chatty.clock-glass",
+                Name = "Glass Clock",
+                NameRu = "Стеклянные Часы",
+                Version = "2.0.0",
                 Author = "ChattyWidgets",
-                Category = "Система",
-                Description = "Ультра-легковесный нативный монитор CPU, RAM, SSD и сетевой активности с мгновенным откликом.",
+                Category = "General",
+                Description = "Elegant digital frosted glass clock with international timezones, world cities, and date.",
+                DescriptionRu = "Элегантные цифровые часы с неоморфизмом, эффектом матового стекла и актуальной датой.",
                 Type = "native",
                 Size = "8 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
-            },
-            new StoreItem
-            {
-                Id = "com.chatty.music-player",
-                Name = "Мини-Медиаплеер",
-                Version = "1.0.0",
-                Author = "ChattyWidgets",
-                Category = "Медиа",
-                Description = "Стильный настольный контроллер для Spotify, Яндекс.Музыки, браузера и системных аудиоплееров.",
-                Type = "web",
-                Size = "24 KB",
-                IsOfficial = true,
-                TrustLevel = "official"
-            },
-            new StoreItem
-            {
-                Id = "com.chatty.sticky-notes",
-                Name = "Быстрые Заметки / ToDo",
-                Version = "1.0.0",
-                Author = "ChattyWidgets",
-                Category = "Утилиты",
-                Description = "Компактный стикер для важных заметок и чек-листа задач прямо на рабочем столе с автосохранением.",
-                Type = "web",
-                Size = "16 KB",
-                IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.clock-glass.chw"
             },
             new StoreItem
             {
                 Id = "com.chatty.crypto-tracker",
-                Name = "Курсы Валют и Крипты",
-                Version = "1.0.0",
+                Name = "Crypto & Currency Tracker",
+                NameRu = "Котировки & Крипта",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Финансы",
-                Description = "Котировки BTC, ETH, GRAM, SOL, а также курсы USD, EUR и RUB в реальном времени.",
-                Type = "web",
-                Size = "22 KB",
+                Category = "Finance",
+                Description = "Real-time cryptocurrency & fiat currency exchange rates tracker with 30+ assets and custom tickers.",
+                DescriptionRu = "Курсы криптовалют и фиатных валют в реальном времени с поддержкой 30+ популярных активов и произвольных пар.",
+                Type = "native",
+                Size = "9 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
-            },
-            new StoreItem
-            {
-                Id = "com.chatty.weather-card",
-                Name = "Прогноз Погоды",
-                Version = "1.0.0",
-                Author = "ChattyWidgets",
-                Category = "Погода",
-                Description = "Детальный погодный информер с текущей температурой, ощущением, влажностью, ветром и прогнозом.",
-                Type = "web",
-                Size = "20 KB",
-                IsOfficial = true,
-                TrustLevel = "official"
-            },
-            new StoreItem
-            {
-                Id = "com.chatty.calendar-glass",
-                Name = "Календарь",
-                Version = "1.0.0",
-                Author = "ChattyWidgets",
-                Category = "Утилиты",
-                Description = "Элегантный настольный календарь с переключением месяцев, подсветкой сегодня и быстрыми заметками на дни.",
-                Type = "web",
-                Size = "18 KB",
-                IsOfficial = true,
-                TrustLevel = "official"
-            },
-            new StoreItem
-            {
-                Id = "com.chatty.media-frame",
-                Name = "Медиа-Фоторамка",
-                Version = "1.0.0",
-                Author = "ChattyWidgets",
-                Category = "Медиа",
-                Description = "Настольная фоторамка и видеоплеер для фоток, гифок или зацикленных видео (MP4, WebM, PNG, JPG, GIF).",
-                Type = "web",
-                Size = "20 KB",
-                IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.crypto-tracker.chw"
             },
             new StoreItem
             {
                 Id = "com.chatty.gpu-monitor",
-                Name = "Монитор GPU & Графика",
-                Version = "1.0.0",
+                Name = "GPU Monitor",
+                NameRu = "GPU Монитор",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Система",
-                Description = "Мониторинг видеокарты: загрузка GPU %, видеопамять VRAM, температура и модель адаптера.",
-                Type = "web",
-                Size = "20 KB",
+                Category = "System",
+                Description = "Lightweight GPU performance monitor displaying 3D load, dedicated VRAM, temperature, and hardware counters.",
+                DescriptionRu = "Монитор видеокарты с отображением нагрузки 3D ядра, видеопамяти VRAM, температуры и аппаратных счетчиков.",
+                Type = "native",
+                Size = "10 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.gpu-monitor.chw"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.media-frame",
+                Name = "Photo Frame",
+                NameRu = "Медиа-Фоторамка",
+                Version = "1.1.0",
+                Author = "ChattyWidgets",
+                Category = "Media",
+                Description = "Desktop photo frame with slideshow support, single photo mode, folder picker, and drag-and-drop support.",
+                DescriptionRu = "Настольная фоторамка для снимков и слайд-шоу с выбором папок, поддержкой драг-н-дроп и идеальным скруглением углов.",
+                Type = "native",
+                Size = "10 KB",
+                IsOfficial = true,
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.media-frame.chw"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.music-player",
+                Name = "Mini Music Player",
+                NameRu = "Мини-Медиаплеер",
+                Version = "1.1.0",
+                Author = "ChattyWidgets",
+                Category = "Media",
+                Description = "Mini desktop media controller with spinning vinyl, play/pause controls, volume, and track marquee ticker.",
+                DescriptionRu = "Компактный медиаплеер с крутящейся виниловой пластинкой, кнопками управления и бегущей строкой названия трека.",
+                Type = "native",
+                Size = "10 KB",
+                IsOfficial = true,
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.music-player.chw"
             },
             new StoreItem
             {
                 Id = "com.chatty.pomodoro-timer",
-                Name = "Фокус-Таймер Pomodoro",
-                Version = "1.0.0",
+                Name = "Focus Timer & Pomodoro",
+                NameRu = "Таймер & Фокус",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Продуктивность",
-                Description = "Таймер 25/5 мин для фокуса на делах с системными тост-уведомлениями и приятным звуковым сигналом.",
-                Type = "web",
-                Size = "18 KB",
+                Category = "Productivity",
+                Description = "Productivity timer featuring standard countdown timer, focus intervals, break mode, and audio alerts.",
+                DescriptionRu = "Таймер продуктивности с обычным обратным отсчетом на 1 месте, режимами фокуса, отдыха и звуковыми оповещениями.",
+                Type = "native",
+                Size = "9 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.pomodoro-timer.chw"
             },
             new StoreItem
             {
                 Id = "com.chatty.quick-dock",
-                Name = "Быстрый Док / Лаунчер",
-                Version = "1.0.0",
+                Name = "Quick Dock",
+                NameRu = "Панель Дока",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Утилиты",
-                Description = "Плавающая панель быстрого запуска любимых программ, сайтов, проводника и терминала в стиле macOS.",
-                Type = "web",
-                Size = "22 KB",
+                Category = "Utilities",
+                Description = "Floating dock for quick app launching, folder navigation, web shortcuts, and system tools in macOS style.",
+                DescriptionRu = "Плавающая панель быстрого запуска программ, папок, терминала и проводника в стиле macOS с выбором приложений.",
+                Type = "native",
+                Size = "9 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.quick-dock.chw"
             },
             new StoreItem
             {
                 Id = "com.chatty.rss-reader",
-                Name = "Лента Новостей & RSS",
-                Version = "1.0.0",
+                Name = "RSS News Reader",
+                NameRu = "Лента Новостей & RSS",
+                Version = "1.1.0",
                 Author = "ChattyWidgets",
-                Category = "Новости",
-                Description = "Живая лента новостей технологий, крипты и Telegram-каналов с автообновлением и карточками.",
-                Type = "web",
-                Size = "24 KB",
+                Category = "News",
+                Description = "Live news reader with international UN News in Russian, Euronews, TechCrunch, Hacker News, and custom RSS feeds.",
+                DescriptionRu = "Живая лента новостей с Новостями ООН на русском, Euronews, Habr, IT, криптой и поддержкой произвольных RSS-ссылок.",
+                Type = "native",
+                Size = "9 KB",
                 IsOfficial = true,
-                TrustLevel = "official"
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.rss-reader.chw"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.sticky-notes",
+                Name = "Notes & Tasks",
+                NameRu = "Заметки и Задачи",
+                Version = "1.1.0",
+                Author = "ChattyWidgets",
+                Category = "Productivity",
+                Description = "Desktop sticky notes & task checklist with instant state persistence, smart empty state, and 5 color accents.",
+                DescriptionRu = "Интерактивный список дел и стикер заметок прямо на рабочем столе с автосохранением и цветовыми акцентами.",
+                Type = "native",
+                Size = "10 KB",
+                IsOfficial = true,
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.sticky-notes.chw"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.system-gauges",
+                Name = "System Gauges",
+                NameRu = "Системный Монитор",
+                Version = "1.1.0",
+                Author = "ChattyWidgets",
+                Category = "System",
+                Description = "Ultra-lightweight native hardware monitor for CPU, RAM, SSD, and Network with linear bars, rings, and 2-column grid.",
+                DescriptionRu = "Ультра-легковесный нативный монитор процессора, памяти, SSD и сети с кольцевыми датчиками и сеткой 2 в ряд.",
+                Type = "native",
+                Size = "10 KB",
+                IsOfficial = true,
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.system-gauges.chw"
+            },
+            new StoreItem
+            {
+                Id = "com.chatty.weather-card",
+                Name = "Weather Card",
+                NameRu = "Прогноз Погоды",
+                Version = "1.1.0",
+                Author = "ChattyWidgets",
+                Category = "Weather",
+                Description = "Real-time weather conditions and 5-day forecast powered by Open-Meteo with city search and standard units.",
+                DescriptionRu = "Информативная погодная карточка с прогнозом на 5 дней, поиском городов по всему миру и стандартными единицами.",
+                Type = "native",
+                Size = "27 KB",
+                IsOfficial = true,
+                TrustLevel = "official",
+                DownloadUrl = "https://raw.githubusercontent.com/chattytoaster/ChattyWidgetsLibrary/main/packages/com.chatty.weather-card.chw"
             }
         };
     }

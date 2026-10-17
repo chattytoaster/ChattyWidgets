@@ -244,7 +244,20 @@
 
                 <!-- Cards list -->
                 <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl x:Name="InstalledWidgetsList">
+                    <Grid>
+                        <!-- Empty State when no widgets are installed -->
+                        <Border x:Name="InstalledEmptyState" Visibility="Collapsed" Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="16" Padding="32,48" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,20">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="64" Height="64" Background="#1E2338" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                    <Image Source="/app.png" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="TxtEmptyInstalledTitle" Text="У вас пока нет установленных виджетов" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="TxtEmptyInstalledDesc" Text="Откройте каталог виджетов, чтобы выбрать и установить часы, монитор ресурсов, плеер, заметки и другие виджеты." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="460" Margin="0,0,0,20"/>
+                                <Button x:Name="BtnGoToStore" Content="🛍️ Открыть Каталог Виджетов" Style="{StaticResource PrimaryBtn}" Padding="20,10" HorizontalAlignment="Center" Click="OnGoToStoreClick"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl x:Name="InstalledWidgetsList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,12">
@@ -322,6 +335,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
 
