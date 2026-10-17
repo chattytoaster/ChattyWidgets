@@ -2099,11 +2099,21 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         set {}
     }
 
-    public string FocusTabBackground => _currentPhase == PomodoroPhase.Focus ? "#25FFFFFF" : "Transparent";
-    public string FocusTabForeground => _currentPhase == PomodoroPhase.Focus ? "#FFFFFF" : "#94A3B8";
+    public Brush FocusTabBackground => _currentPhase == PomodoroPhase.Focus 
+        ? new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)) 
+        : Brushes.Transparent;
 
-    public string BreakTabBackground => _currentPhase != PomodoroPhase.Focus ? "#25FFFFFF" : "Transparent";
-    public string BreakTabForeground => _currentPhase != PomodoroPhase.Focus ? "#FFFFFF" : "#94A3B8";
+    public Brush FocusTabForeground => _currentPhase == PomodoroPhase.Focus 
+        ? Brushes.White 
+        : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+
+    public Brush BreakTabBackground => _currentPhase != PomodoroPhase.Focus 
+        ? new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)) 
+        : Brushes.Transparent;
+
+    public Brush BreakTabForeground => _currentPhase != PomodoroPhase.Focus 
+        ? Brushes.White 
+        : new SolidColorBrush(Color.FromRgb(148, 163, 184));
 
     public string StatusText
     {
@@ -2823,7 +2833,14 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     public string NewTaskText
     {
         get => _newTaskText;
-        set { _newTaskText = value; OnPropertyChanged(); }
+        set
+        {
+            _newTaskText = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PlaceholderVisibility));
+            OnPropertyChanged(nameof(CounterBadgeText));
+            OnPropertyChanged(nameof(CanAddTask));
+        }
     }
 
     private string _accentColor = "amber";
@@ -2837,10 +2854,52 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
                 _accentColor = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(BackgroundBrush));
+                OnPropertyChanged(nameof(HeaderBrush));
+                OnPropertyChanged(nameof(AccentBrush));
+                OnPropertyChanged(nameof(AccentSoftBrush));
+                OnPropertyChanged(nameof(BorderAccentBrush));
                 SaveCustomSettings();
             }
         }
     }
+
+    public string HeaderTitle => LocalizationService.Instance.T("StickyNotes.Title", "Заметки и задачи");
+
+    public Brush HeaderBrush => _accentColor switch
+    {
+        "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+        "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
+        "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
+        "slate" => new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+        _ => new SolidColorBrush(Color.FromRgb(251, 191, 36)) // amber
+    };
+
+    public Brush AccentBrush => _accentColor switch
+    {
+        "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+        "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
+        "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
+        "slate" => new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+        _ => new SolidColorBrush(Color.FromRgb(251, 191, 36))
+    };
+
+    public Brush AccentSoftBrush => _accentColor switch
+    {
+        "sky" => new SolidColorBrush(Color.FromArgb(40, 56, 189, 248)),
+        "emerald" => new SolidColorBrush(Color.FromArgb(40, 52, 211, 153)),
+        "violet" => new SolidColorBrush(Color.FromArgb(40, 192, 132, 252)),
+        "slate" => new SolidColorBrush(Color.FromArgb(40, 148, 163, 184)),
+        _ => new SolidColorBrush(Color.FromArgb(40, 251, 191, 36))
+    };
+
+    public Brush BorderAccentBrush => _accentColor switch
+    {
+        "sky" => new SolidColorBrush(Color.FromArgb(60, 56, 189, 248)),
+        "emerald" => new SolidColorBrush(Color.FromArgb(60, 52, 211, 153)),
+        "violet" => new SolidColorBrush(Color.FromArgb(60, 192, 132, 252)),
+        "slate" => new SolidColorBrush(Color.FromArgb(50, 148, 163, 184)),
+        _ => new SolidColorBrush(Color.FromArgb(60, 251, 191, 36))
+    };
 
     public Brush BackgroundBrush => _accentColor switch
     {
@@ -2861,8 +2920,16 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     }
 
     public string PlaceholderText => LocalizationService.Instance.T("StickyNotes.Placeholder", "Новая задача или заметка...");
+    public string ClearCompletedTooltip => LocalizationService.Instance.T("StickyNotes.ClearCompletedTooltip", "Очистить выполненные задачи");
+    public string AddTaskTooltip => LocalizationService.Instance.T("StickyNotes.AddTaskTooltip", "Добавить задачу (Enter)");
+    public string EmptyStateText => LocalizationService.Instance.T("StickyNotes.EmptyState", "Все задачи выполнены! Отличная работа ✨");
+    public Visibility PlaceholderVisibility => string.IsNullOrEmpty(NewTaskText) ? Visibility.Visible : Visibility.Collapsed;
+    public string CounterBadgeText => $"{NewTaskText?.Length ?? 0}/120";
+    public bool CanAddTask => !string.IsNullOrWhiteSpace(NewTaskText);
+    public double NoteFontSize => 12.0;
 
     public ICommand AddTaskCommand { get; }
+    public ICommand ClearCompletedCommand { get; }
 
     public StickyNotesWidgetViewModel(string instanceId, FrameworkElement? rootElement)
     {
@@ -2872,6 +2939,8 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         _storageFile = Path.Combine(dir, "tasks.json");
 
         LoadCustomSettings();
+
+        ClearCompletedCommand = new NativeRelayCommand(ClearCompletedTasks);
 
         AddTaskCommand = new NativeRelayCommand(() =>
         {
@@ -2889,8 +2958,12 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         {
             Application.Current?.Dispatcher?.Invoke(() =>
             {
+                OnPropertyChanged(nameof(HeaderTitle));
                 OnPropertyChanged(nameof(ActiveCountText));
                 OnPropertyChanged(nameof(PlaceholderText));
+                OnPropertyChanged(nameof(ClearCompletedTooltip));
+                OnPropertyChanged(nameof(AddTaskTooltip));
+                OnPropertyChanged(nameof(EmptyStateText));
             });
         };
 

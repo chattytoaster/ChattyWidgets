@@ -957,48 +957,62 @@ public partial class WidgetWindow : Window
 
             if (child is TextBlock tb)
             {
-                if (isLight)
+                var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(tb, TextBlock.ForegroundProperty);
+                if (fgBinding == null)
                 {
-                    if (tb.Tag == null) tb.Tag = tb.Foreground;
-                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                    if (isLight)
                     {
-                        int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
-                        int max = Math.Max(r, Math.Max(g, b));
-                        int min = Math.Min(r, Math.Min(g, b));
-                        bool isAccent = (max - min) > 70;
-                        if (!isAccent)
+                        if (tb.Tag == null) tb.Tag = tb.Foreground;
+                        if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
                         {
-                            int brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                            if (brightness >= 180)
+                            int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                            int max = Math.Max(r, Math.Max(g, b));
+                            int min = Math.Min(r, Math.Min(g, b));
+                            bool isAccent = (max - min) > 70;
+                            if (!isAccent)
                             {
-                                tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // Dark primary / dark icon
-                            }
-                            else if (brightness >= 100)
-                            {
-                                tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)); // Dark secondary
+                                int brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                                if (brightness >= 180)
+                                {
+                                    tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // Dark primary / dark icon
+                                }
+                                else if (brightness >= 100)
+                                {
+                                    tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)); // Dark secondary
+                                }
                             }
                         }
                     }
-                }
-                else
-                {
-                    if (tb.Tag is Brush origBrush)
+                    else
                     {
-                        tb.Foreground = origBrush;
-                    }
-                    else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
-                    {
-                        tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                        if (tb.Tag is Brush origBrush)
+                        {
+                            tb.Foreground = origBrush;
+                        }
+                        else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
+                        {
+                            tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                        }
+                        else if (tb.Foreground == null || tb.Foreground == System.Windows.SystemColors.ControlTextBrush)
+                        {
+                            tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                        }
                     }
                 }
             }
             else if (child is Button btn)
             {
+                var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(btn, Button.BackgroundProperty);
+                var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(btn, Button.ForegroundProperty);
+
                 if (isLight)
                 {
                     if (btn.Tag == null) btn.Tag = (btn.Foreground, btn.Background, btn.BorderBrush);
-                    btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
-                    if (btn.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    if (fgBinding == null)
+                    {
+                        btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
+                    }
+                    if (bgBinding == null && btn.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                     {
                         if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
                         {
@@ -1014,31 +1028,28 @@ public partial class WidgetWindow : Window
                 {
                     if (btn.Tag is ValueTuple<Brush, Brush, Brush> tuple)
                     {
-                        btn.Foreground = tuple.Item1;
-                        btn.Background = tuple.Item2;
+                        if (fgBinding == null) btn.Foreground = tuple.Item1;
+                        if (bgBinding == null) btn.Background = tuple.Item2;
                         btn.BorderBrush = tuple.Item3;
-                    }
-                    else
-                    {
-                        btn.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)); // LIGHT ICONS!
-                        btn.Background = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255));
-                        btn.BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
                     }
                 }
             }
             else if (child is Border innerB && innerB != rootBorder)
             {
+                var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(innerB, Border.BackgroundProperty);
+                var bbBinding = System.Windows.Data.BindingOperations.GetBindingExpression(innerB, Border.BorderBrushProperty);
+
                 if (isLight)
                 {
                     if (innerB.Tag == null) innerB.Tag = (innerB.Background, innerB.BorderBrush);
-                    if (innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    if (bgBinding == null && innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                     {
                         if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
                         {
                             innerB.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
                         }
                     }
-                    if (innerB.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
+                    if (bbBinding == null && innerB.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
                     {
                         if (bbScb.Color.R > 200 && bbScb.Color.G > 200 && bbScb.Color.B > 200)
                         {
@@ -1050,8 +1061,8 @@ public partial class WidgetWindow : Window
                 {
                     if (innerB.Tag is ValueTuple<Brush, Brush> orig)
                     {
-                        innerB.Background = orig.Item1;
-                        innerB.BorderBrush = orig.Item2;
+                        if (bgBinding == null) innerB.Background = orig.Item1;
+                        if (bbBinding == null) innerB.BorderBrush = orig.Item2;
                     }
                 }
             }
