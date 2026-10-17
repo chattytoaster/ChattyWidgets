@@ -40,8 +40,21 @@ public class WidgetManifest
     [JsonPropertyName("type")]
     public string Type { get; set; } = "web"; // "web" or "native"
 
+    private string _entry = "index.html";
+
     [JsonPropertyName("entry")]
-    public string Entry { get; set; } = "index.html"; // "index.html" or "Widget.xaml"
+    public string Entry
+    {
+        get => _entry;
+        set => _entry = value;
+    }
+
+    [JsonPropertyName("entryPoint")]
+    public string? EntryPoint
+    {
+        get => _entry;
+        set { if (!string.IsNullOrEmpty(value)) _entry = value; }
+    }
 
     [JsonPropertyName("icon")]
     public string Icon { get; set; } = "icon.png";
