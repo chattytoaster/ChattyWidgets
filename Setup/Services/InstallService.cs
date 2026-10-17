@@ -141,11 +141,16 @@ public class InstallService
     private string? FindSourceDirectory()
     {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string[] candidates = new[]
         {
+            Path.Combine(baseDir, "app"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Release", "net8.0-windows10.0.19041.0"),
             Path.Combine(baseDir, "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0"),
             Path.Combine(baseDir, "..", "..", "..", "bin", "Release", "net8.0-windows10.0.19041.0"),
-            Path.Combine(baseDir, "app"),
+            Path.Combine(userHome, "Projects", "chattywidgets", "bin", "Debug", "net8.0-windows10.0.19041.0"),
+            Path.Combine(userHome, "Projects", "chattywidgets", "bin", "Release", "net8.0-windows10.0.19041.0"),
             baseDir
         };
 
@@ -327,6 +332,7 @@ public class InstallService
             {
                 Path.Combine(sourceRoot, ".agents", "skills", "chw"),
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", "skills", "chw"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".agents", "skills", "chw"),
                 Path.Combine(userHome, "Projects", "chattywidgets", ".agents", "skills", "chw")
             };
 
