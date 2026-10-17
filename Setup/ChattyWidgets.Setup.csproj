@@ -25,4 +25,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="app.zip" Condition="Exists('app.zip')" />
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,8 @@
 ## Build results
 [Bb]in/
 [Oo]bj/
+*.zip
+
 
 ## User-specific files
 *.rsuser

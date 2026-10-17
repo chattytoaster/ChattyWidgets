@@ -44,19 +44,26 @@ dotnet test
 dotnet run -- --test
 ```
 
-### 2. Компиляция стабильного бинарника
-Для сборки единого автономного исполняемого файла (Single File EXE) под Windows x64 выполните:
-```bash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+### 2. Сборка установщика ChattyWidgetsSetup.exe
+Для подготовки полноценного инсталлятора с графическим интерфейсом и встроенным дистрибутивом:
+```powershell
+# 1. Публикация основного приложения
+dotnet publish ChattyWidgets.csproj -c Release -o bin/Publish/app
+
+# 2. Создание архива полезной нагрузки
+Compress-Archive -Path bin/Publish/app/* -DestinationPath Setup/app.zip -Force
+
+# 3. Сборка исполняемого файла инсталлятора
+dotnet publish Setup/ChattyWidgets.Setup.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o bin/Publish/setup
 ```
-Скомпилированный файл будет находиться в каталоге:
-`bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/ChattyWidgets.exe`
+Итоговый автономный файл установщика:
+`bin/Publish/setup/ChattyWidgetsSetup.exe`
 
 ### 3. Создание релиза на GitHub
 1. Перейдите в репозиторий: `https://github.com/chattytoaster/ChattyWidgets/releases`.
 2. Нажмите **Draft a new release**.
-3. Укажите тег версии (например, `v1.1.0`).
-4. Прикрепите собранный `ChattyWidgets.exe`.
+3. Укажите тег версии (например, `v1.0.0`).
+4. Прикрепите собранный `ChattyWidgetsSetup.exe`.
 5. Опубликуйте релиз.
 
 ---
