@@ -15,6 +15,7 @@ using DragDropEffects = System.Windows.DragDropEffects;
 using UserControl = System.Windows.Controls.UserControl;
 using Button = System.Windows.Controls.Button;
 using VisualTreeHelper = System.Windows.Media.VisualTreeHelper;
+using ChattyWidgets.UI.Controls;
 
 namespace ChattyWidgets.UI;
 
@@ -891,9 +892,9 @@ public partial class WidgetWindow : Window
         Border? rootBorder = null;
         if (WidgetContentHost.Content is Border b) rootBorder = b;
         else if (WidgetContentHost.Content is UserControl uc && uc.Content is Border ucb) rootBorder = ucb;
-        else if (WidgetContentHost.Content is FrameworkElement fe)
+        else if (WidgetContentHost.Content is FrameworkElement elemFe)
         {
-            rootBorder = FindVisualChild<Border>(fe);
+            rootBorder = FindVisualChild<Border>(elemFe);
         }
 
         if (rootBorder != null)
@@ -916,6 +917,11 @@ public partial class WidgetWindow : Window
         if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
         {
             gaugesView.ApplyTheme(isLight);
+        }
+
+        if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is PomodoroWidgetViewModel pomoVm)
+        {
+            pomoVm.NotifyAllProperties();
         }
 
         // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)

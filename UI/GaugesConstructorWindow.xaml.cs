@@ -24,7 +24,26 @@ public partial class GaugesConstructorWindow : Window
         _onSaved = onSaved;
         _config = SystemGaugesConfig.Load(instanceId);
 
+        if (_config.CircleColumns == 1)
+        {
+            RbCols1.IsChecked = true;
+        }
+        else
+        {
+            RbCols2.IsChecked = true;
+        }
+
         RenderItems();
+    }
+
+    private void OnCols2Checked(object sender, RoutedEventArgs e)
+    {
+        if (_config != null) _config.CircleColumns = 2;
+    }
+
+    private void OnCols1Checked(object sender, RoutedEventArgs e)
+    {
+        if (_config != null) _config.CircleColumns = 1;
     }
 
     private void OnTitleBarMouseDown(object sender, MouseButtonEventArgs e)
@@ -43,6 +62,7 @@ public partial class GaugesConstructorWindow : Window
     private void OnResetDefaultsClick(object sender, RoutedEventArgs e)
     {
         _config = SystemGaugesConfig.CreateDefault();
+        RbCols2.IsChecked = true;
         RenderItems();
     }
 

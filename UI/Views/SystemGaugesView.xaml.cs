@@ -100,223 +100,354 @@ public partial class SystemGaugesView : UserControl
             return;
         }
 
-        foreach (var item in enabledItems)
+        int circleCols = _config.CircleColumns > 0 ? _config.CircleColumns : 2;
+
+        if (circleCols == 2)
         {
-            switch (item.Id.ToLowerInvariant())
+            int i = 0;
+            while (i < enabledItems.Count)
             {
-                case "cpu":
-                    AddCpuItem(item);
-                    break;
-                case "ram":
-                    AddRamItem(item);
-                    break;
-                case "disk":
-                    AddDiskItem(item);
-                    break;
-                case "gpu":
-                    AddGpuItem(item);
-                    break;
-                case "net":
-                    AddNetItem(item);
-                    break;
+                var item = enabledItems[i];
+                if (item.DisplayType == GaugeDisplayType.Bar)
+                {
+                    AddBarItem(item);
+                    i++;
+                }
+                else
+                {
+                    // Circle item: pair with next Circle item if available
+                    if (i + 1 < enabledItems.Count && enabledItems[i + 1].DisplayType == GaugeDisplayType.Circle)
+                    {
+                        var item2 = enabledItems[i + 1];
+                        AddTwoCircleItemsInRow(item, item2);
+                        i += 2;
+                    }
+                    else
+                    {
+                        AddSingleCircleItemInRow(item);
+                        i++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // 1 column list (traditional)
+            foreach (var item in enabledItems)
+            {
+                if (item.DisplayType == GaugeDisplayType.Bar)
+                {
+                    AddBarItem(item);
+                }
+                else
+                {
+                    AddSingleCircleItemInRow(item);
+                }
             }
         }
     }
 
-    private void AddCpuItem(MetricGaugeItem item)
+    private void AddTwoCircleItemsInRow(MetricGaugeItem item1, MetricGaugeItem item2)
     {
-        if (item.DisplayType == GaugeDisplayType.Circle)
+        var grid = new Grid { Margin = new Thickness(0, 3, 0, 4) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var elem1 = CreateCompactCircleElement(item1);
+        Grid.SetColumn(elem1, 0);
+        grid.Children.Add(elem1);
+
+        var elem2 = CreateCompactCircleElement(item2);
+        Grid.SetColumn(elem2, 2);
+        grid.Children.Add(elem2);
+
+        ItemsHost.Children.Add(grid);
+    }
+
+    private UIElement CreateCompactCircleElement(MetricGaugeItem item)
+    {
+        var border = new Border
         {
-            ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
-            {
-                gauge.Value = m.CpuPercent;
-                detail.Text = $"Загрузка: {m.CpuPercent:0}%";
-            }));
+            Background = _isLight ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(6, 8, 6, 8)
+        };
+
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+
+        var txtTitle = new TextBlock
+        {
+            Text = item.Title,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 11,
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 115
+        };
+
+        var gauge = new CircularGauge
+        {
+            Width = 48,
+            Height = 48,
+            StrokeThickness = 4.0,
+            ProgressBrush = GetBrush(item.ColorHex),
+            TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White,
+            Margin = new Thickness(0, 5, 0, 4),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+
+        var txtDetail = new TextBlock
+        {
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = GetBrush(item.ColorHex),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 115
+        };
+
+        sp.Children.Add(txtTitle);
+        sp.Children.Add(gauge);
+        sp.Children.Add(txtDetail);
+        border.Child = sp;
+
+        switch (item.Id.ToLowerInvariant())
+        {
+            case "cpu":
+                _updaters.Add(m =>
+                {
+                    gauge.Value = m.CpuPercent;
+                    txtDetail.Text = $"{m.CpuPercent:0}%";
+                });
+                break;
+            case "ram":
+                _updaters.Add(m =>
+                {
+                    gauge.Value = m.MemoryPercent;
+                    txtDetail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ";
+                });
+                break;
+            case "disk":
+                _updaters.Add(m =>
+                {
+                    gauge.Value = m.DiskPercent;
+                    txtDetail.Text = $"{m.DiskPercent:0}%";
+                });
+                break;
+            case "gpu":
+                _updaters.Add(m =>
+                {
+                    gauge.Value = m.GpuPercent;
+                    string tempStr = m.GpuTemperature > 0 ? $" • {m.GpuTemperature:0}°C" : "";
+                    txtDetail.Text = $"{m.GpuPercent:0}%{tempStr}";
+                });
+                break;
+            case "net":
+                _updaters.Add(m =>
+                {
+                    double totalKb = m.NetworkDownloadKbps + m.NetworkUploadKbps;
+                    double valNorm = Math.Min(100.0, (totalKb / 5000.0) * 100.0);
+                    gauge.Value = valNorm;
+                    txtDetail.Text = $"↓{FormatSpeed(m.NetworkDownloadKbps)} ↑{FormatSpeed(m.NetworkUploadKbps)}";
+                });
+                break;
         }
-        else
+
+        return border;
+    }
+
+    private void AddSingleCircleItemInRow(MetricGaugeItem item)
+    {
+        switch (item.Id.ToLowerInvariant())
         {
-            ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
-            {
-                pb.Value = m.CpuPercent;
-                val.Text = $"{m.CpuPercent:0}%";
-            }));
+            case "cpu":
+                ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
+                {
+                    gauge.Value = m.CpuPercent;
+                    detail.Text = $"Загрузка: {m.CpuPercent:0}%";
+                }));
+                break;
+            case "ram":
+                ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
+                {
+                    gauge.Value = m.MemoryPercent;
+                    detail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ ({m.MemoryPercent:0}%)";
+                }));
+                break;
+            case "disk":
+                ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
+                {
+                    gauge.Value = m.DiskPercent;
+                    detail.Text = $"Занято: {m.DiskPercent:0}%";
+                }));
+                break;
+            case "gpu":
+                ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
+                {
+                    gauge.Value = m.GpuPercent;
+                    string tempStr = m.GpuTemperature > 0 ? $" • {m.GpuTemperature:0}°C" : "";
+                    detail.Text = $"{m.GpuName} ({m.GpuPercent:0}%{tempStr})";
+                }));
+                break;
+            case "net":
+                AddNetCircleItem(item);
+                break;
         }
     }
 
-    private void AddRamItem(MetricGaugeItem item)
+    private void AddBarItem(MetricGaugeItem item)
     {
-        if (item.DisplayType == GaugeDisplayType.Circle)
+        switch (item.Id.ToLowerInvariant())
         {
-            ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
-            {
-                gauge.Value = m.MemoryPercent;
-                detail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ ({m.MemoryPercent:0}%)";
-            }));
-        }
-        else
-        {
-            ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
-            {
-                pb.Value = m.MemoryPercent;
-                val.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ";
-            }));
+            case "cpu":
+                ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
+                {
+                    pb.Value = m.CpuPercent;
+                    val.Text = $"{m.CpuPercent:0}%";
+                }));
+                break;
+            case "ram":
+                ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
+                {
+                    pb.Value = m.MemoryPercent;
+                    val.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ";
+                }));
+                break;
+            case "disk":
+                ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
+                {
+                    pb.Value = m.DiskPercent;
+                    val.Text = $"{m.DiskPercent:0}%";
+                }));
+                break;
+            case "gpu":
+                ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
+                {
+                    pb.Value = m.GpuPercent;
+                    string tempStr = m.GpuTemperature > 0 ? $" {m.GpuTemperature:0}°C" : "";
+                    val.Text = $"{m.GpuPercent:0}%{tempStr}";
+                }));
+                break;
+            case "net":
+                AddNetBarItem(item);
+                break;
         }
     }
 
-    private void AddDiskItem(MetricGaugeItem item)
+    private void AddNetCircleItem(MetricGaugeItem item)
     {
-        if (item.DisplayType == GaugeDisplayType.Circle)
+        var border = new Border
         {
-            ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
-            {
-                gauge.Value = m.DiskPercent;
-                detail.Text = $"Занято: {m.DiskPercent:0}%";
-            }));
-        }
-        else
+            Margin = new Thickness(0, 3, 0, 4),
+            Background = _isLight ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(8, 6, 8, 6)
+        };
+
+        var dock = new DockPanel();
+        var gauge = new CircularGauge
         {
-            ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
-            {
-                pb.Value = m.DiskPercent;
-                val.Text = $"{m.DiskPercent:0}%";
-            }));
-        }
+            Width = 46,
+            Height = 46,
+            StrokeThickness = 4.0,
+            ProgressBrush = GetBrush(item.ColorHex),
+            TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+        DockPanel.SetDock(gauge, Dock.Left);
+        dock.Children.Add(gauge);
+
+        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        var txtTitle = new TextBlock
+        {
+            Text = item.Title,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))
+        };
+        var txtRates = new TextBlock
+        {
+            FontSize = 11,
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            Margin = new Thickness(0, 2, 0, 0)
+        };
+        sp.Children.Add(txtTitle);
+        sp.Children.Add(txtRates);
+        dock.Children.Add(sp);
+
+        border.Child = dock;
+        ItemsHost.Children.Add(border);
+
+        _updaters.Add(m =>
+        {
+            double totalKb = m.NetworkDownloadKbps + m.NetworkUploadKbps;
+            double valNorm = Math.Min(100.0, (totalKb / 5000.0) * 100.0);
+            gauge.Value = valNorm;
+            txtRates.Text = $"↓ {FormatSpeed(m.NetworkDownloadKbps)}  ↑ {FormatSpeed(m.NetworkUploadKbps)}";
+        });
     }
 
-    private void AddGpuItem(MetricGaugeItem item)
+    private void AddNetBarItem(MetricGaugeItem item)
     {
-        if (item.DisplayType == GaugeDisplayType.Circle)
+        var border = new Border
         {
-            ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
-            {
-                gauge.Value = m.GpuPercent;
-                string tempStr = m.GpuTemperature > 0 ? $" • {m.GpuTemperature:0}°C" : "";
-                detail.Text = $"{m.GpuName} ({m.GpuPercent:0}%{tempStr})";
-            }));
-        }
-        else
+            Margin = new Thickness(0, 6, 0, 2),
+            Background = _isLight ? new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8, 5, 8, 5)
+        };
+
+        var dock = new DockPanel();
+        var leftStack = new StackPanel { Orientation = Orientation.Horizontal };
+        DockPanel.SetDock(leftStack, Dock.Left);
+
+        var arrowDown = new TextBlock
         {
-            ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
-            {
-                pb.Value = m.GpuPercent;
-                string tempStr = m.GpuTemperature > 0 ? $" {m.GpuTemperature:0}°C" : "";
-                val.Text = $"{m.GpuPercent:0}%{tempStr}";
-            }));
-        }
-    }
-
-    private void AddNetItem(MetricGaugeItem item)
-    {
-        if (item.DisplayType == GaugeDisplayType.Circle)
+            Text = "↓ ",
+            Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129)),
+            FontWeight = FontWeights.Bold,
+            FontSize = 11
+        };
+        var txtDown = new TextBlock
         {
-            var border = new Border
-            {
-                Margin = new Thickness(0, 3, 0, 4),
-                Background = _isLight ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(8, 6, 8, 6)
-            };
+            FontSize = 11,
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
+        };
+        leftStack.Children.Add(arrowDown);
+        leftStack.Children.Add(txtDown);
 
-            var dock = new DockPanel();
-            var gauge = new CircularGauge
-            {
-                Width = 46,
-                Height = 46,
-                StrokeThickness = 4.0,
-                ProgressBrush = GetBrush(item.ColorHex),
-                TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            DockPanel.SetDock(gauge, Dock.Left);
-            dock.Children.Add(gauge);
+        var rightStack = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        DockPanel.SetDock(rightStack, Dock.Right);
 
-            var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            var txtTitle = new TextBlock
-            {
-                Text = item.Title,
-                FontWeight = FontWeights.SemiBold,
-                FontSize = 12,
-                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))
-            };
-            var txtRates = new TextBlock
-            {
-                FontSize = 11,
-                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-            sp.Children.Add(txtTitle);
-            sp.Children.Add(txtRates);
-            dock.Children.Add(sp);
-
-            border.Child = dock;
-            ItemsHost.Children.Add(border);
-
-            _updaters.Add(m =>
-            {
-                double totalKb = m.NetworkDownloadKbps + m.NetworkUploadKbps;
-                double valNorm = Math.Min(100.0, (totalKb / 5000.0) * 100.0);
-                gauge.Value = valNorm;
-                txtRates.Text = $"↓ {FormatSpeed(m.NetworkDownloadKbps)}  ↑ {FormatSpeed(m.NetworkUploadKbps)}";
-            });
-        }
-        else
+        var arrowUp = new TextBlock
         {
-            var border = new Border
-            {
-                Margin = new Thickness(0, 6, 0, 2),
-                Background = _isLight ? new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(8, 5, 8, 5)
-            };
+            Text = "↑ ",
+            Foreground = new SolidColorBrush(Color.FromRgb(99, 102, 241)),
+            FontWeight = FontWeights.Bold,
+            FontSize = 11
+        };
+        var txtUp = new TextBlock
+        {
+            FontSize = 11,
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
+        };
+        rightStack.Children.Add(arrowUp);
+        rightStack.Children.Add(txtUp);
 
-            var dock = new DockPanel();
-            var leftStack = new StackPanel { Orientation = Orientation.Horizontal };
-            DockPanel.SetDock(leftStack, Dock.Left);
+        dock.Children.Add(leftStack);
+        dock.Children.Add(rightStack);
+        border.Child = dock;
+        ItemsHost.Children.Add(border);
 
-            var arrowDown = new TextBlock
-            {
-                Text = "↓ ",
-                Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129)),
-                FontWeight = FontWeights.Bold,
-                FontSize = 11
-            };
-            var txtDown = new TextBlock
-            {
-                FontSize = 11,
-                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
-            };
-            leftStack.Children.Add(arrowDown);
-            leftStack.Children.Add(txtDown);
-
-            var rightStack = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            DockPanel.SetDock(rightStack, Dock.Right);
-
-            var arrowUp = new TextBlock
-            {
-                Text = "↑ ",
-                Foreground = new SolidColorBrush(Color.FromRgb(99, 102, 241)),
-                FontWeight = FontWeights.Bold,
-                FontSize = 11
-            };
-            var txtUp = new TextBlock
-            {
-                FontSize = 11,
-                Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(226, 232, 240))
-            };
-            rightStack.Children.Add(arrowUp);
-            rightStack.Children.Add(txtUp);
-
-            dock.Children.Add(leftStack);
-            dock.Children.Add(rightStack);
-            border.Child = dock;
-            ItemsHost.Children.Add(border);
-
-            _updaters.Add(m =>
-            {
-                txtDown.Text = FormatSpeed(m.NetworkDownloadKbps);
-                txtUp.Text = FormatSpeed(m.NetworkUploadKbps);
-            });
-        }
+        _updaters.Add(m =>
+        {
+            txtDown.Text = FormatSpeed(m.NetworkDownloadKbps);
+            txtUp.Text = FormatSpeed(m.NetworkUploadKbps);
+        });
     }
 
     private static string FormatSpeed(double kbps)
@@ -390,6 +521,7 @@ public partial class SystemGaugesView : UserControl
             StrokeThickness = 4.0,
             ProgressBrush = GetBrush(item.ColorHex),
             TrackBrush = _isLight ? new SolidColorBrush(Color.FromArgb(28, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White,
             Margin = new Thickness(0, 0, 10, 0)
         };
         DockPanel.SetDock(gauge, Dock.Left);

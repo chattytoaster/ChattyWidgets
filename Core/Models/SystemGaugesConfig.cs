@@ -35,10 +35,14 @@ public class SystemGaugesConfig
     [JsonPropertyName("items")]
     public List<MetricGaugeItem> Items { get; set; } = new();
 
+    [JsonPropertyName("circleColumns")]
+    public int CircleColumns { get; set; } = 2;
+
     public static SystemGaugesConfig CreateDefault()
     {
         return new SystemGaugesConfig
         {
+            CircleColumns = 2,
             Items = new List<MetricGaugeItem>
             {
                 new() { Id = "cpu", Title = "Процессор (CPU)", IsEnabled = true, DisplayType = GaugeDisplayType.Bar, ColorHex = "#38BDF8" },
@@ -91,6 +95,11 @@ public class SystemGaugesConfig
 
     private static void EnsureAllMetricsPresent(SystemGaugesConfig config)
     {
+        if (config.CircleColumns <= 0)
+        {
+            config.CircleColumns = 2;
+        }
+
         var defaultCfg = CreateDefault();
         foreach (var defItem in defaultCfg.Items)
         {

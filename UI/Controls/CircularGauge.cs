@@ -37,6 +37,10 @@ public class CircularGauge : FrameworkElement
         DependencyProperty.Register(nameof(Label), typeof(string), typeof(CircularGauge),
             new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty ForegroundProperty =
+        DependencyProperty.Register(nameof(Foreground), typeof(Brush), typeof(CircularGauge),
+            new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public double Value
     {
         get => (double)GetValue(ValueProperty);
@@ -77,6 +81,12 @@ public class CircularGauge : FrameworkElement
     {
         get => (string?)GetValue(LabelProperty);
         set => SetValue(LabelProperty, value);
+    }
+
+    public Brush Foreground
+    {
+        get => (Brush)GetValue(ForegroundProperty);
+        set => SetValue(ForegroundProperty, value);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -159,7 +169,7 @@ public class CircularGauge : FrameworkElement
             System.Windows.FlowDirection.LeftToRight,
             typeface,
             fontSize,
-            Brushes.White,
+            Foreground ?? Brushes.White,
             VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
         Point textPos = new Point(center.X - formattedText.Width / 2.0, center.Y - formattedText.Height / 2.0);

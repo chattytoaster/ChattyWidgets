@@ -16,6 +16,7 @@ using RadioButton = System.Windows.Controls.RadioButton;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Border = System.Windows.Controls.Border;
 using ColorConverter = System.Windows.Media.ColorConverter;
+using ChattyWidgets.UI.Controls;
 
 namespace ChattyWidgets.UI;
 

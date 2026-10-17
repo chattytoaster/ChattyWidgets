@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Xml.Linq;
+using ChattyWidgets.Core.Models;
 
 namespace ChattyWidgets.Core.Services;
 
@@ -64,6 +65,7 @@ public static class NativeWidgetContextProvider
             "com.chatty.rss-reader" => new RssWidgetViewModel(instanceId),
             "com.chatty.sticky-notes" => new StickyNotesWidgetViewModel(instanceId, rootElement),
             "com.chatty.weather-card" => new WeatherWidgetViewModel(instanceId),
+            "com.chatty.system-gauges" => new SystemGaugesWidgetViewModel(instanceId),
             _ => SystemMonitorService.Instance
         };
     }
@@ -584,6 +586,18 @@ public class CryptoItem
     public string Icon { get; set; } = "●";
 }
 
+public record CryptoAssetDef(
+    string Key,
+    string Symbol,
+    string NameRu,
+    string NameEn,
+    string Icon,
+    string Category, // "Crypto" or "Fiat"
+    string? BinanceSymbol = null,
+    string? CoinGeckoId = null,
+    bool IsDefault = false
+);
+
 public class CryptoWidgetViewModel : NativeViewModelBase
 {
     public const string DefaultBaseCurrency = "USD";
@@ -631,8 +645,11 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         }
     }
 
-    private readonly HashSet<string> _enabledTokens = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyCollection<string> EnabledTokens => _enabledTokens;
+    private readonly List<string> _enabledTokens = new();
+    public IReadOnlyCollection<string> EnabledTokens => _enabledTokens.AsReadOnly();
+
+    private readonly HashSet<string> _customTokens = new(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyCollection<string> CustomTokens => _customTokens;
 
     public string HeaderTitle => LocalizationService.Instance.T("Crypto.HeaderTitle", "💎 КОТИРОВКИ & ВАЛЮТЫ");
     public string RefreshButtonText => LocalizationService.Instance.T("Crypto.RefreshShort", "Обновить ↻");
@@ -652,6 +669,80 @@ public class CryptoWidgetViewModel : NativeViewModelBase
     }
 
     public ICommand RefreshCommand { get; }
+
+    // Predefined catalog of 50+ popular crypto and fiat assets
+    private static readonly List<CryptoAssetDef> _defaultCatalog = new()
+    {
+        // Top Crypto
+        new("BTC", "BTC", "Биткоин", "Bitcoin", "₿", "Crypto", "BTCUSDT", "bitcoin", true),
+        new("ETH", "ETH", "Эфириум", "Ethereum", "Ξ", "Crypto", "ETHUSDT", "ethereum", true),
+        new("SOL", "SOL", "Солана", "Solana", "◎", "Crypto", "SOLUSDT", "solana", true),
+        new("GRAM", "GRAM", "Грам", "Gram", "💎", "Crypto", "TONUSDT", "the-open-network", true), // Rebranded TON
+        new("BNB", "BNB", "BNB", "BNB", "🟡", "Crypto", "BNBUSDT", "binancecoin", false),
+        new("XRP", "XRP", "Риппл", "Ripple", "✕", "Crypto", "XRPUSDT", "ripple", false),
+        new("DOGE", "DOGE", "Догикоин", "Dogecoin", "🐕", "Crypto", "DOGEUSDT", "dogecoin", false),
+        new("ADA", "ADA", "Кардано", "Cardano", "₳", "Crypto", "ADAUSDT", "cardano", false),
+        new("AVAX", "AVAX", "Аваланч", "Avalanche", "🔺", "Crypto", "AVAXUSDT", "avalanche-2", false),
+        new("LTC", "LTC", "Лайткоин", "Litecoin", "Ł", "Crypto", "LTCUSDT", "litecoin", false),
+        new("LINK", "LINK", "Чейнлинк", "Chainlink", "🔗", "Crypto", "LINKUSDT", "chainlink", false),
+        new("DOT", "DOT", "Полкадот", "Polkadot", "●", "Crypto", "DOTUSDT", "polkadot", false),
+        new("NEAR", "NEAR", "Ниар", "NEAR Protocol", "Ⓝ", "Crypto", "NEARUSDT", "near", false),
+        new("TRX", "TRX", "Трон", "TRON", "🔴", "Crypto", "TRXUSDT", "tron", false),
+        new("SHIB", "SHIB", "Шиба-ину", "Shiba Inu", "🐶", "Crypto", "SHIBUSDT", "shiba-inu", false),
+        new("SUI", "SUI", "Суи", "Sui", "💧", "Crypto", "SUIUSDT", "sui", false),
+        new("PEPE", "PEPE", "Пепе", "Pepe", "🐸", "Crypto", "1000PEPEUSDT", "pepe", false),
+        new("APT", "APT", "Аптос", "Aptos", "⚡", "Crypto", "APTUSDT", "aptos", false),
+        new("ATOM", "ATOM", "Космос", "Cosmos", "⚛", "Crypto", "ATOMUSDT", "cosmos", false),
+        new("UNI", "UNI", "Юнисвап", "Uniswap", "🦄", "Crypto", "UNIUSDT", "uniswap", false),
+        new("XMR", "XMR", "Монеро", "Monero", "ɱ", "Crypto", null, "monero", false),
+        new("ETC", "ETC", "Эфириум Классик", "Ethereum Classic", "⟠", "Crypto", "ETCUSDT", "ethereum-classic", false),
+        new("FIL", "FIL", "Файлкоин", "Filecoin", "⨎", "Crypto", "FILUSDT", "filecoin", false),
+        new("ICP", "ICP", "Интернет Компьютер", "Internet Computer", "∞", "Crypto", "ICPUSDT", "internet-computer", false),
+        new("ARB", "ARB", "Арбитрум", "Arbitrum", "🔵", "Crypto", "ARBUSDT", "arbitrum", false),
+        new("OP", "OP", "Оптимизм", "Optimism", "🔴", "Crypto", "OPUSDT", "optimism", false),
+        new("POL", "POL", "Полигон", "Polygon", "💜", "Crypto", "POLUSDT", "polygon-ecosystem-token", false),
+        new("KAS", "KAS", "Каспа", "Kaspa", "⚡", "Crypto", "KASUSDT", "kaspa", false),
+        new("TIA", "TIA", "Селестия", "Celestia", "✨", "Crypto", "TIAUSDT", "celestia", false),
+        new("INJ", "INJ", "Инджектив", "Injective", "🥷", "Crypto", "INJUSDT", "injective-protocol", false),
+        new("RENDER", "RENDER", "Рендер", "Render Token", "🎨", "Crypto", "RENDERUSDT", "render-token", false),
+        new("FET", "FET", "АИ Альянс", "Artificial Superintelligence", "🤖", "Crypto", "FETUSDT", "fetch-ai", false),
+        new("USDT", "USDT", "Тезер USD", "Tether USD", "₮", "Crypto", null, "tether", false),
+        new("USDC", "USDC", "ЮСДС", "USD Coin", "💲", "Crypto", null, "usd-coin", false),
+
+        // Fiat & Forex Pairs
+        new("USD/RUB", "USD/RUB", "Доллар / Рубль", "USD / Russian Ruble", "$", "Fiat", null, null, true),
+        new("EUR/RUB", "EUR/RUB", "Евро / Рубль", "EUR / Russian Ruble", "€", "Fiat", null, null, true),
+        new("CNY/RUB", "CNY/RUB", "Юань / Рубль", "Chinese Yuan / Ruble", "¥", "Fiat", null, null, false),
+        new("KZT/RUB", "KZT/RUB", "Тенге / Рубль", "Kazakhstani Tenge / Ruble", "₸", "Fiat", null, null, false),
+        new("TRY/RUB", "TRY/RUB", "Лира / Рубль", "Turkish Lira / Ruble", "₺", "Fiat", null, null, false),
+        new("AED/RUB", "AED/RUB", "Дирхам ОАЭ / Рубль", "UAE Dirham / Ruble", "د.إ", "Fiat", null, null, false),
+        new("BYN/RUB", "BYN/RUB", "Бел. рубль / Рубль", "Belarusian Ruble / Ruble", "Br", "Fiat", null, null, false),
+        new("EUR/USD", "EUR/USD", "Евро / Доллар", "EUR / US Dollar", "€", "Fiat", null, null, false),
+        new("GBP/USD", "GBP/USD", "Фунт / Доллар", "GBP / US Dollar", "£", "Fiat", null, null, false),
+        new("USD/JPY", "USD/JPY", "Доллар / Иена", "USD / Japanese Yen", "¥", "Fiat", null, null, false),
+        new("USD/CNY", "USD/CNY", "Доллар / Юань", "USD / Chinese Yuan", "¥", "Fiat", null, null, false),
+        new("USD/TRY", "USD/TRY", "Доллар / Лира", "USD / Turkish Lira", "₺", "Fiat", null, null, false),
+        new("USD/KZT", "USD/KZT", "Доллар / Тенге", "USD / Kazakhstani Tenge", "₸", "Fiat", null, null, false),
+        new("USD/CHF", "USD/CHF", "Доллар / Франк", "USD / Swiss Franc", "Fr", "Fiat", null, null, false),
+        new("USD/CAD", "USD/CAD", "Доллар / Канадский доллар", "USD / Canadian Dollar", "C$", "Fiat", null, null, false),
+        new("AUD/USD", "AUD/USD", "Австралийский доллар / Доллар", "AUD / US Dollar", "A$", "Fiat", null, null, false),
+
+        // Crypto Cross Pairs
+        new("ETH/BTC", "ETH/BTC", "Эфириум / Биткоин", "Ethereum / Bitcoin", "Ξ", "Crypto", "ETHBTC", null, false),
+        new("SOL/BTC", "SOL/BTC", "Солана / Биткоин", "Solana / Bitcoin", "◎", "Crypto", "SOLBTC", null, false),
+        new("GRAM/USDT", "GRAM/USDT", "Грам / USDT", "Gram / USDT", "💎", "Crypto", "TONUSDT", null, false)
+    };
+
+    private static readonly Dictionary<string, CryptoAssetDef> _catalogMap =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    static CryptoWidgetViewModel()
+    {
+        foreach (var def in _defaultCatalog)
+        {
+            _catalogMap[def.Key] = def;
+        }
+    }
 
     public CryptoWidgetViewModel() : this(string.Empty) { }
 
@@ -680,11 +771,36 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         _ = FetchPricesAsync();
     }
 
+    public static string NormalizeKey(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        string s = raw.Trim().ToUpperInvariant().Replace('-', '/').Replace('_', '/').Replace(' ', '/');
+        while (s.Contains("//")) s = s.Replace("//", "/");
+        if (s == "TON" || s == "TONCOIN") return "GRAM";
+        if (s.StartsWith("TON/")) return "GRAM/" + s[4..];
+        if (s.EndsWith("/TON")) return s[..^4] + "/GRAM";
+        return s;
+    }
+
+    public static string GuessIcon(string key)
+    {
+        string norm = NormalizeKey(key);
+        if (_catalogMap.TryGetValue(norm, out var def)) return def.Icon;
+        if (norm.Contains('/'))
+        {
+            var parts = norm.Split('/');
+            if (parts.Length > 0 && _catalogMap.TryGetValue(parts[0], out var firstDef))
+                return firstDef.Icon;
+        }
+        return "🪙";
+    }
+
     public void LoadCustomSettings()
     {
         _baseCurrency = DefaultBaseCurrency;
         _refreshInterval = DefaultRefreshInterval;
         _enabledTokens.Clear();
+        _customTokens.Clear();
 
         if (!string.IsNullOrEmpty(_instanceId) &&
             WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
@@ -697,12 +813,25 @@ public class CryptoWidgetViewModel : NativeViewModelBase
             {
                 _refreshInterval = interval.Trim();
             }
+            if (s.CustomSettings.TryGetValue("cryptoCustomTokens", out var customTokensStr) && !string.IsNullOrWhiteSpace(customTokensStr))
+            {
+                var parts = customTokensStr.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var p in parts)
+                {
+                    string norm = NormalizeKey(p);
+                    if (!string.IsNullOrEmpty(norm)) _customTokens.Add(norm);
+                }
+            }
             if (s.CustomSettings.TryGetValue("cryptoEnabledTokens", out var tokensStr) && !string.IsNullOrWhiteSpace(tokensStr))
             {
                 var parts = tokensStr.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var p in parts)
                 {
-                    _enabledTokens.Add(p.Trim().ToUpperInvariant());
+                    string norm = NormalizeKey(p);
+                    if (!string.IsNullOrEmpty(norm) && !_enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase))
+                    {
+                        _enabledTokens.Add(norm);
+                    }
                 }
             }
         }
@@ -711,7 +840,11 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         {
             foreach (var tok in DefaultEnabledTokens.Split(','))
             {
-                _enabledTokens.Add(tok.Trim().ToUpperInvariant());
+                string norm = NormalizeKey(tok);
+                if (!string.IsNullOrEmpty(norm) && !_enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase))
+                {
+                    _enabledTokens.Add(norm);
+                }
             }
         }
     }
@@ -724,30 +857,81 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         s.CustomSettings["cryptoBaseCurrency"] = _baseCurrency;
         s.CustomSettings["cryptoRefreshInterval"] = _refreshInterval;
         s.CustomSettings["cryptoEnabledTokens"] = string.Join(",", _enabledTokens);
+        s.CustomSettings["cryptoCustomTokens"] = string.Join(",", _customTokens);
         WidgetManager.Instance.SaveSettings();
     }
 
     public bool IsTokenEnabled(string tokenKey)
     {
-        return _enabledTokens.Contains(tokenKey.ToUpperInvariant());
+        string norm = NormalizeKey(tokenKey);
+        return _enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase);
     }
 
     public void SetTokenEnabled(string tokenKey, bool enabled)
     {
-        string norm = tokenKey.ToUpperInvariant();
+        string norm = NormalizeKey(tokenKey);
+        if (string.IsNullOrEmpty(norm)) return;
+
         if (enabled)
-            _enabledTokens.Add(norm);
+        {
+            if (!_enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase))
+                _enabledTokens.Add(norm);
+        }
         else
-            _enabledTokens.Remove(norm);
+        {
+            _enabledTokens.RemoveAll(t => string.Equals(t, norm, StringComparison.OrdinalIgnoreCase));
+        }
 
         SaveCustomSettings();
         _ = FetchPricesAsync();
     }
 
+    public bool AddCustomToken(string rawToken)
+    {
+        string norm = NormalizeKey(rawToken);
+        if (string.IsNullOrWhiteSpace(norm)) return false;
+
+        _customTokens.Add(norm);
+        if (!_enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase))
+            _enabledTokens.Add(norm);
+
+        SaveCustomSettings();
+        _ = FetchPricesAsync();
+        return true;
+    }
+
+    public bool RemoveCustomToken(string rawToken)
+    {
+        string norm = NormalizeKey(rawToken);
+        bool removed = _customTokens.Remove(norm);
+        _enabledTokens.RemoveAll(t => string.Equals(t, norm, StringComparison.OrdinalIgnoreCase));
+        SaveCustomSettings();
+        _ = FetchPricesAsync();
+        return removed;
+    }
+
+    public bool IsCustomToken(string tokenKey)
+    {
+        string norm = NormalizeKey(tokenKey);
+        return _customTokens.Contains(norm);
+    }
+
     public void SelectAllTokens(IEnumerable<string> allTokens)
     {
         _enabledTokens.Clear();
-        foreach (var t in allTokens) _enabledTokens.Add(t.ToUpperInvariant());
+        foreach (var t in allTokens)
+        {
+            string norm = NormalizeKey(t);
+            if (!string.IsNullOrEmpty(norm) && !_enabledTokens.Contains(norm, StringComparer.OrdinalIgnoreCase))
+                _enabledTokens.Add(norm);
+        }
+        SaveCustomSettings();
+        _ = FetchPricesAsync();
+    }
+
+    public void DeselectAllTokens()
+    {
+        _enabledTokens.Clear();
         SaveCustomSettings();
         _ = FetchPricesAsync();
     }
@@ -759,7 +943,9 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         _enabledTokens.Clear();
         foreach (var tok in DefaultEnabledTokens.Split(','))
         {
-            _enabledTokens.Add(tok.Trim().ToUpperInvariant());
+            string norm = NormalizeKey(tok);
+            if (!string.IsNullOrEmpty(norm))
+                _enabledTokens.Add(norm);
         }
         UpdateTimerInterval();
         SaveCustomSettings();
@@ -767,6 +953,30 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(BaseCurrencyBadge));
         OnPropertyChanged(nameof(RefreshInterval));
         _ = FetchPricesAsync();
+    }
+
+    public IReadOnlyList<CryptoAssetDef> GetCatalog()
+    {
+        var list = new List<CryptoAssetDef>(_defaultCatalog);
+        var existingKeys = new HashSet<string>(_defaultCatalog.Select(d => d.Key), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var c in _customTokens)
+        {
+            if (!existingKeys.Contains(c))
+            {
+                list.Add(CreateSyntheticAssetDef(c));
+                existingKeys.Add(c);
+            }
+        }
+        return list;
+    }
+
+    private static CryptoAssetDef CreateSyntheticAssetDef(string key)
+    {
+        string norm = NormalizeKey(key);
+        string icon = GuessIcon(norm);
+        string cat = norm.Contains('/') && (norm.EndsWith("/RUB") || norm.EndsWith("/USD") || norm.EndsWith("/EUR")) ? "Fiat" : "Crypto";
+        return new CryptoAssetDef(norm, norm, norm, norm, icon, cat, null, null, false);
     }
 
     private void UpdateTimerInterval()
@@ -793,34 +1003,87 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         var loc = LocalizationService.Instance;
         bool isRu = loc.IsRussian;
 
-        if (IsTokenEnabled("BTC"))
-            Items.Add(new CryptoItem { Key = "BTC", Name = isRu ? "Биткоин" : "Bitcoin", Symbol = "BTC", Price = FormatPrice(81950m, _baseCurrency), Change = "+1.8%", IsPositive = true, Icon = "₿" });
-        if (IsTokenEnabled("ETH"))
-            Items.Add(new CryptoItem { Key = "ETH", Name = isRu ? "Эфириум" : "Ethereum", Symbol = "ETH", Price = FormatPrice(2460m, _baseCurrency), Change = "+3.2%", IsPositive = true, Icon = "Ξ" });
-        if (IsTokenEnabled("SOL"))
-            Items.Add(new CryptoItem { Key = "SOL", Name = isRu ? "Солана" : "Solana", Symbol = "SOL", Price = FormatPrice(105.40m, _baseCurrency), Change = "+2.5%", IsPositive = true, Icon = "◎" });
-        if (IsTokenEnabled("GRAM"))
-            Items.Add(new CryptoItem { Key = "GRAM", Name = isRu ? "Грам" : "Gram", Symbol = "GRAM", Price = FormatPrice(5.35m, _baseCurrency), Change = "+1.4%", IsPositive = true, Icon = "💎" });
-        if (IsTokenEnabled("BNB"))
-            Items.Add(new CryptoItem { Key = "BNB", Name = "BNB", Symbol = "BNB", Price = FormatPrice(620m, _baseCurrency), Change = "+0.8%", IsPositive = true, Icon = "🟡" });
-        if (IsTokenEnabled("XRP"))
-            Items.Add(new CryptoItem { Key = "XRP", Name = isRu ? "Риппл" : "Ripple", Symbol = "XRP", Price = FormatPrice(0.55m, _baseCurrency), Change = "-0.4%", IsPositive = false, Icon = "✕" });
-        if (IsTokenEnabled("USD/RUB"))
-            Items.Add(new CryptoItem { Key = "USD/RUB", Name = isRu ? "Доллар США" : "US Dollar", Symbol = "USD/RUB", Price = "83.76 ₽", Change = "-0.19", IsPositive = false, Icon = "$" });
-        if (IsTokenEnabled("EUR/RUB"))
-            Items.Add(new CryptoItem { Key = "EUR/RUB", Name = isRu ? "Евро" : "Euro", Symbol = "EUR/RUB", Price = "93.77 ₽", Change = "-0.15", IsPositive = false, Icon = "€" });
+        foreach (var token in _enabledTokens)
+        {
+            if (_catalogMap.TryGetValue(token, out var def))
+            {
+                decimal initialVal = def.Key switch
+                {
+                    "BTC" => 81500m,
+                    "ETH" => 2420m,
+                    "SOL" => 105.4m,
+                    "GRAM" => 5.35m,
+                    "BNB" => 620m,
+                    "XRP" => 0.55m,
+                    "DOGE" => 0.08m,
+                    "ADA" => 0.22m,
+                    "AVAX" => 14.5m,
+                    "LTC" => 75m,
+                    "NEAR" => 3.2m,
+                    "SUI" => 1.85m,
+                    _ => 1.0m
+                };
+                string priceStr = def.Category == "Fiat" && def.Key.EndsWith("/RUB")
+                    ? (def.Key == "USD/RUB" ? "83.76 ₽" : (def.Key == "EUR/RUB" ? "93.77 ₽" : "11.85 ₽"))
+                    : FormatPrice(initialVal, _baseCurrency);
+
+                Items.Add(new CryptoItem
+                {
+                    Key = def.Key,
+                    Name = isRu ? def.NameRu : def.NameEn,
+                    Symbol = def.Symbol,
+                    Price = priceStr,
+                    Change = "+0.0%",
+                    IsPositive = true,
+                    Icon = def.Icon
+                });
+            }
+            else
+            {
+                Items.Add(new CryptoItem
+                {
+                    Key = token,
+                    Name = token,
+                    Symbol = token,
+                    Price = "—",
+                    Change = "0.0%",
+                    IsPositive = true,
+                    Icon = GuessIcon(token)
+                });
+            }
+        }
     }
 
-    private static string FormatPrice(decimal val, string baseCurrency)
+    public static string FormatPrice(decimal val, string baseCurrency)
     {
-        return baseCurrency switch
+        string symbol = baseCurrency switch
         {
-            "RUB" => val >= 1000 ? $"{val:N0} ₽" : $"{val:F2} ₽",
-            "EUR" => val >= 1000 ? $"€{val:N0}" : (val >= 1 ? $"€{val:F2}" : $"€{val:F4}"),
-            "GBP" => val >= 1000 ? $"£{val:N0}" : (val >= 1 ? $"£{val:F2}" : $"£{val:F4}"),
-            "JPY" => $"¥{val:N0}",
-            _ => val >= 1000 ? $"${val:N0}" : (val >= 1 ? $"${val:F2}" : $"${val:F4}")
+            "RUB" => "₽",
+            "EUR" => "€",
+            "GBP" => "£",
+            "JPY" => "¥",
+            "CNY" => "¥",
+            "KZT" => "₸",
+            "TRY" => "₺",
+            "CHF" => "Fr",
+            "CAD" => "C$",
+            "AUD" => "A$",
+            _ => "$"
         };
+
+        bool symbolAfter = (baseCurrency == "RUB" || baseCurrency == "KZT" || baseCurrency == "TRY" || baseCurrency == "CHF");
+
+        string formattedNum;
+        if (val >= 1000m)
+            formattedNum = $"{val:N0}";
+        else if (val >= 1m)
+            formattedNum = $"{val:N2}";
+        else if (val >= 0.001m)
+            formattedNum = $"{val:N4}";
+        else
+            formattedNum = $"{val:G6}";
+
+        return symbolAfter ? $"{formattedNum} {symbol}" : $"{symbol}{formattedNum}";
     }
 
     public async Task FetchPricesAsync()
@@ -829,184 +1092,324 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         IsLoading = true;
         try
         {
-            // 1. Fetch Binance 24hr tickers
-            // Supported tokens: BTC, ETH, SOL, GRAM (mapped from TONUSDT on Binance API), BNB, XRP
-            string binanceUrl = "https://api.binance.com/api/v3/ticker/24hr?symbols=[\"BTCUSDT\",\"ETHUSDT\",\"SOLUSDT\",\"TONUSDT\",\"BNBUSDT\",\"XRPUSDT\"]";
-            string binanceJson = await _httpClient.GetStringAsync(binanceUrl);
-            using var bDoc = JsonDocument.Parse(binanceJson);
+            var loc = LocalizationService.Instance;
+            bool isRu = loc.IsRussian;
 
-            var cryptoData = new Dictionary<string, (decimal Price, decimal Change)>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var elem in bDoc.RootElement.EnumerateArray())
-            {
-                string sym = elem.GetProperty("symbol").GetString() ?? "";
-                decimal p = decimal.TryParse(elem.GetProperty("lastPrice").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lp) ? lp : 0;
-                decimal c = decimal.TryParse(elem.GetProperty("priceChangePercent").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cp) ? cp : 0;
-
-                if (sym == "BTCUSDT") cryptoData["BTC"] = (p, c);
-                else if (sym == "ETHUSDT") cryptoData["ETH"] = (p, c);
-                else if (sym == "SOLUSDT") cryptoData["SOL"] = (p, c);
-                else if (sym == "TONUSDT") cryptoData["GRAM"] = (p, c); // Rebrand TON to Gram!
-                else if (sym == "BNBUSDT") cryptoData["BNB"] = (p, c);
-                else if (sym == "XRPUSDT") cryptoData["XRP"] = (p, c);
-            }
-
-            // Fallback for GRAM if API was unavailable
-            if (!cryptoData.ContainsKey("GRAM") || cryptoData["GRAM"].Price == 0)
-            {
-                cryptoData["GRAM"] = (5.35m, 1.4m);
-            }
-
-            // 2. Fetch Central Bank (CBR) rates for fiat conversion
-            decimal usdRub = 83.76m, usdDiff = -0.19m;
-            decimal eurRub = 93.77m, eurDiff = -0.15m;
-            decimal gbpRub = 110.50m, gbpDiff = +0.25m;
-            decimal jpyRub = 0.58m;
+            // 1. Fetch Fiat exchange rates (CBR as primary with Open-ER-API fallback)
+            var fiatRates = new Dictionary<string, (decimal RateToRub, decimal PrevRateToRub, string NameRu)>(StringComparer.OrdinalIgnoreCase);
+            fiatRates["RUB"] = (1.0m, 1.0m, "Российский рубль");
 
             try
             {
                 string cbrJson = await _httpClient.GetStringAsync("https://www.cbr-xml-daily.ru/daily_json.js");
                 using var cDoc = JsonDocument.Parse(cbrJson);
-                var valute = cDoc.RootElement.GetProperty("Valute");
+                if (cDoc.RootElement.TryGetProperty("Valute", out var valuteElem))
+                {
+                    foreach (var prop in valuteElem.EnumerateObject())
+                    {
+                        string code = prop.Name.ToUpperInvariant();
+                        var valObj = prop.Value;
+                        int nominal = valObj.TryGetProperty("Nominal", out var nom) ? nom.GetInt32() : 1;
+                        if (nominal <= 0) nominal = 1;
+                        decimal curVal = valObj.TryGetProperty("Value", out var v) ? v.GetDecimal() : 0m;
+                        decimal prevVal = valObj.TryGetProperty("Previous", out var pv) ? pv.GetDecimal() : curVal;
+                        string name = valObj.TryGetProperty("Name", out var nm) ? nm.GetString() ?? code : code;
 
-                if (valute.TryGetProperty("USD", out var usdElem))
-                {
-                    usdRub = usdElem.GetProperty("Value").GetDecimal();
-                    usdDiff = usdRub - usdElem.GetProperty("Previous").GetDecimal();
-                }
-                if (valute.TryGetProperty("EUR", out var eurElem))
-                {
-                    eurRub = eurElem.GetProperty("Value").GetDecimal();
-                    eurDiff = eurRub - eurElem.GetProperty("Previous").GetDecimal();
-                }
-                if (valute.TryGetProperty("GBP", out var gbpElem))
-                {
-                    gbpRub = gbpElem.GetProperty("Value").GetDecimal();
-                    gbpDiff = gbpRub - gbpElem.GetProperty("Previous").GetDecimal();
-                }
-                if (valute.TryGetProperty("JPY", out var jpyElem))
-                {
-                    int nominal = jpyElem.TryGetProperty("Nominal", out var nom) ? nom.GetInt32() : 100;
-                    if (nominal <= 0) nominal = 100;
-                    jpyRub = jpyElem.GetProperty("Value").GetDecimal() / nominal;
+                        decimal rateToRub = curVal / nominal;
+                        decimal prevRateToRub = prevVal / nominal;
+                        fiatRates[code] = (rateToRub, prevRateToRub, name);
+                    }
                 }
             }
             catch { }
 
-            // Conversion factor relative to USD: 1 USD = factor units of BaseCurrency
-            decimal conversionRate = 1.0m;
-            switch (_baseCurrency)
+            // Secondary fiat fallback if CBR unavailable
+            if (!fiatRates.ContainsKey("USD"))
             {
-                case "RUB":
-                    conversionRate = usdRub > 0 ? usdRub : 83.76m;
-                    break;
-                case "EUR":
-                    conversionRate = (usdRub > 0 && eurRub > 0) ? (usdRub / eurRub) : 0.89m;
-                    break;
-                case "GBP":
-                    conversionRate = (usdRub > 0 && gbpRub > 0) ? (usdRub / gbpRub) : 0.76m;
-                    break;
-                case "JPY":
-                    conversionRate = (usdRub > 0 && jpyRub > 0) ? (usdRub / jpyRub) : 150.0m;
-                    break;
-                default: // USD
-                    conversionRate = 1.0m;
-                    break;
+                try
+                {
+                    string erJson = await _httpClient.GetStringAsync("https://open.er-api.com/v6/latest/USD");
+                    using var erDoc = JsonDocument.Parse(erJson);
+                    if (erDoc.RootElement.TryGetProperty("rates", out var ratesElem))
+                    {
+                        decimal rubPerUsd = 83.76m;
+                        if (ratesElem.TryGetProperty("RUB", out var rubProp))
+                            rubPerUsd = rubProp.GetDecimal();
+
+                        foreach (var prop in ratesElem.EnumerateObject())
+                        {
+                            string code = prop.Name.ToUpperInvariant();
+                            decimal perUsd = prop.Value.GetDecimal();
+                            if (perUsd > 0)
+                            {
+                                decimal rateToRub = rubPerUsd / perUsd;
+                                if (!fiatRates.ContainsKey(code))
+                                    fiatRates[code] = (rateToRub, rateToRub, code);
+                            }
+                        }
+                    }
+                }
+                catch { }
             }
 
-            var loc = LocalizationService.Instance;
-            bool isRu = loc.IsRussian;
+            // Fallback for key currencies if all offline
+            if (!fiatRates.ContainsKey("USD")) fiatRates["USD"] = (83.76m, 83.95m, "Доллар США");
+            if (!fiatRates.ContainsKey("EUR")) fiatRates["EUR"] = (93.77m, 93.92m, "Евро");
+            if (!fiatRates.ContainsKey("CNY")) fiatRates["CNY"] = (11.85m, 11.87m, "Китайский юань");
+            if (!fiatRates.ContainsKey("GBP")) fiatRates["GBP"] = (110.50m, 110.25m, "Британский фунт");
+            if (!fiatRates.ContainsKey("JPY")) fiatRates["JPY"] = (0.58m, 0.58m, "Японская иена");
+            if (!fiatRates.ContainsKey("KZT")) fiatRates["KZT"] = (0.17m, 0.17m, "Казахстанский тенге");
+            if (!fiatRates.ContainsKey("TRY")) fiatRates["TRY"] = (2.45m, 2.46m, "Турецкая лира");
 
-            var newItems = new List<CryptoItem>();
+            // Calculate 1 USD in _baseCurrency
+            decimal usdInRub = fiatRates.TryGetValue("USD", out var usdInfo) ? usdInfo.RateToRub : 83.76m;
+            decimal baseInRub = fiatRates.TryGetValue(_baseCurrency, out var baseInfo) ? baseInfo.RateToRub : 1.0m;
+            decimal usdToBase = (usdInRub > 0 && baseInRub > 0) ? (usdInRub / baseInRub) : 1.0m;
 
-            // Crypto definitions: Gram is now Gram / Грам with 💎
-            var tokenDefs = new (string Key, string Symbol, string NameRu, string NameEn, string Icon)[]
+            // 2. Fetch Crypto Tickers from Binance
+            var cryptoData = new Dictionary<string, (decimal Price, decimal Change)>(StringComparer.OrdinalIgnoreCase);
+            cryptoData["USDT"] = (1.0m, 0.0m);
+            cryptoData["USDC"] = (1.0m, 0.0m);
+
+            // Verified batch of Binance symbols
+            var verifiedBinanceSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                ("BTC", "BTC", "Биткоин", "Bitcoin", "₿"),
-                ("ETH", "ETH", "Эфириум", "Ethereum", "Ξ"),
-                ("SOL", "SOL", "Солана", "Solana", "◎"),
-                ("GRAM", "GRAM", "Грам", "Gram", "💎"),
-                ("BNB", "BNB", "BNB", "BNB", "🟡"),
-                ("XRP", "XRP", "Риппл", "Ripple", "✕")
+                "BTCUSDT", "ETHUSDT", "SOLUSDT", "TONUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
+                "ADAUSDT", "AVAXUSDT", "LTCUSDT", "LINKUSDT", "DOTUSDT", "NEARUSDT", "TRXUSDT",
+                "SHIBUSDT", "SUIUSDT", "1000PEPEUSDT", "APTUSDT", "ATOMUSDT", "UNIUSDT",
+                "ETCUSDT", "FILUSDT", "ICPUSDT", "ARBUSDT", "OPUSDT", "POLUSDT", "KASUSDT",
+                "TIAUSDT", "INJUSDT", "RENDERUSDT", "FETUSDT", "ETHBTC", "SOLBTC"
             };
 
-            foreach (var t in tokenDefs)
-            {
-                if (!IsTokenEnabled(t.Key)) continue;
+            // Identify which Binance symbols need to be fetched based on _enabledTokens
+            var symbolsToBatch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var customSymbolsToProbe = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                if (cryptoData.TryGetValue(t.Key, out var val) && val.Price > 0)
+            foreach (var token in _enabledTokens)
+            {
+                if (IsFiatPair(token, fiatRates)) continue;
+
+                string? mapped = null;
+                if (_catalogMap.TryGetValue(token, out var def) && !string.IsNullOrEmpty(def.BinanceSymbol))
                 {
-                    decimal convertedPrice = val.Price * conversionRate;
-                    newItems.Add(new CryptoItem
-                    {
-                        Key = t.Key,
-                        Name = isRu ? t.NameRu : t.NameEn,
-                        Symbol = t.Symbol,
-                        Price = FormatPrice(convertedPrice, _baseCurrency),
-                        Change = (val.Change >= 0 ? "+" : "") + $"{val.Change:F2}%",
-                        IsPositive = val.Change >= 0,
-                        Icon = t.Icon
-                    });
+                    mapped = def.BinanceSymbol;
+                }
+                else if (token.Contains('/'))
+                {
+                    mapped = token.Replace("/", "");
+                }
+                else
+                {
+                    mapped = token + "USDT";
+                }
+
+                if (!string.IsNullOrEmpty(mapped))
+                {
+                    if (verifiedBinanceSymbols.Contains(mapped))
+                        symbolsToBatch.Add(mapped);
+                    else
+                        customSymbolsToProbe.Add(mapped);
                 }
             }
 
-            // Fiat pairs
-            if (IsTokenEnabled("USD/RUB") && usdRub > 0)
+            // Always ensure core symbols are in batch
+            symbolsToBatch.Add("BTCUSDT");
+            symbolsToBatch.Add("ETHUSDT");
+            symbolsToBatch.Add("SOLUSDT");
+            symbolsToBatch.Add("TONUSDT");
+
+            // Query verified batch in one single HTTP request
+            try
             {
-                newItems.Add(new CryptoItem
+                string symbolsParam = JsonSerializer.Serialize(symbolsToBatch.ToArray());
+                string binanceUrl = $"https://api.binance.com/api/v3/ticker/24hr?symbols={Uri.EscapeDataString(symbolsParam)}";
+                string binanceJson = await _httpClient.GetStringAsync(binanceUrl);
+                using var bDoc = JsonDocument.Parse(binanceJson);
+                foreach (var elem in bDoc.RootElement.EnumerateArray())
                 {
-                    Key = "USD/RUB",
-                    Name = isRu ? "Доллар США" : "US Dollar",
-                    Symbol = "USD/RUB",
-                    Price = $"{usdRub:F2} ₽",
-                    Change = (usdDiff >= 0 ? "+" : "") + $"{usdDiff:F2}",
-                    IsPositive = usdDiff >= 0,
-                    Icon = "$"
-                });
+                    string sym = elem.GetProperty("symbol").GetString() ?? "";
+                    decimal p = decimal.TryParse(elem.GetProperty("lastPrice").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lp) ? lp : 0;
+                    decimal c = decimal.TryParse(elem.GetProperty("priceChangePercent").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cp) ? cp : 0;
+
+                    cryptoData[sym] = (p, c);
+                    if (sym == "TONUSDT") cryptoData["GRAM"] = (p, c); // Rebrand TON to Gram!
+                    else if (sym.EndsWith("USDT") && sym.Length > 4)
+                    {
+                        string baseToken = sym[..^4];
+                        if (baseToken == "1000PEPE") baseToken = "PEPE";
+                        cryptoData[baseToken] = (p, c);
+                    }
+                }
+            }
+            catch { }
+
+            // Probe custom symbols individually or via CoinGecko
+            foreach (var probeSym in customSymbolsToProbe)
+            {
+                try
+                {
+                    string probeUrl = $"https://api.binance.com/api/v3/ticker/24hr?symbol={probeSym}";
+                    string pJson = await _httpClient.GetStringAsync(probeUrl);
+                    using var pDoc = JsonDocument.Parse(pJson);
+                    decimal p = decimal.TryParse(pDoc.RootElement.GetProperty("lastPrice").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lp) ? lp : 0;
+                    decimal c = decimal.TryParse(pDoc.RootElement.GetProperty("priceChangePercent").GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cp) ? cp : 0;
+                    if (p > 0)
+                    {
+                        cryptoData[probeSym] = (p, c);
+                        if (probeSym.EndsWith("USDT") && probeSym.Length > 4)
+                        {
+                            string baseToken = probeSym[..^4];
+                            cryptoData[baseToken] = (p, c);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fallback to CoinGecko
+                    string tokenName = probeSym.EndsWith("USDT") ? probeSym[..^4].ToLowerInvariant() : probeSym.ToLowerInvariant();
+                    try
+                    {
+                        string cgUrl = $"https://api.coingecko.com/api/v3/simple/price?ids={tokenName}&vs_currencies=usd&include_24hr_change=true";
+                        string cgJson = await _httpClient.GetStringAsync(cgUrl);
+                        using var cgDoc = JsonDocument.Parse(cgJson);
+                        if (cgDoc.RootElement.TryGetProperty(tokenName, out var coinProp))
+                        {
+                            decimal p = coinProp.TryGetProperty("usd", out var up) ? up.GetDecimal() : 0m;
+                            decimal c = coinProp.TryGetProperty("usd_24h_change", out var uc) ? uc.GetDecimal() : 0m;
+                            if (p > 0)
+                            {
+                                cryptoData[probeSym] = (p, c);
+                                cryptoData[tokenName.ToUpperInvariant()] = (p, c);
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
 
-            if (IsTokenEnabled("EUR/RUB") && eurRub > 0)
+            // GRAM Fallback check
+            if (!cryptoData.ContainsKey("GRAM") || cryptoData["GRAM"].Price == 0)
             {
-                newItems.Add(new CryptoItem
-                {
-                    Key = "EUR/RUB",
-                    Name = isRu ? "Евро" : "Euro",
-                    Symbol = "EUR/RUB",
-                    Price = $"{eurRub:F2} ₽",
-                    Change = (eurDiff >= 0 ? "+" : "") + $"{eurDiff:F2}",
-                    IsPositive = eurDiff >= 0,
-                    Icon = "€"
-                });
+                cryptoData["GRAM"] = (5.35m, 1.4m);
             }
 
-            if (IsTokenEnabled("EUR/USD") && usdRub > 0 && eurRub > 0)
-            {
-                decimal eurUsd = eurRub / usdRub;
-                newItems.Add(new CryptoItem
-                {
-                    Key = "EUR/USD",
-                    Name = isRu ? "Евро / Доллар" : "Euro / USD",
-                    Symbol = "EUR/USD",
-                    Price = $"${eurUsd:F4}",
-                    Change = "+0.12%",
-                    IsPositive = true,
-                    Icon = "€"
-                });
-            }
+            // 3. Assemble and Format Items
+            var newItems = new List<CryptoItem>();
 
-            if (IsTokenEnabled("GBP/USD") && usdRub > 0 && gbpRub > 0)
+            foreach (var token in _enabledTokens)
             {
-                decimal gbpUsd = gbpRub / usdRub;
-                newItems.Add(new CryptoItem
+                string norm = NormalizeKey(token);
+
+                // Case A: Fiat Pair (e.g. USD/RUB, EUR/RUB, EUR/USD, GBP/USD, USD/JPY, USD/CNY, USD/KZT, etc.)
+                if (norm.Contains('/'))
                 {
-                    Key = "GBP/USD",
-                    Name = isRu ? "Фунт / Доллар" : "Pound / USD",
-                    Symbol = "GBP/USD",
-                    Price = $"${gbpUsd:F4}",
-                    Change = (gbpDiff >= 0 ? "+" : "") + $"{gbpDiff:F2}",
-                    IsPositive = gbpDiff >= 0,
-                    Icon = "£"
-                });
+                    var parts = norm.Split('/');
+                    if (parts.Length == 2 && fiatRates.TryGetValue(parts[0], out var rA) && fiatRates.TryGetValue(parts[1], out var rB))
+                    {
+                        decimal rate = rB.RateToRub > 0 ? (rA.RateToRub / rB.RateToRub) : 0m;
+                        decimal prevRate = rB.PrevRateToRub > 0 ? (rA.PrevRateToRub / rB.PrevRateToRub) : rate;
+                        decimal diff = rate - prevRate;
+                        decimal diffPct = prevRate > 0 ? (diff / prevRate * 100m) : 0m;
+
+                        string formattedPrice = parts[1] switch
+                        {
+                            "RUB" => $"{rate:F2} ₽",
+                            "USD" => $"${rate:F4}",
+                            "EUR" => $"€{rate:F4}",
+                            "GBP" => $"£{rate:F4}",
+                            "JPY" => $"¥{rate:F2}",
+                            "CNY" => $"¥{rate:F4}",
+                            "KZT" => $"{rate:F2} ₸",
+                            "TRY" => $"{rate:F2} ₺",
+                            _ => $"{rate:F4} {parts[1]}"
+                        };
+
+                        string changeText = parts[1] == "RUB"
+                            ? (diff >= 0 ? "+" : "") + $"{diff:F2}"
+                            : (diffPct >= 0 ? "+" : "") + $"{diffPct:F2}%";
+
+                        string icon = _catalogMap.TryGetValue(norm, out var catDef) ? catDef.Icon : GuessIcon(parts[0]);
+                        string name = _catalogMap.TryGetValue(norm, out var cd)
+                            ? (isRu ? cd.NameRu : cd.NameEn)
+                            : $"{parts[0]} / {parts[1]}";
+
+                        newItems.Add(new CryptoItem
+                        {
+                            Key = norm,
+                            Name = name,
+                            Symbol = norm,
+                            Price = formattedPrice,
+                            Change = changeText,
+                            IsPositive = diff >= 0,
+                            Icon = icon
+                        });
+                        continue;
+                    }
+
+                    // Case B: Crypto cross pair (e.g. ETH/BTC, SOL/BTC, GRAM/USDT)
+                    string directBinanceSym = norm.Replace("/", "");
+                    if (cryptoData.TryGetValue(directBinanceSym, out var directVal) && directVal.Price > 0)
+                    {
+                        string icon = _catalogMap.TryGetValue(norm, out var cd) ? cd.Icon : GuessIcon(parts[0]);
+                        string name = _catalogMap.TryGetValue(norm, out var cd2)
+                            ? (isRu ? cd2.NameRu : cd2.NameEn)
+                            : norm;
+
+                        newItems.Add(new CryptoItem
+                        {
+                            Key = norm,
+                            Name = name,
+                            Symbol = norm,
+                            Price = $"{directVal.Price:G6} {parts[1]}",
+                            Change = (directVal.Change >= 0 ? "+" : "") + $"{directVal.Change:F2}%",
+                            IsPositive = directVal.Change >= 0,
+                            Icon = icon
+                        });
+                        continue;
+                    }
+                }
+
+                // Case C: Standard Crypto Token (BTC, ETH, SOL, GRAM 💎, DOGE, AVAX, etc.)
+                if (cryptoData.TryGetValue(norm, out var cryptoVal) && cryptoVal.Price > 0)
+                {
+                    decimal convertedPrice = cryptoVal.Price * usdToBase;
+                    string icon = _catalogMap.TryGetValue(norm, out var cd) ? cd.Icon : GuessIcon(norm);
+                    string name = _catalogMap.TryGetValue(norm, out var cd2)
+                        ? (isRu ? cd2.NameRu : cd2.NameEn)
+                        : (norm == "GRAM" ? (isRu ? "Грам" : "Gram") : norm);
+
+                    newItems.Add(new CryptoItem
+                    {
+                        Key = norm,
+                        Name = name,
+                        Symbol = norm,
+                        Price = FormatPrice(convertedPrice, _baseCurrency),
+                        Change = (cryptoVal.Change >= 0 ? "+" : "") + $"{cryptoVal.Change:F2}%",
+                        IsPositive = cryptoVal.Change >= 0,
+                        Icon = icon
+                    });
+                    continue;
+                }
+
+                // Case D: Single fiat currency in BaseCurrency (e.g. CNY, KZT, TRY, USD, EUR)
+                if (fiatRates.TryGetValue(norm, out var singleFiat))
+                {
+                    decimal rateInBase = baseInRub > 0 ? (singleFiat.RateToRub / baseInRub) : singleFiat.RateToRub;
+                    decimal prevRateInBase = baseInfo.PrevRateToRub > 0 ? (singleFiat.PrevRateToRub / baseInfo.PrevRateToRub) : rateInBase;
+                    decimal diff = rateInBase - prevRateInBase;
+                    decimal diffPct = prevRateInBase > 0 ? (diff / prevRateInBase * 100m) : 0m;
+
+                    newItems.Add(new CryptoItem
+                    {
+                        Key = norm,
+                        Name = isRu ? singleFiat.NameRu : norm,
+                        Symbol = norm,
+                        Price = FormatPrice(rateInBase, _baseCurrency),
+                        Change = (diffPct >= 0 ? "+" : "") + $"{diffPct:F2}%",
+                        IsPositive = diff >= 0,
+                        Icon = GuessIcon(norm)
+                    });
+                }
             }
 
             string updatedTime = DateTime.Now.ToString("HH:mm:ss");
@@ -1026,6 +1429,13 @@ public class CryptoWidgetViewModel : NativeViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private static bool IsFiatPair(string token, Dictionary<string, (decimal RateToRub, decimal PrevRateToRub, string NameRu)> fiatRates)
+    {
+        if (!token.Contains('/')) return false;
+        var parts = token.Split('/');
+        return parts.Length == 2 && fiatRates.ContainsKey(parts[0]) && fiatRates.ContainsKey(parts[1]);
     }
 }
 
@@ -1090,6 +1500,19 @@ public class GpuMonitorWidgetViewModel : NativeViewModelBase
 
     private string _gpuAdapterNameMode = "full"; // "full" or "short"
     public string AdapterNameMode => _gpuAdapterNameMode;
+
+    private string _gpuGaugeStyle = "bars"; // "bars" or "circular"
+    public string GaugeStyle => _gpuGaugeStyle;
+    public bool IsBarsStyle => _gpuGaugeStyle != "circular";
+    public bool IsCircularStyle => _gpuGaugeStyle == "circular";
+    public Visibility BarsVisibility => IsBarsStyle ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility CircularVisibility => IsCircularStyle ? Visibility.Visible : Visibility.Collapsed;
+
+    public double GpuTempNormalized => Math.Clamp(_gpuTemp, 0.0, 100.0);
+
+    public Brush CoreLoadProgressBrush => new SolidColorBrush((Color)System.Windows.Media.ColorConverter.ConvertFromString(CoreLoadBrush));
+    public Brush VramProgressBrush => new SolidColorBrush((Color)System.Windows.Media.ColorConverter.ConvertFromString(VramBrush));
+    public Brush TempProgressBrush => new SolidColorBrush((Color)System.Windows.Media.ColorConverter.ConvertFromString(IsAlertActive ? "#EF4444" : (_gpuTemp >= 75.0 ? "#F59E0B" : "#EC4899")));
 
     // Derived Display Properties
     public string FormattedCoreLoad => $"{Math.Round(GpuPercent)}%";
@@ -1189,6 +1612,8 @@ public class GpuMonitorWidgetViewModel : NativeViewModelBase
                 _gpuAlertThreshold = val;
             if (s.CustomSettings.TryGetValue("gpuAdapterNameMode", out var mode) && !string.IsNullOrWhiteSpace(mode))
                 _gpuAdapterNameMode = mode;
+            if (s.CustomSettings.TryGetValue("gpuGaugeStyle", out var gstyle) && !string.IsNullOrWhiteSpace(gstyle))
+                _gpuGaugeStyle = gstyle;
         }
     }
 
@@ -1200,6 +1625,17 @@ public class GpuMonitorWidgetViewModel : NativeViewModelBase
             s.CustomSettings[key] = value;
             WidgetManager.Instance.SaveSettings();
         }
+    }
+
+    public void SetGaugeStyle(string style)
+    {
+        _gpuGaugeStyle = style;
+        SaveSetting("gpuGaugeStyle", style);
+        OnPropertyChanged(nameof(GaugeStyle));
+        OnPropertyChanged(nameof(IsBarsStyle));
+        OnPropertyChanged(nameof(IsCircularStyle));
+        OnPropertyChanged(nameof(BarsVisibility));
+        OnPropertyChanged(nameof(CircularVisibility));
     }
 
     public void SetVramDisplayMode(string mode)
@@ -1305,6 +1741,7 @@ public class GpuMonitorWidgetViewModel : NativeViewModelBase
     private void CheckAlertState()
     {
         IsAlertActive = (_gpuTemp >= _gpuAlertThreshold) || (_gpuPercent >= 95.0);
+        OnPropertyChanged(nameof(TempProgressBrush));
     }
 
     private void UpdateFrom(SystemMetrics metrics)
@@ -1322,15 +1759,135 @@ public class GpuMonitorWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(GpuPercent));
         OnPropertyChanged(nameof(FormattedCoreLoad));
         OnPropertyChanged(nameof(CoreLoadBrush));
+        OnPropertyChanged(nameof(CoreLoadProgressBrush));
         OnPropertyChanged(nameof(GpuMemoryPercent));
         OnPropertyChanged(nameof(VramBrush));
+        OnPropertyChanged(nameof(VramProgressBrush));
         OnPropertyChanged(nameof(TotalGpuMemoryGb));
         OnPropertyChanged(nameof(UsedGpuMemoryGb));
         OnPropertyChanged(nameof(GpuTemp));
+        OnPropertyChanged(nameof(GpuTempNormalized));
 
         UpdateTempDisplay();
         UpdateVramDisplay();
         CheckAlertState();
+    }
+}
+
+// 3b. System Gauges ViewModel
+public class SystemGaugesWidgetViewModel : NativeViewModelBase
+{
+    private readonly string? _instanceId;
+    public SystemMonitorService Monitor => SystemMonitorService.Instance;
+    public SystemMetrics CurrentMetrics => Monitor.CurrentMetrics;
+
+    private string _gaugeStyle = "bars"; // "bars" or "circular"
+    public string GaugeStyle => _gaugeStyle;
+    public bool IsBarsStyle => _gaugeStyle == "bars";
+    public bool IsCircularStyle => _gaugeStyle == "circular";
+    public Visibility BarsVisibility => IsBarsStyle ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility CircularVisibility => IsCircularStyle ? Visibility.Visible : Visibility.Collapsed;
+
+    private int _circleColumns = 2;
+    public int CircleColumns => _circleColumns;
+
+    public string FormattedCpu => $"{Math.Round(CurrentMetrics.CpuPercent)}%";
+    public string FormattedMemory => $"{Math.Round(CurrentMetrics.MemoryPercent)}%";
+    public string FormattedDisk => $"{Math.Round(CurrentMetrics.DiskPercent)}%";
+    public string FormattedNetTotal => FormatSpeed(CurrentMetrics.NetworkDownloadKbps + CurrentMetrics.NetworkUploadKbps);
+    public double NetSpeedRatio => Math.Min(100.0, ((CurrentMetrics.NetworkDownloadKbps + CurrentMetrics.NetworkUploadKbps) / 5000.0) * 100.0);
+
+    public SystemGaugesWidgetViewModel(string? instanceId = null)
+    {
+        _instanceId = instanceId;
+        LoadSettings();
+
+        Monitor.MetricsUpdated += (m) =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(CurrentMetrics));
+                OnPropertyChanged(nameof(FormattedCpu));
+                OnPropertyChanged(nameof(FormattedMemory));
+                OnPropertyChanged(nameof(FormattedDisk));
+                OnPropertyChanged(nameof(FormattedNetTotal));
+                OnPropertyChanged(nameof(NetSpeedRatio));
+            });
+        };
+    }
+
+    private void LoadSettings()
+    {
+        if (!string.IsNullOrEmpty(_instanceId))
+        {
+            var config = SystemGaugesConfig.Load(_instanceId);
+            _circleColumns = config.CircleColumns > 0 ? config.CircleColumns : 2;
+            bool hasCircles = config.Items.Any(i => i.IsEnabled && i.DisplayType == GaugeDisplayType.Circle);
+            _gaugeStyle = hasCircles ? "circular" : "bars";
+
+            if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+            {
+                if (s.CustomSettings.TryGetValue("systemGaugeStyle", out var style) && !string.IsNullOrWhiteSpace(style))
+                    _gaugeStyle = style;
+                if (s.CustomSettings.TryGetValue("systemCircleColumns", out var cols) && int.TryParse(cols, out var colVal))
+                    _circleColumns = colVal > 0 ? colVal : 2;
+            }
+        }
+    }
+
+    private void SaveSetting(string key, string value)
+    {
+        if (!string.IsNullOrEmpty(_instanceId) &&
+            WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+        {
+            s.CustomSettings[key] = value;
+            WidgetManager.Instance.SaveSettings();
+        }
+    }
+
+    public void SetGaugeStyle(string style)
+    {
+        _gaugeStyle = style;
+        SaveSetting("systemGaugeStyle", style);
+
+        if (!string.IsNullOrEmpty(_instanceId))
+        {
+            var config = SystemGaugesConfig.Load(_instanceId);
+            var targetType = style == "circular" ? GaugeDisplayType.Circle : GaugeDisplayType.Bar;
+            foreach (var item in config.Items)
+            {
+                item.DisplayType = targetType;
+            }
+            SystemGaugesConfig.Save(_instanceId, config);
+        }
+
+        OnPropertyChanged(nameof(GaugeStyle));
+        OnPropertyChanged(nameof(IsBarsStyle));
+        OnPropertyChanged(nameof(IsCircularStyle));
+        OnPropertyChanged(nameof(BarsVisibility));
+        OnPropertyChanged(nameof(CircularVisibility));
+    }
+
+    public void SetCircleColumns(int columns)
+    {
+        _circleColumns = columns > 0 ? columns : 2;
+        SaveSetting("systemCircleColumns", _circleColumns.ToString());
+
+        if (!string.IsNullOrEmpty(_instanceId))
+        {
+            var config = SystemGaugesConfig.Load(_instanceId);
+            config.CircleColumns = _circleColumns;
+            SystemGaugesConfig.Save(_instanceId, config);
+        }
+
+        OnPropertyChanged(nameof(CircleColumns));
+    }
+
+    private static string FormatSpeed(double kbps)
+    {
+        if (kbps >= 1024.0)
+            return $"{(kbps / 1024.0):0.0} МБ/с";
+        return $"{kbps:0} КБ/с";
     }
 }
 
@@ -1418,6 +1975,55 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         private set { _customFolder = value; OnPropertyChanged(); }
     }
 
+    private string _singleFilePath = "";
+    public string SingleFilePath
+    {
+        get => _singleFilePath;
+        private set
+        {
+            _singleFilePath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSingleFileMode));
+            OnPropertyChanged(nameof(SourceDisplayName));
+            OnPropertyChanged(nameof(NavigationButtonsVisibility));
+        }
+    }
+
+    public bool IsSingleFileMode => !string.IsNullOrEmpty(_singleFilePath);
+
+    public Visibility NavigationButtonsVisibility => _images.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+    public string SourceDisplayName
+    {
+        get
+        {
+            if (IsSingleFileMode && File.Exists(_singleFilePath))
+            {
+                return Path.GetFileName(_singleFilePath);
+            }
+            if (!string.IsNullOrEmpty(_customFolder))
+            {
+                return _customFolder;
+            }
+            return LocalizationService.Instance.T("MediaFrame.DefaultPictures", "Стандартная папка «Изображения»");
+        }
+    }
+
+    private bool _autoHideControls = true;
+    public bool AutoHideControls
+    {
+        get => _autoHideControls;
+        set
+        {
+            if (_autoHideControls != value)
+            {
+                _autoHideControls = value;
+                OnPropertyChanged();
+                SaveCustomSetting("mediaAutoHideControls", value ? "true" : "false");
+            }
+        }
+    }
+
     public string DragDropHintText => LocalizationService.Instance.T("MediaFrame.DragDropHint", "Перетащите сюда фото или папку");
     public string DragDropSubText => LocalizationService.Instance.T("MediaFrame.DragDropSub", "или укажите папку в настройках (ПКМ)");
     public string PrevTooltip => LocalizationService.Instance.T("MediaFrame.PrevPhoto", "Предыдущее фото");
@@ -1443,14 +2049,21 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
         LocalizationService.Instance.LanguageChanged += RefreshLocalization;
 
+        string? savedSingleFile = null;
         string? savedFolder = null;
         int savedInterval = 10;
         string savedStretch = "UniformToFill";
         bool savedShuffle = false;
+        bool savedAutoHide = true;
 
         if (!string.IsNullOrEmpty(_instanceId) &&
             WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
         {
+            if (s.CustomSettings.TryGetValue("mediaSingleFile", out var sf) && File.Exists(sf))
+            {
+                savedSingleFile = sf;
+            }
+
             if (s.CustomSettings.TryGetValue("mediaFolder", out var f) && Directory.Exists(f))
             {
                 savedFolder = f;
@@ -1470,8 +2083,14 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             {
                 savedShuffle = shVal;
             }
+
+            if (s.CustomSettings.TryGetValue("mediaAutoHideControls", out var ahStr) && bool.TryParse(ahStr, out var ahVal))
+            {
+                savedAutoHide = ahVal;
+            }
         }
 
+        _autoHideControls = savedAutoHide;
         _isShuffle = savedShuffle;
         _slideIntervalSec = savedInterval;
         if (Enum.TryParse<Stretch>(savedStretch, true, out var st))
@@ -1479,7 +2098,11 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             _stretchMode = st;
         }
 
-        if (savedFolder != null)
+        if (savedSingleFile != null)
+        {
+            SetSingleFile(savedSingleFile, saveToSettings: false);
+        }
+        else if (savedFolder != null)
         {
             SetCustomFolder(savedFolder, saveToSettings: false);
         }
@@ -1508,6 +2131,7 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(DragDropSubText));
         OnPropertyChanged(nameof(PrevTooltip));
         OnPropertyChanged(nameof(NextTooltip));
+        OnPropertyChanged(nameof(SourceDisplayName));
         if (_images.Count > 0 && _index >= 0 && _index < _images.Count)
         {
             UpdateCaption();
@@ -1520,10 +2144,16 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
     private void UpdateTimerInterval()
     {
+        if (IsSingleFileMode || _images.Count <= 1)
+        {
+            _slideTimer.Stop();
+            return;
+        }
+
         if (_slideIntervalSec > 0)
         {
             _slideTimer.Interval = TimeSpan.FromSeconds(_slideIntervalSec);
-            if (!_slideTimer.IsEnabled && _images.Count > 1)
+            if (!_slideTimer.IsEnabled)
             {
                 _slideTimer.Start();
             }
@@ -1552,7 +2182,14 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
     {
         if (_images.Count == 0 || _index < 0 || _index >= _images.Count) return;
         string fileName = Path.GetFileNameWithoutExtension(_images[_index]);
-        Caption = $"{_index + 1}/{_images.Count}: {fileName}";
+        if (IsSingleFileMode || _images.Count == 1)
+        {
+            Caption = fileName;
+        }
+        else
+        {
+            Caption = $"{_index + 1}/{_images.Count}: {fileName}";
+        }
     }
 
     private void ShowImage(int idx)
@@ -1564,6 +2201,7 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             OnPropertyChanged(nameof(HasImage));
             OnPropertyChanged(nameof(ImageVisibility));
             OnPropertyChanged(nameof(PlaceholderVisibility));
+            OnPropertyChanged(nameof(NavigationButtonsVisibility));
             _slideTimer.Stop();
             return;
         }
@@ -1574,8 +2212,9 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(ImageVisibility));
         OnPropertyChanged(nameof(PlaceholderVisibility));
+        OnPropertyChanged(nameof(NavigationButtonsVisibility));
 
-        if (_slideIntervalSec > 0 && _images.Count > 1 && !_slideTimer.IsEnabled)
+        if (!IsSingleFileMode && _slideIntervalSec > 0 && _images.Count > 1 && !_slideTimer.IsEnabled)
         {
             _slideTimer.Start();
         }
@@ -1724,17 +2363,56 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
             if (rememberedFolder != null)
             {
+                _singleFilePath = "";
                 CustomFolder = rememberedFolder;
                 SaveCustomSetting("mediaFolder", rememberedFolder);
+                SaveCustomSetting("mediaSingleFile", "");
+                OnPropertyChanged(nameof(SingleFilePath));
+                OnPropertyChanged(nameof(IsSingleFileMode));
+                OnPropertyChanged(nameof(SourceDisplayName));
             }
 
             ShowImage(_index);
         }
     }
 
+    public void SetSingleFile(string filePath, bool saveToSettings = true)
+    {
+        if (!File.Exists(filePath)) return;
+
+        SingleFilePath = filePath;
+        CustomFolder = Path.GetDirectoryName(filePath) ?? "";
+
+        _originalImages.Clear();
+        _originalImages.Add(filePath);
+
+        _images.Clear();
+        _images.Add(filePath);
+        _index = 0;
+
+        _slideTimer.Stop();
+
+        CurrentImage = filePath;
+        UpdateCaption();
+
+        OnPropertyChanged(nameof(HasImage));
+        OnPropertyChanged(nameof(ImageVisibility));
+        OnPropertyChanged(nameof(PlaceholderVisibility));
+        OnPropertyChanged(nameof(NavigationButtonsVisibility));
+        OnPropertyChanged(nameof(SourceDisplayName));
+
+        if (saveToSettings)
+        {
+            SaveCustomSetting("mediaSingleFile", filePath);
+            SaveCustomSetting("mediaFolder", "");
+        }
+    }
+
     public void SetCustomFolder(string folderPath, bool saveToSettings = true)
     {
         if (!Directory.Exists(folderPath)) return;
+
+        SingleFilePath = "";
         CustomFolder = folderPath;
         LoadImagesFromDirectory(folderPath);
 
@@ -1749,12 +2427,16 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             OnPropertyChanged(nameof(HasImage));
             OnPropertyChanged(nameof(ImageVisibility));
             OnPropertyChanged(nameof(PlaceholderVisibility));
+            OnPropertyChanged(nameof(NavigationButtonsVisibility));
             _slideTimer.Stop();
         }
+
+        OnPropertyChanged(nameof(SourceDisplayName));
 
         if (saveToSettings)
         {
             SaveCustomSetting("mediaFolder", folderPath);
+            SaveCustomSetting("mediaSingleFile", "");
         }
     }
 }
@@ -2023,7 +2705,8 @@ public enum PomodoroPhase
 {
     Focus,
     ShortBreak,
-    LongBreak
+    LongBreak,
+    Timer
 }
 
 public class PomodoroWidgetViewModel : NativeViewModelBase
@@ -2034,6 +2717,8 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     private int _focusMinutes = 25;
     private int _breakMinutes = 5;
     private int _longBreakMinutes = 15;
+    private int _timerMinutes = 10;
+    private int _timerTotalSeconds = 10 * 60;
     private bool _autoStart = false;
     private bool _soundEnabled = true;
 
@@ -2045,6 +2730,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     public int FocusMinutes => _focusMinutes;
     public int BreakMinutes => _breakMinutes;
     public int LongBreakMinutes => _longBreakMinutes;
+    public int TimerMinutes => _timerMinutes;
     public bool AutoStart => _autoStart;
     public bool SoundEnabled => _soundEnabled;
     public bool IsRunning => _isRunning;
@@ -2062,6 +2748,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             {
                 PomodoroPhase.ShortBreak => loc.T("Pomodoro.ModeBreak", "☕ ОТДЫХ"),
                 PomodoroPhase.LongBreak => loc.T("Pomodoro.ModeLongBreak", "🌿 ДЛИННЫЙ ОТДЫХ"),
+                PomodoroPhase.Timer => loc.T("Pomodoro.ModeTimer", "⏱ ТАЙМЕР"),
                 _ => loc.T("Pomodoro.ModeFocus", "🎯 ФОКУС")
             };
         }
@@ -2082,12 +2769,11 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
 
     public string SwitchModeText => LocalizationService.Instance.T("Pomodoro.SwitchMode", "Сменить режим");
 
-    public string FocusTabTitle => string.Format(LocalizationService.Instance.T("Pomodoro.TabFocus", "🍅 Фокус ({0}м)"), _focusMinutes);
+    public string FocusTabTitle => LocalizationService.Instance.T("Pomodoro.Focus", "Фокус");
 
-    public string BreakTabTitle => string.Format(
-        LocalizationService.Instance.T(_currentPhase == PomodoroPhase.LongBreak ? "Pomodoro.TabLongBreak" : "Pomodoro.TabBreak", 
-            _currentPhase == PomodoroPhase.LongBreak ? "🌿 Отдых ({0}м)" : "☕ Отдых ({0}м)"),
-        _currentPhase == PomodoroPhase.LongBreak ? _longBreakMinutes : _breakMinutes);
+    public string BreakTabTitle => LocalizationService.Instance.T("Pomodoro.Break", "Отдых");
+
+    public string TimerTabTitle => LocalizationService.Instance.T("Pomodoro.Timer", "Таймер");
 
     public string AccentColor
     {
@@ -2095,26 +2781,94 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         {
             PomodoroPhase.ShortBreak => "#10B981",
             PomodoroPhase.LongBreak => "#3B82F6",
+            PomodoroPhase.Timer => "#F59E0B",
             _ => "#EF4444"
         };
         set {}
     }
 
+    public Color AccentMediaColor => _currentPhase switch
+    {
+        PomodoroPhase.ShortBreak => Color.FromRgb(16, 185, 129),
+        PomodoroPhase.LongBreak => Color.FromRgb(59, 130, 246),
+        PomodoroPhase.Timer => Color.FromRgb(245, 158, 11),
+        _ => Color.FromRgb(239, 68, 68)
+    };
+
+    private bool IsLightTheme()
+    {
+        try
+        {
+            string theme = "";
+            if (!string.IsNullOrEmpty(_instanceId) && WidgetManager.Instance?.Settings?.Widgets != null &&
+                WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
+            {
+                theme = s.Theme;
+            }
+            if (string.IsNullOrEmpty(theme) || theme.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                theme = WidgetManager.Instance?.Settings?.Theme ?? "";
+            }
+            return theme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public Brush PillBackground => IsLightTheme()
+        ? new SolidColorBrush(Color.FromArgb(20, 0, 0, 0))
+        : new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+
     public Brush FocusTabBackground => _currentPhase == PomodoroPhase.Focus 
-        ? new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)) 
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)))
         : Brushes.Transparent;
 
     public Brush FocusTabForeground => _currentPhase == PomodoroPhase.Focus 
-        ? Brushes.White 
-        : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White)
+        : (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(100, 116, 139)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)));
 
-    public Brush BreakTabBackground => _currentPhase != PomodoroPhase.Focus 
-        ? new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)) 
+    public Brush BreakTabBackground => (_currentPhase == PomodoroPhase.ShortBreak || _currentPhase == PomodoroPhase.LongBreak)
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)))
         : Brushes.Transparent;
 
-    public Brush BreakTabForeground => _currentPhase != PomodoroPhase.Focus 
-        ? Brushes.White 
+    public Brush BreakTabForeground => (_currentPhase == PomodoroPhase.ShortBreak || _currentPhase == PomodoroPhase.LongBreak)
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White)
+        : (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(100, 116, 139)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)));
+
+    public Brush TimerTabBackground => _currentPhase == PomodoroPhase.Timer
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(55, 255, 255, 255)))
+        : Brushes.Transparent;
+
+    public Brush TimerTabForeground => _currentPhase == PomodoroPhase.Timer
+        ? (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : Brushes.White)
+        : (IsLightTheme() ? new SolidColorBrush(Color.FromRgb(100, 116, 139)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)));
+
+    public Brush ResetButtonBackground => IsLightTheme()
+        ? new SolidColorBrush(Color.FromArgb(20, 0, 0, 0))
+        : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255));
+
+    public Brush ResetButtonForeground => IsLightTheme()
+        ? new SolidColorBrush(Color.FromRgb(71, 85, 105))
         : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+
+    public Brush QuickButtonBackground => IsLightTheme()
+        ? new SolidColorBrush(Color.FromArgb(24, 0, 0, 0))
+        : new SolidColorBrush(Color.FromArgb(24, 255, 255, 255));
+
+    public Brush QuickButtonForeground => IsLightTheme()
+        ? new SolidColorBrush(Color.FromRgb(30, 41, 59))
+        : new SolidColorBrush(Color.FromRgb(226, 232, 240));
+
+    public Visibility TimerControlsVisibility => _currentPhase == PomodoroPhase.Timer
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    public string Minus1mText => LocalizationService.Instance.T("Pomodoro.Minus1m", "-1м");
+    public string Plus1mText => LocalizationService.Instance.T("Pomodoro.Plus1m", "+1м");
+    public string Plus5mText => LocalizationService.Instance.T("Pomodoro.Plus5m", "+5м");
+    public string Plus10mText => LocalizationService.Instance.T("Pomodoro.Plus10m", "+10м");
 
     public string StatusText
     {
@@ -2127,8 +2881,18 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
                 {
                     PomodoroPhase.ShortBreak => loc.T("Pomodoro.BreakActive", "☕ Время перерыва"),
                     PomodoroPhase.LongBreak => loc.T("Pomodoro.LongBreakActive", "🌿 Восстанавливающий отдых"),
+                    PomodoroPhase.Timer => loc.T("Pomodoro.TimerActive", "⏱ Идёт отсчёт времени"),
                     _ => loc.T("Pomodoro.SessionActive", "🍅 Фокус-сессия активна")
                 };
+            }
+
+            if (_currentPhase == PomodoroPhase.Timer)
+            {
+                if (_remainingSeconds == 0)
+                    return loc.T("Pomodoro.TimerFinished", "🔔 Время вышло!");
+                if (_remainingSeconds < _timerTotalSeconds)
+                    return loc.T("Pomodoro.SessionPaused", "⏸ Таймер на паузе");
+                return loc.T("Pomodoro.TimerReady", "Готов к запуску");
             }
 
             int total = GetPhaseDurationSeconds(_currentPhase);
@@ -2145,7 +2909,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     {
         get
         {
-            int total = GetPhaseDurationSeconds(_currentPhase);
+            int total = _currentPhase == PomodoroPhase.Timer ? _timerTotalSeconds : GetPhaseDurationSeconds(_currentPhase);
             return total > 0 ? ((double)(total - _remainingSeconds) / total) * 100 : 0;
         }
         set {}
@@ -2157,6 +2921,9 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     public ICommand SetFocusModeCommand { get; }
     public ICommand SetBreakModeCommand { get; }
     public ICommand SetLongBreakModeCommand { get; }
+    public ICommand SetTimerModeCommand { get; }
+    public ICommand AdjustMinutesCommand { get; }
+    public ICommand SetPresetMinutesCommand { get; }
 
     public PomodoroWidgetViewModel(string? instanceId = null)
     {
@@ -2180,6 +2947,11 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
 
         ToggleTimerCommand = new NativeRelayCommand(() =>
         {
+            if (!_isRunning && _currentPhase == PomodoroPhase.Timer && _remainingSeconds == 0)
+            {
+                _remainingSeconds = _timerTotalSeconds > 0 ? _timerTotalSeconds : _timerMinutes * 60;
+                _timerTotalSeconds = _remainingSeconds;
+            }
             _isRunning = !_isRunning;
             if (_isRunning) _timer.Start(); else _timer.Stop();
             NotifyStateChanged();
@@ -2190,6 +2962,10 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             _timer.Stop();
             _isRunning = false;
             _remainingSeconds = GetPhaseDurationSeconds(_currentPhase);
+            if (_currentPhase == PomodoroPhase.Timer)
+            {
+                _timerTotalSeconds = _remainingSeconds;
+            }
             NotifyStateChanged();
         });
 
@@ -2198,6 +2974,10 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             if (_currentPhase == PomodoroPhase.Focus)
             {
                 SwitchToPhase(PomodoroPhase.ShortBreak);
+            }
+            else if (_currentPhase == PomodoroPhase.ShortBreak || _currentPhase == PomodoroPhase.LongBreak)
+            {
+                SwitchToPhase(PomodoroPhase.Timer);
             }
             else
             {
@@ -2208,6 +2988,23 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         SetFocusModeCommand = new NativeRelayCommand(() => SwitchToPhase(PomodoroPhase.Focus));
         SetBreakModeCommand = new NativeRelayCommand(() => SwitchToPhase(PomodoroPhase.ShortBreak));
         SetLongBreakModeCommand = new NativeRelayCommand(() => SwitchToPhase(PomodoroPhase.LongBreak));
+        SetTimerModeCommand = new NativeRelayCommand(() => SwitchToPhase(PomodoroPhase.Timer));
+
+        AdjustMinutesCommand = new NativeRelayCommand(param =>
+        {
+            if (param != null && int.TryParse(param.ToString(), out int delta))
+            {
+                AdjustMinutes(delta);
+            }
+        });
+
+        SetPresetMinutesCommand = new NativeRelayCommand(param =>
+        {
+            if (param != null && int.TryParse(param.ToString(), out int mins))
+            {
+                SetTimerMinutes(mins);
+            }
+        });
 
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
@@ -2217,12 +3014,52 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         NotifyAllProperties();
     }
 
+    public void AdjustMinutes(int deltaMinutes)
+    {
+        if (_currentPhase != PomodoroPhase.Timer) return;
+
+        int newSeconds = _remainingSeconds + (deltaMinutes * 60);
+        if (newSeconds < 60) newSeconds = 60;
+        if (newSeconds > 180 * 60) newSeconds = 180 * 60;
+
+        _remainingSeconds = newSeconds;
+
+        if (!_isRunning)
+        {
+            _timerMinutes = Math.Clamp(_remainingSeconds / 60, 1, 180);
+            _timerTotalSeconds = _remainingSeconds;
+            SaveSettings();
+        }
+        else
+        {
+            _timerTotalSeconds = Math.Max(_timerTotalSeconds + (deltaMinutes * 60), _remainingSeconds);
+        }
+
+        NotifyStateChanged();
+    }
+
+    public void SetTimerMinutes(int mins)
+    {
+        _timerMinutes = Math.Clamp(mins, 1, 180);
+        SaveSettings();
+        if (_currentPhase == PomodoroPhase.Timer && !_isRunning)
+        {
+            _remainingSeconds = _timerMinutes * 60;
+            _timerTotalSeconds = _remainingSeconds;
+            NotifyStateChanged();
+        }
+    }
+
     private void SwitchToPhase(PomodoroPhase phase)
     {
         _timer.Stop();
         _isRunning = false;
         _currentPhase = phase;
         _remainingSeconds = GetPhaseDurationSeconds(_currentPhase);
+        if (_currentPhase == PomodoroPhase.Timer)
+        {
+            _timerTotalSeconds = _remainingSeconds;
+        }
         NotifyStateChanged();
     }
 
@@ -2235,6 +3072,15 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
                 System.Media.SystemSounds.Exclamation.Play();
             }
             catch { }
+        }
+
+        if (_currentPhase == PomodoroPhase.Timer)
+        {
+            _timer.Stop();
+            _isRunning = false;
+            _remainingSeconds = 0;
+            NotifyStateChanged();
+            return;
         }
 
         if (_currentPhase == PomodoroPhase.Focus)
@@ -2274,14 +3120,16 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     {
         PomodoroPhase.ShortBreak => _breakMinutes * 60,
         PomodoroPhase.LongBreak => _longBreakMinutes * 60,
+        PomodoroPhase.Timer => _timerMinutes * 60,
         _ => _focusMinutes * 60
     };
 
-    public void ApplyCustomSettings(int focusMins, int breakMins, int longBreakMins, bool autoStart, bool sound)
+    public void ApplyCustomSettings(int focusMins, int breakMins, int longBreakMins, int timerMins, bool autoStart, bool sound)
     {
         _focusMinutes = Math.Clamp(focusMins, 1, 180);
         _breakMinutes = Math.Clamp(breakMins, 1, 60);
         _longBreakMinutes = Math.Clamp(longBreakMins, 1, 90);
+        _timerMinutes = Math.Clamp(timerMins, 1, 180);
         _autoStart = autoStart;
         _soundEnabled = sound;
 
@@ -2290,14 +3138,23 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         if (!_isRunning)
         {
             _remainingSeconds = GetPhaseDurationSeconds(_currentPhase);
+            if (_currentPhase == PomodoroPhase.Timer)
+            {
+                _timerTotalSeconds = _remainingSeconds;
+            }
         }
 
         NotifyAllProperties();
     }
 
+    public void ApplyCustomSettings(int focusMins, int breakMins, int longBreakMins, bool autoStart, bool sound)
+    {
+        ApplyCustomSettings(focusMins, breakMins, longBreakMins, _timerMinutes, autoStart, sound);
+    }
+
     public void SetWorkMinutes(int mins)
     {
-        ApplyCustomSettings(mins, _breakMinutes, _longBreakMinutes, _autoStart, _soundEnabled);
+        ApplyCustomSettings(mins, _breakMinutes, _longBreakMinutes, _timerMinutes, _autoStart, _soundEnabled);
     }
 
     private void LoadSettings()
@@ -2311,6 +3168,8 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
                 _breakMinutes = b;
             if (s.CustomSettings.TryGetValue("pomoLongBreakMins", out var lbVal) && int.TryParse(lbVal, out var lb))
                 _longBreakMinutes = lb;
+            if (s.CustomSettings.TryGetValue("pomoTimerMins", out var tVal) && int.TryParse(tVal, out var t))
+                _timerMinutes = t;
             if (s.CustomSettings.TryGetValue("pomoAutoStart", out var asVal) && bool.TryParse(asVal, out var a))
                 _autoStart = a;
             if (s.CustomSettings.TryGetValue("pomoSound", out var sndVal) && bool.TryParse(sndVal, out var snd))
@@ -2318,6 +3177,10 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         }
 
         _remainingSeconds = GetPhaseDurationSeconds(_currentPhase);
+        if (_currentPhase == PomodoroPhase.Timer)
+        {
+            _timerTotalSeconds = _remainingSeconds;
+        }
     }
 
     private void SaveSettings()
@@ -2328,6 +3191,7 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
             s.CustomSettings["pomoFocusMins"] = _focusMinutes.ToString();
             s.CustomSettings["pomoBreakMins"] = _breakMinutes.ToString();
             s.CustomSettings["pomoLongBreakMins"] = _longBreakMinutes.ToString();
+            s.CustomSettings["pomoTimerMins"] = _timerMinutes.ToString();
             s.CustomSettings["pomoAutoStart"] = _autoStart ? "true" : "false";
             s.CustomSettings["pomoSound"] = _soundEnabled ? "true" : "false";
             WidgetManager.Instance.SaveSettings();
@@ -2340,14 +3204,24 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(ModeText));
         OnPropertyChanged(nameof(ActionButtonText));
         OnPropertyChanged(nameof(AccentColor));
+        OnPropertyChanged(nameof(AccentMediaColor));
         OnPropertyChanged(nameof(ProgressPercent));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusTabTitle));
         OnPropertyChanged(nameof(BreakTabTitle));
+        OnPropertyChanged(nameof(TimerTabTitle));
+        OnPropertyChanged(nameof(PillBackground));
         OnPropertyChanged(nameof(FocusTabBackground));
         OnPropertyChanged(nameof(FocusTabForeground));
         OnPropertyChanged(nameof(BreakTabBackground));
         OnPropertyChanged(nameof(BreakTabForeground));
+        OnPropertyChanged(nameof(TimerTabBackground));
+        OnPropertyChanged(nameof(TimerTabForeground));
+        OnPropertyChanged(nameof(ResetButtonBackground));
+        OnPropertyChanged(nameof(ResetButtonForeground));
+        OnPropertyChanged(nameof(QuickButtonBackground));
+        OnPropertyChanged(nameof(QuickButtonForeground));
+        OnPropertyChanged(nameof(TimerControlsVisibility));
     }
 
     public void NotifyAllProperties()
@@ -2355,8 +3229,13 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         NotifyStateChanged();
         OnPropertyChanged(nameof(ResetButtonText));
         OnPropertyChanged(nameof(SwitchModeText));
+        OnPropertyChanged(nameof(Minus1mText));
+        OnPropertyChanged(nameof(Plus1mText));
+        OnPropertyChanged(nameof(Plus5mText));
+        OnPropertyChanged(nameof(Plus10mText));
     }
 }
+
 
 // 7. Quick Dock ViewModel
 public class DockAppItem : INotifyPropertyChanged
@@ -3080,7 +3959,20 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     public string PlaceholderText => LocalizationService.Instance.T("StickyNotes.Placeholder", "Новая задача или заметка...");
     public string ClearCompletedTooltip => LocalizationService.Instance.T("StickyNotes.ClearCompletedTooltip", "Очистить выполненные задачи");
     public string AddTaskTooltip => LocalizationService.Instance.T("StickyNotes.AddTaskTooltip", "Добавить задачу (Enter)");
-    public string EmptyStateText => LocalizationService.Instance.T("StickyNotes.EmptyState", "Все задачи выполнены! Отличная работа ✨");
+    public Visibility EmptyStateVisibility => (Tasks.Count == 0 || Tasks.All(t => t.IsDone)) ? Visibility.Visible : Visibility.Collapsed;
+
+    public string EmptyStateText
+    {
+        get
+        {
+            if (Tasks.Count == 0)
+                return LocalizationService.Instance.T("StickyNotes.EmptyNoTasks", "Задач пока нет. Добавьте первую задачу!");
+            if (Tasks.All(t => t.IsDone))
+                return LocalizationService.Instance.T("StickyNotes.EmptyAllDone", "Все задачи выполнены! Отличная работа ✨");
+            return "";
+        }
+    }
+
     public Visibility PlaceholderVisibility => string.IsNullOrEmpty(NewTaskText) ? Visibility.Visible : Visibility.Collapsed;
     public string CounterBadgeText => $"{NewTaskText?.Length ?? 0}/120";
     public bool CanAddTask => !string.IsNullOrWhiteSpace(NewTaskText);
@@ -3105,11 +3997,11 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
             if (string.IsNullOrWhiteSpace(NewTaskText)) return;
             var item = new NoteTaskItem { Text = NewTaskText.Trim(), IsDone = false };
             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
-            item.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
             Tasks.Add(item);
             NewTaskText = "";
             Save();
-            OnPropertyChanged(nameof(ActiveCountText));
+            UpdateTaskStateNotifications();
         });
 
         LocalizationService.Instance.LanguageChanged += () =>
@@ -3122,6 +4014,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
                 OnPropertyChanged(nameof(ClearCompletedTooltip));
                 OnPropertyChanged(nameof(AddTaskTooltip));
                 OnPropertyChanged(nameof(EmptyStateText));
+                OnPropertyChanged(nameof(EmptyStateVisibility));
             });
         };
 
@@ -3139,11 +4032,11 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         {
             var item = new NoteTaskItem { Text = text, IsDone = false };
             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
-            item.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+            item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
             Tasks.Add(item);
         }
         Save();
-        OnPropertyChanged(nameof(ActiveCountText));
+        UpdateTaskStateNotifications();
     }
 
     public void LoadCustomSettings()
@@ -3169,7 +4062,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     {
         Tasks.Remove(item);
         Save();
-        OnPropertyChanged(nameof(ActiveCountText));
+        UpdateTaskStateNotifications();
     }
 
     public void ClearCompletedTasks()
@@ -3180,7 +4073,14 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
             Tasks.Remove(item);
         }
         Save();
+        UpdateTaskStateNotifications();
+    }
+
+    private void UpdateTaskStateNotifications()
+    {
         OnPropertyChanged(nameof(ActiveCountText));
+        OnPropertyChanged(nameof(EmptyStateVisibility));
+        OnPropertyChanged(nameof(EmptyStateText));
     }
 
     private void Save()
@@ -3211,20 +4111,20 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
                         {
                             var item = new NoteTaskItem { Text = text, IsDone = done };
                             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
-                            item.Toggled = () => { Save(); OnPropertyChanged(nameof(ActiveCountText)); };
+                            item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
                             Tasks.Add(item);
                         }
                     }
                 }
             }
+            else
+            {
+                AddSampleTasks();
+            }
         }
         catch { }
 
-        if (Tasks.Count == 0)
-        {
-            AddSampleTasks();
-        }
-        OnPropertyChanged(nameof(ActiveCountText));
+        UpdateTaskStateNotifications();
     }
 }
 

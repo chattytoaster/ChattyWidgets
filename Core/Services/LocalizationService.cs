@@ -377,6 +377,16 @@ public class LocalizationService
         Add("MediaFrame.NoImagesFound", "В папке нет поддерживаемых изображений", "No supported images found in folder");
         Add("MediaFrame.PhotosFound", "Найдено фото: {0}", "Photos found: {0}");
         Add("MediaFrame.PhotoCounter", "Фото {0} из {1}", "Photo {0} of {1}");
+        Add("MediaFrame.BtnSingleFile", "🖼️ Выбрать одно фото...", "🖼️ Select single photo...");
+        Add("MediaFrame.BtnSingleFileShort", "🖼️ Одно фото...", "🖼️ Single photo...");
+        Add("MediaFrame.SelectPhotoDialog", "Выберите фотографию", "Select photo");
+        Add("MediaFrame.SinglePhotoLoaded", "Выбрано фото '{0}'", "Photo selected: '{0}'");
+        Add("MediaFrame.CurrentSource", "Текущий источник:", "Current source:");
+        Add("MediaFrame.SourceSinglePhoto", "Одно фото: {0}", "Single photo: {0}");
+        Add("MediaFrame.SourceFolder", "Папка: {0}", "Folder: {0}");
+        Add("MediaFrame.ControlsSection", "Панель навигации и стрелки", "Navigation Controls & Arrows");
+        Add("MediaFrame.AutoHideControls", "Скрывать панель (показывать только при наведении)", "Auto-hide control bar (show on hover)");
+        Add("MediaFrame.AutoHideControlsHint", "Стрелки навигации и подпись плавно появляются при наведении курсора на фоторамку", "Navigation arrows and caption smoothly appear when hovering over the widget");
 
         // 7. Music Player Widget
         Add("Music.Title", "Настройки Медиаплеера", "Music Player Settings");
@@ -432,6 +442,7 @@ public class LocalizationService
         Add("Pomodoro.Focus", "Фокус", "Focus");
         Add("Pomodoro.Break", "Отдых", "Break");
         Add("Pomodoro.LongBreak", "Длинный отдых", "Long Break");
+        Add("Pomodoro.Timer", "Таймер", "Timer");
         Add("Pomodoro.Start", "Старт", "Start");
         Add("Pomodoro.Pause", "Пауза", "Pause");
         Add("Pomodoro.Reset", "Сброс", "Reset");
@@ -439,17 +450,37 @@ public class LocalizationService
         Add("Pomodoro.TabFocus", "🍅 Фокус ({0}м)", "🍅 Focus ({0}m)");
         Add("Pomodoro.TabBreak", "☕ Отдых ({0}м)", "☕ Break ({0}m)");
         Add("Pomodoro.TabLongBreak", "🌿 Отдых ({0}м)", "🌿 Break ({0}m)");
+        Add("Pomodoro.TabTimer", "⏱ Таймер", "⏱ Timer");
         Add("Pomodoro.ModeFocus", "🎯 ФОКУС", "🎯 FOCUS");
         Add("Pomodoro.ModeBreak", "☕ ОТДЫХ", "☕ BREAK");
         Add("Pomodoro.ModeLongBreak", "🌿 ДЛИННЫЙ ОТДЫХ", "🌿 LONG BREAK");
+        Add("Pomodoro.ModeTimer", "⏱ ТАЙМЕР", "⏱ TIMER");
         Add("Pomodoro.BtnStart", "Старт", "Start");
         Add("Pomodoro.BtnPause", "Пауза", "Pause");
         Add("Pomodoro.BtnReset", "Сброс", "Reset");
         Add("Pomodoro.SessionActive", "🍅 Фокус-сессия активна", "🍅 Focus session active");
         Add("Pomodoro.BreakActive", "☕ Время перерыва", "☕ Break time active");
         Add("Pomodoro.LongBreakActive", "🌿 Восстанавливающий отдых", "🌿 Long recovery break active");
+        Add("Pomodoro.TimerActive", "⏱ Идёт отсчёт времени", "⏱ Countdown in progress");
+        Add("Pomodoro.TimerFinished", "🔔 Время вышло!", "🔔 Time is up!");
+        Add("Pomodoro.TimerReady", "Готов к запуску", "Ready to start");
         Add("Pomodoro.SessionPaused", "⏸ Таймер на паузе", "⏸ Timer paused");
         Add("Pomodoro.CompletedCount", "Выполнено сессий: {0}", "Completed sessions: {0}");
+        Add("Pomodoro.TimerDuration", "Длительность обычного таймера:", "Countdown Timer Duration:");
+        Add("Pomodoro.Timer1m", "1 минута", "1 minute");
+        Add("Pomodoro.Timer3m", "3 минуты", "3 minutes");
+        Add("Pomodoro.Timer5m", "5 минут", "5 minutes");
+        Add("Pomodoro.Timer10m", "10 минут (Классика)", "10 minutes (Classic)");
+        Add("Pomodoro.Timer15m", "15 минут", "15 minutes");
+        Add("Pomodoro.Timer20m", "20 минут", "20 minutes");
+        Add("Pomodoro.Timer30m", "30 минут", "30 minutes");
+        Add("Pomodoro.Timer45m", "45 минут", "45 minutes");
+        Add("Pomodoro.Timer60m", "60 минут (1 час)", "60 minutes (1 hour)");
+        Add("Pomodoro.Minus1m", "-1м", "-1m");
+        Add("Pomodoro.Plus1m", "+1м", "+1m");
+        Add("Pomodoro.Plus5m", "+5м", "+5m");
+        Add("Pomodoro.Plus10m", "+10м", "+10m");
+
 
         // 9. Sticky Notes Widget
         Add("StickyNotes.Title", "Настройки Заметок & Задач", "Sticky Notes & Tasks Settings");
@@ -466,6 +497,9 @@ public class LocalizationService
         Add("StickyNotes.ColorViolet", "Фиолетовый", "Violet");
         Add("StickyNotes.ColorSlate", "Тёмный грифель", "Minimalist Slate");
         Add("StickyNotes.BtnAddSamples", "+ Добавить примеры задач", "+ Add Sample Tasks");
+        Add("StickyNotes.EmptyNoTasks", "Задач пока нет. Добавьте первую задачу!", "No tasks yet. Add your first task!");
+        Add("StickyNotes.EmptyAllDone", "Все задачи выполнены! Отличная работа ✨", "All tasks completed! Great job ✨");
+        Add("StickyNotes.EmptyState", "Все задачи выполнены! Отличная работа ✨", "All tasks completed! Great job ✨");
 
         // 10. Quick Dock Widget
         Add("QuickDock.Title", "Настройки Панели Дока", "Quick Dock Settings");
@@ -525,6 +559,9 @@ public class LocalizationService
         Add("SystemGauges.StyleBars", "Линейные полоски (Bars)", "Linear Bars");
         Add("SystemGauges.StyleCircles", "Круговые диаграммы (Rings)", "Circular Rings");
         Add("SystemGauges.StyleCombined", "Комбинированный (Выбор в Конструкторе)", "Combined (Custom in Constructor)");
+        Add("SystemGauges.CircleColumnsTitle", "Расположение круговых диаграмм:", "Circular Gauges Layout:");
+        Add("SystemGauges.CircleColumns2", "2 в один ряд (Сетка 2x2)", "2 in a row (2-Column Grid)");
+        Add("SystemGauges.CircleColumns1", "1 в ряд (Список)", "1 per row (Single Column)");
 
         // Refresh Rate Options
         Add("SystemGauges.Refresh500ms", "500 мс (Быстро, плавные графики)", "500 ms (Fast, smooth charts)");
@@ -562,6 +599,9 @@ public class LocalizationService
         Add("GpuMonitor.Temperature", "Температура", "Temperature");
         Add("GpuMonitor.Temp", "Температура", "Temperature");
         Add("GpuMonitor.HardwareDwm", "Аппаратные счетчики DWM", "Hardware counters via Windows DWM");
+        Add("GpuMonitor.GaugeStyle", "Стиль отображения датчиков:", "Sensor Display Style:");
+        Add("GpuMonitor.GaugeStyleBars", "Линейные полоски (Bars)", "Linear Bars");
+        Add("GpuMonitor.GaugeStyleCircular", "Круговые диаграммы (Circular Rings)", "Circular Rings");
         Add("GpuMonitor.VramDisplayMode", "Режим отображения видеопамяти:", "VRAM Display Mode:");
         Add("GpuMonitor.VramGb", "В гигабайтах (ГБ) — e.g. 2.4 GB", "In Gigabytes (GB) — e.g. 2.4 GB");
         Add("GpuMonitor.VramPercent", "В процентах (%) — e.g. 45%", "In Percentage (%) — e.g. 45%");

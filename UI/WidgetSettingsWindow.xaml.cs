@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using ChattyWidgets.Core.Models;
 using ChattyWidgets.Core.Services;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
@@ -679,14 +680,15 @@ public partial class WidgetSettingsWindow : Window
     private void BuildCryptoSettings()
     {
         var loc = LocalizationService.Instance;
+        bool isRu = loc.IsRussian;
         TxtWindowTitle.Text = loc.T("Crypto.Title", "Настройки Котировок & Валют");
         AddSectionHeader(loc.T("Crypto.Header", "💎 Котировки криптовалют и курсы валют"),
-                         loc.T("Crypto.HeaderSub", "Актуальные цены через Binance API, Грам (GRAM) и центробанки"));
+                         loc.T("Crypto.HeaderSub", "Актуальные цены Binance API, Грам (GRAM 💎), ЦБ РФ и мировые валюты"));
 
         var cryptoVm = _viewModel as CryptoWidgetViewModel;
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
 
-        // Card 1: Base Currency Selector
+        // CARD 1: Base Currency Selector
         var cardBase = CreateCard();
         var spBase = new StackPanel();
 
@@ -700,7 +702,7 @@ public partial class WidgetSettingsWindow : Window
         });
         spBase.Children.Add(new TextBlock
         {
-            Text = loc.T("Crypto.BaseCurrencyHint", "Конвертировать все котировки в выбранную валюту"),
+            Text = loc.T("Crypto.BaseCurrencyHint", "Конвертировать криптовалюты и котировки в выбранную валюту"),
             FontSize = 11,
             Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             Margin = new Thickness(0, 0, 0, 8)
@@ -719,7 +721,13 @@ public partial class WidgetSettingsWindow : Window
             ("EUR", "€ EUR — Евро (Euro)"),
             ("RUB", "₽ RUB — Российский рубль (Russian Ruble)"),
             ("GBP", "£ GBP — Британский фунт (British Pound)"),
-            ("JPY", "¥ JPY — Японская иена (Japanese Yen)")
+            ("JPY", "¥ JPY — Японская иена (Japanese Yen)"),
+            ("CNY", "¥ CNY — Китайский юань (Chinese Yuan)"),
+            ("KZT", "₸ KZT — Казахстанский тенге (Kazakhstani Tenge)"),
+            ("TRY", "₺ TRY — Турецкая лира (Turkish Lira)"),
+            ("CHF", "Fr CHF — Швейцарский франк (Swiss Franc)"),
+            ("CAD", "C$ CAD — Канадский доллар (Canadian Dollar)"),
+            ("AUD", "A$ AUD — Австралийский доллар (Australian Dollar)")
         };
 
         foreach (var (code, display) in currencies)
@@ -753,88 +761,308 @@ public partial class WidgetSettingsWindow : Window
         cardBase.Child = spBase;
         SettingsPanel.Children.Add(cardBase);
 
-        // Card 2: Visible Assets Toggle (Tokens & Fiat)
+        // CARD 2: Add Custom Currency or Crypto Pair / Ticker
+        var cardAdd = CreateCard();
+        var spAdd = new StackPanel();
+
+        spAdd.Children.Add(new TextBlock
+        {
+            Text = loc.T("Crypto.AddCustomTitle", "➕ Добавить любую валютную пару или тикер:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+        spAdd.Children.Add(new TextBlock
+        {
+            Text = loc.T("Crypto.AddCustomHint", "Введите любой тикер криптовалюты (DOGE, AVAX, NEAR, SUI, PEPE...) или валютную пару (USD/CNY, KZT/RUB, EUR/USD, ETH/BTC). TON автоматически распознается как Грам (GRAM 💎):"),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        var dockAdd = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+
+        var btnAddCustom = new Button
+        {
+            Content = "+ " + loc.T("Crypto.AddBtn", "Добавить"),
+            Height = 32,
+            Padding = new Thickness(14, 0, 14, 0),
+            Background = new SolidColorBrush(Color.FromRgb(14, 165, 233)), // Sky blue
+            Foreground = Brushes.White,
+            FontWeight = FontWeights.SemiBold,
+            BorderThickness = new Thickness(0),
+            Cursor = Cursors.Hand,
+            Margin = new Thickness(8, 0, 0, 0)
+        };
+        DockPanel.SetDock(btnAddCustom, Dock.Right);
+
+        var txtCustomInput = new TextBox
+        {
+            Height = 32,
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+            Padding = new Thickness(8, 4, 8, 4),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+
+        Action? refreshCatalogUI = null;
+
+        Action doAddCustom = () =>
+        {
+            string raw = txtCustomInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(raw)) return;
+
+            string norm = CryptoWidgetViewModel.NormalizeKey(raw);
+            if (cryptoVm != null)
+            {
+                cryptoVm.AddCustomToken(raw);
+                if (win != null)
+                {
+                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                    win.Settings.CustomSettings["cryptoCustomTokens"] = string.Join(",", cryptoVm.CustomTokens);
+                    WidgetManager.Instance.SaveSettings();
+                }
+                TxtStatus.Text = string.Format(loc.T("Crypto.AddedSuccess", "Тикер/пара '{0}' успешно добавлен(а)!"), norm);
+                txtCustomInput.Text = "";
+                refreshCatalogUI?.Invoke();
+                _onSettingsChanged?.Invoke();
+            }
+        };
+
+        btnAddCustom.Click += (s, e) => doAddCustom();
+        txtCustomInput.KeyDown += (s, e) =>
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                doAddCustom();
+            }
+        };
+
+        dockAdd.Children.Add(btnAddCustom);
+        dockAdd.Children.Add(txtCustomInput);
+        spAdd.Children.Add(dockAdd);
+
+        cardAdd.Child = spAdd;
+        SettingsPanel.Children.Add(cardAdd);
+
+        // CARD 3: Assets Catalog & Toggles with Search & Categories
         var cardAssets = CreateCard();
         var spAssets = new StackPanel();
 
         spAssets.Children.Add(new TextBlock
         {
-            Text = loc.T("Crypto.VisibleAssets", "Отображаемые активы и валютные пары:"),
+            Text = loc.T("Crypto.CatalogTitle", "Каталог активов и отслеживаемые пары:"),
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = Brushes.White,
-            Margin = new Thickness(0, 0, 0, 8)
+            Margin = new Thickness(0, 0, 0, 6)
         });
 
-        var assetDefinitions = new (string Key, string Glyph, string NameKey, string FallbackText)[]
+        // Search Filter Box
+        var txtSearchFilter = new TextBox
         {
-            ("BTC", "₿", "Crypto.Token.BTC", "Биткоин (BTC)"),
-            ("ETH", "Ξ", "Crypto.Token.ETH", "Эфириум (ETH)"),
-            ("SOL", "◎", "Crypto.Token.SOL", "Солана (SOL)"),
-            ("GRAM", "💎", "Crypto.Token.GRAM", "Грам (GRAM)"), // Former TON, completely rebranded to Gram / Грам!
-            ("BNB", "🟡", "Crypto.Token.BNB", "BNB (BNB)"),
-            ("XRP", "✕", "Crypto.Token.XRP", "Риппл (XRP)"),
-            ("USD/RUB", "$", "Crypto.Pair.USDRUB", "Доллар США / Рубль (USD/RUB)"),
-            ("EUR/RUB", "€", "Crypto.Pair.EURRUB", "Евро / Рубль (EUR/RUB)"),
-            ("EUR/USD", "€", "Crypto.Pair.EURUSD", "Евро / Доллар (EUR/USD)"),
-            ("GBP/USD", "£", "Crypto.Pair.GBPUSD", "Фунт / Доллар (GBP/USD)")
+            Height = 30,
+            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+            Padding = new Thickness(8, 4, 8, 4),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 8)
         };
 
-        var checkBoxes = new List<(string Key, CheckBox Box)>();
+        // Category Filter Chips
+        string currentCategory = "All"; // "All", "Active", "Crypto", "Fiat"
+        var spCategories = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
 
-        var gridTokens = new Grid { Margin = new Thickness(0, 0, 0, 10) };
-        gridTokens.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        gridTokens.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        for (int i = 0; i < assetDefinitions.Length; i++)
+        var catButtons = new List<(string Cat, Button Btn)>();
+        var categories = new[]
         {
-            if (i % 2 == 0)
-                gridTokens.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            ("All", loc.T("Crypto.CatAll", "Все")),
+            ("Active", loc.T("Crypto.CatActive", "Отслеживаемые")),
+            ("Crypto", loc.T("Crypto.CatCrypto", "Криптовалюты")),
+            ("Fiat", loc.T("Crypto.CatFiat", "Фиат & Форекс"))
+        };
 
-            var def = assetDefinitions[i];
-            bool isChecked = cryptoVm?.IsTokenEnabled(def.Key) ?? (def.Key != "BNB" && def.Key != "XRP" && def.Key != "EUR/USD" && def.Key != "GBP/USD");
-
-            var cb = new CheckBox
+        foreach (var (catKey, catLabel) in categories)
+        {
+            var btnCat = new Button
             {
-                Content = $"{def.Glyph}  {loc.T(def.NameKey, def.FallbackText)}",
+                Content = catLabel,
+                Height = 24,
+                Padding = new Thickness(10, 0, 10, 0),
+                Background = catKey == currentCategory ? new SolidColorBrush(Color.FromRgb(14, 165, 233)) : new SolidColorBrush(Color.FromArgb(25, 255, 255, 255)),
                 Foreground = Brushes.White,
-                FontSize = 11.5,
-                Margin = new Thickness(4, 4, 4, 4),
-                IsChecked = isChecked,
-                Tag = def.Key
+                FontSize = 10.5,
+                FontWeight = catKey == currentCategory ? FontWeights.Bold : FontWeights.Normal,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 0, 6, 0)
             };
-
-            cb.Checked += (s, e) =>
+            string localCat = catKey;
+            btnCat.Click += (s, e) =>
             {
-                cryptoVm?.SetTokenEnabled(def.Key, true);
-                if (win != null && cryptoVm != null)
+                currentCategory = localCat;
+                foreach (var (k, b) in catButtons)
                 {
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    WidgetManager.Instance.SaveSettings();
+                    b.Background = k == currentCategory ? new SolidColorBrush(Color.FromRgb(14, 165, 233)) : new SolidColorBrush(Color.FromArgb(25, 255, 255, 255));
+                    b.FontWeight = k == currentCategory ? FontWeights.Bold : FontWeights.Normal;
                 }
-                _onSettingsChanged?.Invoke();
+                refreshCatalogUI?.Invoke();
             };
-
-            cb.Unchecked += (s, e) =>
-            {
-                cryptoVm?.SetTokenEnabled(def.Key, false);
-                if (win != null && cryptoVm != null)
-                {
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    WidgetManager.Instance.SaveSettings();
-                }
-                _onSettingsChanged?.Invoke();
-            };
-
-            checkBoxes.Add((def.Key, cb));
-            Grid.SetRow(cb, i / 2);
-            Grid.SetColumn(cb, i % 2);
-            gridTokens.Children.Add(cb);
+            catButtons.Add((catKey, btnCat));
+            spCategories.Children.Add(btnCat);
         }
 
-        spAssets.Children.Add(gridTokens);
+        spAssets.Children.Add(txtSearchFilter);
+        spAssets.Children.Add(spCategories);
 
-        // Buttons for Quick Select
+        // Container for Asset Items
+        var scrollContainer = new ScrollViewer
+        {
+            MaxHeight = 280,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        var pnlAssetItems = new StackPanel();
+        scrollContainer.Content = pnlAssetItems;
+        spAssets.Children.Add(scrollContainer);
+
+        refreshCatalogUI = () =>
+        {
+            pnlAssetItems.Children.Clear();
+            if (cryptoVm == null) return;
+
+            string search = txtSearchFilter.Text.Trim().ToUpperInvariant();
+            var catalog = cryptoVm.GetCatalog();
+
+            var filtered = catalog.Where(item =>
+            {
+                if (currentCategory == "Active" && !cryptoVm.IsTokenEnabled(item.Key)) return false;
+                if (currentCategory == "Crypto" && item.Category != "Crypto") return false;
+                if (currentCategory == "Fiat" && item.Category != "Fiat") return false;
+
+                if (!string.IsNullOrEmpty(search))
+                {
+                    bool matchKey = item.Key.ToUpperInvariant().Contains(search);
+                    bool matchRu = item.NameRu.ToUpperInvariant().Contains(search);
+                    bool matchEn = item.NameEn.ToUpperInvariant().Contains(search);
+                    bool matchSym = item.Symbol.ToUpperInvariant().Contains(search);
+                    if (!matchKey && !matchRu && !matchEn && !matchSym) return false;
+                }
+                return true;
+            }).ToList();
+
+            if (filtered.Count == 0)
+            {
+                pnlAssetItems.Children.Add(new TextBlock
+                {
+                    Text = loc.T("Crypto.NoMatches", "Ничего не найдено. Нажмите 'Добавить' выше для создания новой пары."),
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    FontSize = 11,
+                    Margin = new Thickness(4, 8, 4, 8)
+                });
+                return;
+            }
+
+            var gridTokens = new Grid();
+            gridTokens.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            gridTokens.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            for (int i = 0; i < filtered.Count; i++)
+            {
+                if (i % 2 == 0)
+                    gridTokens.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+                var def = filtered[i];
+                bool isChecked = cryptoVm.IsTokenEnabled(def.Key);
+                bool isCustom = cryptoVm.IsCustomToken(def.Key);
+
+                var dockRow = new DockPanel { Margin = new Thickness(3, 3, 3, 3) };
+
+                if (isCustom)
+                {
+                    var btnDelete = new Button
+                    {
+                        Content = "✕",
+                        Width = 18,
+                        Height = 18,
+                        Background = Brushes.Transparent,
+                        Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+                        BorderThickness = new Thickness(0),
+                        Cursor = Cursors.Hand,
+                        ToolTip = loc.T("Crypto.DeleteCustom", "Удалить пользовательский тикер"),
+                        Margin = new Thickness(4, 0, 0, 0),
+                        FontSize = 9.5
+                    };
+                    string delKey = def.Key;
+                    btnDelete.Click += (s, e) =>
+                    {
+                        cryptoVm.RemoveCustomToken(delKey);
+                        if (win != null)
+                        {
+                            win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                            win.Settings.CustomSettings["cryptoCustomTokens"] = string.Join(",", cryptoVm.CustomTokens);
+                            WidgetManager.Instance.SaveSettings();
+                        }
+                        refreshCatalogUI?.Invoke();
+                        _onSettingsChanged?.Invoke();
+                    };
+                    DockPanel.SetDock(btnDelete, Dock.Right);
+                    dockRow.Children.Add(btnDelete);
+                }
+
+                string displayName = isRu ? def.NameRu : def.NameEn;
+                string labelText = $"{def.Icon}  {def.Symbol}" + (displayName != def.Symbol ? $" ({displayName})" : "");
+
+                var cb = new CheckBox
+                {
+                    Content = labelText,
+                    Foreground = Brushes.White,
+                    FontSize = 11.5,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    IsChecked = isChecked,
+                    Tag = def.Key
+                };
+
+                cb.Checked += (s, e) =>
+                {
+                    cryptoVm.SetTokenEnabled(def.Key, true);
+                    if (win != null)
+                    {
+                        win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                        WidgetManager.Instance.SaveSettings();
+                    }
+                    _onSettingsChanged?.Invoke();
+                };
+
+                cb.Unchecked += (s, e) =>
+                {
+                    cryptoVm.SetTokenEnabled(def.Key, false);
+                    if (win != null)
+                    {
+                        win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                        WidgetManager.Instance.SaveSettings();
+                    }
+                    _onSettingsChanged?.Invoke();
+                };
+
+                dockRow.Children.Add(cb);
+
+                Grid.SetRow(dockRow, i / 2);
+                Grid.SetColumn(dockRow, i % 2);
+                gridTokens.Children.Add(dockRow);
+            }
+
+            pnlAssetItems.Children.Add(gridTokens);
+        };
+
+        txtSearchFilter.TextChanged += (s, e) => refreshCatalogUI();
+
+        // Quick Actions Row
         var spQuick = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
         var btnSelectAll = new Button
         {
@@ -846,18 +1074,48 @@ public partial class WidgetSettingsWindow : Window
             FontSize = 11,
             BorderThickness = new Thickness(0),
             Cursor = Cursors.Hand,
-            Margin = new Thickness(0, 0, 8, 0)
+            Margin = new Thickness(0, 0, 6, 0)
         };
         btnSelectAll.Click += (s, e) =>
         {
-            foreach (var (_, cb) in checkBoxes) cb.IsChecked = true;
-            cryptoVm?.SelectAllTokens(assetDefinitions.Select(d => d.Key));
-            if (win != null && cryptoVm != null)
+            if (cryptoVm != null)
             {
-                win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                WidgetManager.Instance.SaveSettings();
+                cryptoVm.SelectAllTokens(cryptoVm.GetCatalog().Select(d => d.Key));
+                if (win != null)
+                {
+                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                    WidgetManager.Instance.SaveSettings();
+                }
+                refreshCatalogUI();
+                _onSettingsChanged?.Invoke();
             }
-            _onSettingsChanged?.Invoke();
+        };
+
+        var btnDeselectAll = new Button
+        {
+            Content = loc.T("Crypto.DeselectAll", "Снять все"),
+            Height = 26,
+            Padding = new Thickness(10, 0, 10, 0),
+            Background = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            Foreground = Brushes.White,
+            FontSize = 11,
+            BorderThickness = new Thickness(0),
+            Cursor = Cursors.Hand,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+        btnDeselectAll.Click += (s, e) =>
+        {
+            if (cryptoVm != null)
+            {
+                cryptoVm.DeselectAllTokens();
+                if (win != null)
+                {
+                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                    WidgetManager.Instance.SaveSettings();
+                }
+                refreshCatalogUI();
+                _onSettingsChanged?.Invoke();
+            }
         };
 
         var btnReset = new Button
@@ -873,29 +1131,34 @@ public partial class WidgetSettingsWindow : Window
         };
         btnReset.Click += (s, e) =>
         {
-            cryptoVm?.ResetToDefaults();
-            foreach (var (k, cb) in checkBoxes)
+            if (cryptoVm != null)
             {
-                cb.IsChecked = cryptoVm?.IsTokenEnabled(k) ?? false;
+                cryptoVm.ResetToDefaults();
+                if (win != null)
+                {
+                    win.Settings.CustomSettings["cryptoBaseCurrency"] = cryptoVm.BaseCurrency;
+                    win.Settings.CustomSettings["cryptoRefreshInterval"] = cryptoVm.RefreshInterval;
+                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
+                    WidgetManager.Instance.SaveSettings();
+                }
+                int defaultBaseIdx = Array.FindIndex(currencies, c => string.Equals(c.Item1, cryptoVm.BaseCurrency, StringComparison.OrdinalIgnoreCase));
+                if (defaultBaseIdx >= 0) comboBase.SelectedIndex = defaultBaseIdx;
+                refreshCatalogUI();
+                _onSettingsChanged?.Invoke();
             }
-            if (win != null && cryptoVm != null)
-            {
-                win.Settings.CustomSettings["cryptoBaseCurrency"] = cryptoVm.BaseCurrency;
-                win.Settings.CustomSettings["cryptoRefreshInterval"] = cryptoVm.RefreshInterval;
-                win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                WidgetManager.Instance.SaveSettings();
-            }
-            _onSettingsChanged?.Invoke();
         };
 
         spQuick.Children.Add(btnSelectAll);
+        spQuick.Children.Add(btnDeselectAll);
         spQuick.Children.Add(btnReset);
         spAssets.Children.Add(spQuick);
+
+        refreshCatalogUI();
 
         cardAssets.Child = spAssets;
         SettingsPanel.Children.Add(cardAssets);
 
-        // Card 3: Refresh Interval
+        // CARD 4: Auto-refresh interval
         var cardInterval = CreateCard();
         var spInterval = new StackPanel();
 
@@ -917,6 +1180,7 @@ public partial class WidgetSettingsWindow : Window
 
         var intervals = new[]
         {
+            ("15s", loc.T("Crypto.Interval15s", "15 секунд (Сверхбыстро)")),
             ("30s", loc.T("Crypto.Interval30s", "30 секунд (Быстро)")),
             ("60s", loc.T("Crypto.Interval60s", "60 секунд (По умолчанию)")),
             ("5m", loc.T("Crypto.Interval5m", "5 минут")),
@@ -930,7 +1194,7 @@ public partial class WidgetSettingsWindow : Window
 
         string curInterval = cryptoVm?.RefreshInterval ?? "60s";
         int intervalIdx = Array.FindIndex(intervals, iv => string.Equals(iv.Item1, curInterval, StringComparison.OrdinalIgnoreCase));
-        comboInterval.SelectedIndex = intervalIdx >= 0 ? intervalIdx : 1;
+        comboInterval.SelectedIndex = intervalIdx >= 0 ? intervalIdx : 2;
 
         comboInterval.SelectionChanged += (s, e) =>
         {
@@ -953,7 +1217,7 @@ public partial class WidgetSettingsWindow : Window
         cardInterval.Child = spInterval;
         SettingsPanel.Children.Add(cardInterval);
 
-        // Card 4: Manual Refresh Action & Live Feed
+        // CARD 5: Manual Refresh Action & Live Feed
         var cardAction = CreateCard();
         var spAction = new StackPanel();
 
@@ -995,6 +1259,7 @@ public partial class WidgetSettingsWindow : Window
         int currentFocus = 25;
         int currentBreak = 5;
         int currentLongBreak = 15;
+        int currentTimer = 10;
         bool currentAutoStart = false;
         bool currentSound = true;
 
@@ -1009,6 +1274,8 @@ public partial class WidgetSettingsWindow : Window
                 currentBreak = b;
             if (customSettings.TryGetValue("pomoLongBreakMins", out var lbVal) && int.TryParse(lbVal, out var lb))
                 currentLongBreak = lb;
+            if (customSettings.TryGetValue("pomoTimerMins", out var tVal) && int.TryParse(tVal, out var t))
+                currentTimer = t;
             if (customSettings.TryGetValue("pomoAutoStart", out var asVal) && bool.TryParse(asVal, out var a))
                 currentAutoStart = a;
             if (customSettings.TryGetValue("pomoSound", out var sVal) && bool.TryParse(sVal, out var s))
@@ -1021,15 +1288,17 @@ public partial class WidgetSettingsWindow : Window
             currentFocus = pomodoroVm.FocusMinutes;
             currentBreak = pomodoroVm.BreakMinutes;
             currentLongBreak = pomodoroVm.LongBreakMinutes;
+            currentTimer = pomodoroVm.TimerMinutes;
             currentAutoStart = pomodoroVm.AutoStart;
             currentSound = pomodoroVm.SoundEnabled;
         }
 
-        void SaveAndApply(int focus, int sBreak, int lBreak, bool auto, bool sound)
+        void SaveAndApply(int focus, int sBreak, int lBreak, int timer, bool auto, bool sound)
         {
             currentFocus = focus;
             currentBreak = sBreak;
             currentLongBreak = lBreak;
+            currentTimer = timer;
             currentAutoStart = auto;
             currentSound = sound;
 
@@ -1038,12 +1307,13 @@ public partial class WidgetSettingsWindow : Window
                 win.Settings.CustomSettings["pomoFocusMins"] = focus.ToString();
                 win.Settings.CustomSettings["pomoBreakMins"] = sBreak.ToString();
                 win.Settings.CustomSettings["pomoLongBreakMins"] = lBreak.ToString();
+                win.Settings.CustomSettings["pomoTimerMins"] = timer.ToString();
                 win.Settings.CustomSettings["pomoAutoStart"] = auto ? "true" : "false";
                 win.Settings.CustomSettings["pomoSound"] = sound ? "true" : "false";
                 WidgetManager.Instance.SaveSettings();
             }
 
-            pomodoroVm?.ApplyCustomSettings(focus, sBreak, lBreak, auto, sound);
+            pomodoroVm?.ApplyCustomSettings(focus, sBreak, lBreak, timer, auto, sound);
             _onSettingsChanged?.Invoke();
         }
 
@@ -1096,7 +1366,7 @@ public partial class WidgetSettingsWindow : Window
         {
             if (comboWork.SelectedItem is ComboBoxItem item && item.Tag is int mins)
             {
-                SaveAndApply(mins, currentBreak, currentLongBreak, currentAutoStart, currentSound);
+                SaveAndApply(mins, currentBreak, currentLongBreak, currentTimer, currentAutoStart, currentSound);
             }
         };
 
@@ -1151,7 +1421,7 @@ public partial class WidgetSettingsWindow : Window
         {
             if (comboShortBreak.SelectedItem is ComboBoxItem item && item.Tag is int mins)
             {
-                SaveAndApply(currentFocus, mins, currentLongBreak, currentAutoStart, currentSound);
+                SaveAndApply(currentFocus, mins, currentLongBreak, currentTimer, currentAutoStart, currentSound);
             }
         };
         spBreaks.Children.Add(comboShortBreak);
@@ -1198,7 +1468,7 @@ public partial class WidgetSettingsWindow : Window
         {
             if (comboLongBreak.SelectedItem is ComboBoxItem item && item.Tag is int mins)
             {
-                SaveAndApply(currentFocus, currentBreak, mins, currentAutoStart, currentSound);
+                SaveAndApply(currentFocus, currentBreak, mins, currentTimer, currentAutoStart, currentSound);
             }
         };
         spBreaks.Children.Add(comboLongBreak);
@@ -1206,7 +1476,66 @@ public partial class WidgetSettingsWindow : Window
         cardBreaks.Child = spBreaks;
         SettingsPanel.Children.Add(cardBreaks);
 
-        // 3. Automation and Sound Alert Card
+        // 3. Regular Countdown Timer Card
+        var cardTimer = CreateCard();
+        var spTimer = new StackPanel();
+
+        spTimer.Children.Add(new TextBlock
+        {
+            Text = loc.T("Pomodoro.TimerDuration", "Длительность обычного таймера:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        var comboTimer = new ComboBox
+        {
+            Height = 32,
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White
+        };
+
+        var timerOptions = new (int Minutes, string Key, string DefaultLabel)[]
+        {
+            (1, "Pomodoro.Timer1m", "1 минута"),
+            (3, "Pomodoro.Timer3m", "3 минуты"),
+            (5, "Pomodoro.Timer5m", "5 минут"),
+            (10, "Pomodoro.Timer10m", "10 минут (Классика)"),
+            (15, "Pomodoro.Timer15m", "15 минут"),
+            (20, "Pomodoro.Timer20m", "20 минут"),
+            (30, "Pomodoro.Timer30m", "30 минут"),
+            (45, "Pomodoro.Timer45m", "45 минут"),
+            (60, "Pomodoro.Timer60m", "60 минут (1 час)")
+        };
+
+        int selectedTimerIndex = 3; // Default 10 min
+        for (int i = 0; i < timerOptions.Length; i++)
+        {
+            var opt = timerOptions[i];
+            comboTimer.Items.Add(new ComboBoxItem
+            {
+                Content = loc.T(opt.Key, opt.DefaultLabel),
+                Tag = opt.Minutes
+            });
+            if (opt.Minutes == currentTimer)
+                selectedTimerIndex = i;
+        }
+        comboTimer.SelectedIndex = selectedTimerIndex;
+
+        comboTimer.SelectionChanged += (s, e) =>
+        {
+            if (comboTimer.SelectedItem is ComboBoxItem item && item.Tag is int mins)
+            {
+                SaveAndApply(currentFocus, currentBreak, currentLongBreak, mins, currentAutoStart, currentSound);
+            }
+        };
+
+        spTimer.Children.Add(comboTimer);
+        cardTimer.Child = spTimer;
+        SettingsPanel.Children.Add(cardTimer);
+
+        // 4. Automation and Sound Alert Card
         var cardOptions = CreateCard();
         var spOptions = new StackPanel();
 
@@ -1230,7 +1559,7 @@ public partial class WidgetSettingsWindow : Window
 
         var cbSound = new CheckBox
         {
-            Content = loc.T("Pomodoro.SoundAlert", "Воспроизводить звуковой сигнал при смене фазы"),
+            Content = loc.T("Pomodoro.SoundAlert", "Воспроизводить звуковой сигнал при завершении"),
             Foreground = Brushes.White,
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
@@ -1246,11 +1575,11 @@ public partial class WidgetSettingsWindow : Window
             TextWrapping = TextWrapping.Wrap
         };
 
-        cbAutoStart.Checked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, true, currentSound);
-        cbAutoStart.Unchecked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, false, currentSound);
+        cbAutoStart.Checked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentTimer, true, currentSound);
+        cbAutoStart.Unchecked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentTimer, false, currentSound);
 
-        cbSound.Checked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentAutoStart, true);
-        cbSound.Unchecked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentAutoStart, false);
+        cbSound.Checked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentTimer, currentAutoStart, true);
+        cbSound.Unchecked += (s, e) => SaveAndApply(currentFocus, currentBreak, currentLongBreak, currentTimer, currentAutoStart, false);
 
         spOptions.Children.Add(cbAutoStart);
         spOptions.Children.Add(txtAutoStartHint);
@@ -1388,6 +1717,38 @@ public partial class WidgetSettingsWindow : Window
         // Card 1: Display Modes & Units
         var cardDisplay = CreateCard();
         var spDisplay = new StackPanel();
+
+        // Gauge Display Style (Bars / Circular)
+        spDisplay.Children.Add(new TextBlock
+        {
+            Text = loc.T("GpuMonitor.GaugeStyle", "Стиль отображения датчиков:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        var comboGaugeStyle = new ComboBox
+        {
+            Height = 32,
+            Margin = new Thickness(0, 0, 0, 12),
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White
+        };
+        comboGaugeStyle.Items.Add(new ComboBoxItem { Content = loc.T("GpuMonitor.GaugeStyleBars", "▬ Линейные полоски (Bars)"), Tag = "bars" });
+        comboGaugeStyle.Items.Add(new ComboBoxItem { Content = loc.T("GpuMonitor.GaugeStyleCircular", "◯ Круговые диаграммы (Circular Rings)"), Tag = "circular" });
+        comboGaugeStyle.SelectedIndex = (gpuVm?.GaugeStyle == "circular") ? 1 : 0;
+
+        comboGaugeStyle.SelectionChanged += (s, e) =>
+        {
+            if (comboGaugeStyle.SelectedItem is ComboBoxItem item && item.Tag is string style)
+            {
+                gpuVm?.SetGaugeStyle(style);
+                TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
+                _onSettingsChanged?.Invoke();
+            }
+        };
+        spDisplay.Children.Add(comboGaugeStyle);
 
         // VRAM Display Mode
         spDisplay.Children.Add(new TextBlock
@@ -2106,65 +2467,144 @@ public partial class WidgetSettingsWindow : Window
             return;
         }
 
-        // 1. Folder Selection & Drag-and-Drop Card
+        // 1. Folder & Single Photo Selection & Drag-and-Drop Card
         var folderCard = CreateCard();
         var folderSp = new StackPanel();
 
-        var lblFolder = new TextBlock
+        var lblSource = new TextBlock
         {
-            Text = LocalizationService.Instance.T("MediaFrame.CurrentFolder", "Текущая папка:"),
+            Text = LocalizationService.Instance.T("MediaFrame.CurrentSource", "Текущий источник:"),
             FontSize = 11,
             Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             Margin = new Thickness(0, 0, 0, 4)
         };
-        folderSp.Children.Add(lblFolder);
+        folderSp.Children.Add(lblSource);
 
-        string folderDisplay = !string.IsNullOrEmpty(frameVm.CustomFolder)
-            ? frameVm.CustomFolder
-            : LocalizationService.Instance.T("MediaFrame.DefaultPictures", "Стандартная папка «Изображения»");
-
-        var txtCurrentFolder = new TextBlock
+        var txtCurrentSource = new TextBlock
         {
-            Text = folderDisplay,
             FontSize = 11.5,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
             TextTrimming = TextTrimming.CharacterEllipsis,
             Margin = new Thickness(0, 0, 0, 10)
         };
-        folderSp.Children.Add(txtCurrentFolder);
+        void UpdateSourceLabel()
+        {
+            if (frameVm.IsSingleFileMode && !string.IsNullOrEmpty(frameVm.SingleFilePath))
+            {
+                txtCurrentSource.Text = string.Format(LocalizationService.Instance.T("MediaFrame.SourceSinglePhoto", "Одно фото: {0}"), frameVm.SingleFilePath);
+            }
+            else if (!string.IsNullOrEmpty(frameVm.CustomFolder))
+            {
+                txtCurrentSource.Text = string.Format(LocalizationService.Instance.T("MediaFrame.SourceFolder", "Папка: {0}"), frameVm.CustomFolder);
+            }
+            else
+            {
+                txtCurrentSource.Text = LocalizationService.Instance.T("MediaFrame.DefaultPictures", "Стандартная папка «Изображения»");
+            }
+        }
+        UpdateSourceLabel();
+        folderSp.Children.Add(txtCurrentSource);
+
+        // Buttons Grid for Folder and Single Photo
+        var buttonsGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+        buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+        buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var btnFolder = new Button
         {
-            Content = LocalizationService.Instance.T("MediaFrame.BtnFolder", "📁 Выбрать папку с фотографиями..."),
+            Content = LocalizationService.Instance.T("MediaFrame.BtnFolder", "📁 Выбрать папку..."),
             Height = 34,
             Background = new SolidColorBrush(Color.FromArgb(25, 56, 189, 248)),
             Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
             FontWeight = FontWeights.Bold,
             BorderThickness = new Thickness(0),
-            Cursor = Cursors.Hand,
-            Margin = new Thickness(0, 0, 0, 10)
+            Cursor = Cursors.Hand
         };
         btnFolder.Click += (s, e) =>
         {
-            var dlg = new Microsoft.Win32.OpenFolderDialog
+            try
             {
-                Title = LocalizationService.Instance.T("MediaFrame.SelectFolderDialog", "Выберите папку с изображениями")
+                var dlg = new Microsoft.Win32.OpenFolderDialog
+                {
+                    Title = LocalizationService.Instance.T("MediaFrame.SelectFolderDialog", "Выберите папку с изображениями")
+                };
+                if (!string.IsNullOrEmpty(frameVm.CustomFolder) && Directory.Exists(frameVm.CustomFolder))
+                {
+                    dlg.InitialDirectory = frameVm.CustomFolder;
+                }
+
+                if (dlg.ShowDialog() == true)
+                {
+                    frameVm.SetCustomFolder(dlg.FolderName);
+                    UpdateSourceLabel();
+                    TxtStatus.Text = string.Format(LocalizationService.Instance.T("MediaFrame.FolderLoaded", "Загружены фотографии из папки '{0}'"), Path.GetFileName(dlg.FolderName));
+                    _onSettingsChanged?.Invoke();
+                }
+            }
+            catch
+            {
+                using var fbd = new System.Windows.Forms.FolderBrowserDialog
+                {
+                    Description = LocalizationService.Instance.T("MediaFrame.SelectFolderDialog", "Выберите папку с изображениями"),
+                    UseDescriptionForTitle = true
+                };
+                if (!string.IsNullOrEmpty(frameVm.CustomFolder) && Directory.Exists(frameVm.CustomFolder))
+                {
+                    fbd.SelectedPath = frameVm.CustomFolder;
+                }
+                if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    frameVm.SetCustomFolder(fbd.SelectedPath);
+                    UpdateSourceLabel();
+                    TxtStatus.Text = string.Format(LocalizationService.Instance.T("MediaFrame.FolderLoaded", "Загружены фотографии из папки '{0}'"), Path.GetFileName(fbd.SelectedPath));
+                    _onSettingsChanged?.Invoke();
+                }
+            }
+        };
+        Grid.SetColumn(btnFolder, 0);
+        buttonsGrid.Children.Add(btnFolder);
+
+        var btnSinglePhoto = new Button
+        {
+            Content = LocalizationService.Instance.T("MediaFrame.BtnSingleFileShort", "🖼️ Одно фото..."),
+            Height = 34,
+            Background = new SolidColorBrush(Color.FromArgb(25, 168, 85, 247)),
+            Foreground = new SolidColorBrush(Color.FromRgb(192, 132, 252)),
+            FontWeight = FontWeights.Bold,
+            BorderThickness = new Thickness(0),
+            Cursor = Cursors.Hand
+        };
+        btnSinglePhoto.Click += (s, e) =>
+        {
+            var ofd = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = LocalizationService.Instance.T("MediaFrame.SelectPhotoDialog", "Выберите фотографию"),
+                Filter = "Изображения (*.jpg;*.jpeg;*.png;*.bmp;*.webp;*.gif)|*.jpg;*.jpeg;*.png;*.bmp;*.webp;*.gif|Все файлы (*.*)|*.*"
             };
-            if (!string.IsNullOrEmpty(frameVm.CustomFolder) && Directory.Exists(frameVm.CustomFolder))
+            if (!string.IsNullOrEmpty(frameVm.SingleFilePath) && File.Exists(frameVm.SingleFilePath))
             {
-                dlg.InitialDirectory = frameVm.CustomFolder;
+                ofd.InitialDirectory = Path.GetDirectoryName(frameVm.SingleFilePath);
+                ofd.FileName = Path.GetFileName(frameVm.SingleFilePath);
+            }
+            else if (!string.IsNullOrEmpty(frameVm.CustomFolder) && Directory.Exists(frameVm.CustomFolder))
+            {
+                ofd.InitialDirectory = frameVm.CustomFolder;
             }
 
-            if (dlg.ShowDialog() == true)
+            if (ofd.ShowDialog() == true)
             {
-                frameVm.SetCustomFolder(dlg.FolderName);
-                txtCurrentFolder.Text = dlg.FolderName;
-                TxtStatus.Text = string.Format(LocalizationService.Instance.T("MediaFrame.FolderLoaded", "Загружены фотографии из папки '{0}'"), Path.GetFileName(dlg.FolderName));
+                frameVm.SetSingleFile(ofd.FileName);
+                UpdateSourceLabel();
+                TxtStatus.Text = string.Format(LocalizationService.Instance.T("MediaFrame.SinglePhotoLoaded", "Выбрано фото '{0}'"), Path.GetFileName(ofd.FileName));
                 _onSettingsChanged?.Invoke();
             }
         };
-        folderSp.Children.Add(btnFolder);
+        Grid.SetColumn(btnSinglePhoto, 2);
+        buttonsGrid.Children.Add(btnSinglePhoto);
+
+        folderSp.Children.Add(buttonsGrid);
 
         // Drag & Drop Indicator Box
         var dndBorder = new Border
@@ -2196,6 +2636,35 @@ public partial class WidgetSettingsWindow : Window
 
         folderCard.Child = folderSp;
         SettingsPanel.Children.Add(folderCard);
+
+        // 2. Navigation Bar & Arrows Card (AutoHide)
+        var navCard = CreateCard();
+        var navSp = new StackPanel();
+
+        var cbAutoHide = new CheckBox
+        {
+            Content = "👀 " + LocalizationService.Instance.T("MediaFrame.AutoHideControls", "Скрывать панель (показывать только при наведении)"),
+            Foreground = Brushes.White,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            IsChecked = frameVm.AutoHideControls,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        cbAutoHide.Checked += (s, e) => { frameVm.AutoHideControls = true; _onSettingsChanged?.Invoke(); };
+        cbAutoHide.Unchecked += (s, e) => { frameVm.AutoHideControls = false; _onSettingsChanged?.Invoke(); };
+        navSp.Children.Add(cbAutoHide);
+
+        navSp.Children.Add(new TextBlock
+        {
+            Text = LocalizationService.Instance.T("MediaFrame.AutoHideControlsHint", "Стрелки навигации и подпись плавно появляются при наведении курсора на фоторамку"),
+            FontSize = 10.5,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(24, 0, 0, 0)
+        });
+
+        navCard.Child = navSp;
+        SettingsPanel.Children.Add(navCard);
 
         // 2. Slideshow Speed / Timer Card
         var timerCard = CreateCard();
@@ -2335,10 +2804,95 @@ public partial class WidgetSettingsWindow : Window
             loc.T("SystemGauges.Header", "⚡ Формат и сенсоры системы"),
             loc.T("SystemGauges.HeaderSub", "Настройка визуального представления сенсоров (полоски / круги / GPU / SSD)"));
 
-        var card = CreateCard();
-        var sp = new StackPanel();
+        var vm = _viewModel as SystemGaugesWidgetViewModel;
+        var config = SystemGaugesConfig.Load(_instanceId);
 
-        sp.Children.Add(new TextBlock
+        // Card 1: Layout & Style Options
+        var cardLayout = CreateCard();
+        var spLayout = new StackPanel();
+
+        // 1. Circular Gauges Columns (2 in a row vs 1)
+        spLayout.Children.Add(new TextBlock
+        {
+            Text = loc.T("SystemGauges.CircleColumnsTitle", "Расположение круговых диаграмм:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        var comboCols = new ComboBox
+        {
+            Height = 32,
+            Margin = new Thickness(0, 0, 0, 12),
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White
+        };
+        comboCols.Items.Add(new ComboBoxItem { Content = loc.T("SystemGauges.CircleColumns2", "2 в один ряд (Сетка 2x2)"), Tag = 2 });
+        comboCols.Items.Add(new ComboBoxItem { Content = loc.T("SystemGauges.CircleColumns1", "1 в ряд (Список)"), Tag = 1 });
+        comboCols.SelectedIndex = config.CircleColumns == 1 ? 1 : 0;
+
+        comboCols.SelectionChanged += (s, e) =>
+        {
+            if (comboCols.SelectedItem is ComboBoxItem item && item.Tag is int cols)
+            {
+                config.CircleColumns = cols;
+                SystemGaugesConfig.Save(_instanceId, config);
+                vm?.SetCircleColumns(cols);
+                TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
+                _onSettingsChanged?.Invoke();
+            }
+        };
+        spLayout.Children.Add(comboCols);
+
+        // 2. Quick Gauge Style Switcher
+        spLayout.Children.Add(new TextBlock
+        {
+            Text = loc.T("SystemGauges.StyleSection", "Стиль отображения шкал:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        var comboStyle = new ComboBox
+        {
+            Height = 32,
+            Margin = new Thickness(0, 0, 0, 12),
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White
+        };
+        comboStyle.Items.Add(new ComboBoxItem { Content = loc.T("SystemGauges.StyleCircles", "Круговые диаграммы (Rings)"), Tag = "circular" });
+        comboStyle.Items.Add(new ComboBoxItem { Content = loc.T("SystemGauges.StyleBars", "Линейные полоски (Bars)"), Tag = "bars" });
+
+        bool allCircles = config.Items.Where(i => i.IsEnabled).All(i => i.DisplayType == GaugeDisplayType.Circle);
+        comboStyle.SelectedIndex = allCircles ? 0 : 1;
+
+        comboStyle.SelectionChanged += (s, e) =>
+        {
+            if (comboStyle.SelectedItem is ComboBoxItem item && item.Tag is string style)
+            {
+                var targetType = style == "circular" ? GaugeDisplayType.Circle : GaugeDisplayType.Bar;
+                foreach (var gi in config.Items)
+                {
+                    gi.DisplayType = targetType;
+                }
+                SystemGaugesConfig.Save(_instanceId, config);
+                vm?.SetGaugeStyle(style);
+                TxtStatus.Text = loc.T("Common.ChangesApplied", "Изменения применяются мгновенно");
+                _onSettingsChanged?.Invoke();
+            }
+        };
+        spLayout.Children.Add(comboStyle);
+
+        cardLayout.Child = spLayout;
+        SettingsPanel.Children.Add(cardLayout);
+
+        // Card 2: Visual Constructor Button
+        var cardConstructor = CreateCard();
+        var spConstructor = new StackPanel();
+
+        spConstructor.Children.Add(new TextBlock
         {
             Text = loc.T("SystemGauges.BtnConstructorHint", "Индивидуальная сортировка, выбор шкал и цвета сенсоров"),
             FontSize = 11.5,
@@ -2367,10 +2921,10 @@ public partial class WidgetSettingsWindow : Window
             constructorWin.Owner = this;
             constructorWin.ShowDialog();
         };
-        sp.Children.Add(btnConstructor);
+        spConstructor.Children.Add(btnConstructor);
 
-        card.Child = sp;
-        SettingsPanel.Children.Add(card);
+        cardConstructor.Child = spConstructor;
+        SettingsPanel.Children.Add(cardConstructor);
     }
 
     // 12. Quick Dock
