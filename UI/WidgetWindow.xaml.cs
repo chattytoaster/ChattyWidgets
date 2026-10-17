@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -214,6 +215,8 @@ public partial class WidgetWindow : Window
             // Suppress Windows 11 DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
             int noneColor = unchecked((int)0xFFFFFFFE);
             Win32Native.DwmSetWindowAttribute(_hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noneColor, sizeof(int));
+
+            DesktopHostManager.DisableAeroSnap(_hwnd);
         }
         catch { }
     }
@@ -237,6 +240,7 @@ public partial class WidgetWindow : Window
         }, IntPtr.Zero);
     }
 
+    private bool _isDragMoving = false;
     private bool _isFreeResizeEnabled = false;
     private const int RESIZE_BORDER_THICKNESS = 10;
 
@@ -382,12 +386,50 @@ public partial class WidgetWindow : Window
             handled = true;
             return IntPtr.Zero;
         }
-        else if (msg == 0x0112 /* WM_SYSCOMMAND */)
+        else if (msg == Win32Native.WM_WINDOWPOSCHANGING && _isDragMoving)
+        {
+            try
+            {
+                var wp = Marshal.PtrToStructure<Win32Native.WINDOWPOS>(lParam);
+                int targetW = (int)Math.Round(Settings.Width > 0 ? Settings.Width : (Width > 0 ? Width : 200));
+                int targetH = (int)Math.Round(Settings.Height > 0 ? Settings.Height : (Height > 0 ? Height : 200));
+                if (targetW > 0 && targetH > 0)
+                {
+                    if ((wp.flags & Win32Native.SWP_NOSIZE) == 0 && (wp.cx != targetW || wp.cy != targetH))
+                    {
+                        wp.cx = targetW;
+                        wp.cy = targetH;
+                        wp.flags |= Win32Native.SWP_NOSIZE;
+                        Marshal.StructureToPtr(wp, lParam, false);
+                    }
+                }
+            }
+            catch { }
+        }
+        else if (msg == Win32Native.WM_GETMINMAXINFO)
+        {
+            try
+            {
+                var mmi = Marshal.PtrToStructure<Win32Native.MINMAXINFO>(lParam);
+                int targetW = (int)Math.Round(Settings.Width > 0 ? Settings.Width : (Width > 0 ? Width : 200));
+                int targetH = (int)Math.Round(Settings.Height > 0 ? Settings.Height : (Height > 0 ? Height : 200));
+                if (targetW > 0 && targetH > 0)
+                {
+                    mmi.ptMaxSize.X = targetW;
+                    mmi.ptMaxSize.Y = targetH;
+                    mmi.ptMaxPosition.X = (int)Math.Round(Left);
+                    mmi.ptMaxPosition.Y = (int)Math.Round(Top);
+                    Marshal.StructureToPtr(mmi, lParam, false);
+                }
+            }
+            catch { }
+        }
+        else if (msg == Win32Native.WM_SYSCOMMAND)
         {
             int command = (int)(wParam.ToInt64() & 0xFFF0);
-            if (command == 0xF020 /* SC_MINIMIZE */)
+            if (command == Win32Native.SC_MINIMIZE || command == Win32Native.SC_MAXIMIZE)
             {
-                // Prevent Windows / Explorer from minimizing widgets on Show Desktop (Win+D or taskbar button)
+                // Prevent Windows / Explorer from minimizing or maximizing widgets on Show Desktop / Snap
                 handled = true;
                 return IntPtr.Zero;
             }
@@ -398,13 +440,14 @@ public partial class WidgetWindow : Window
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
-        if (WindowState == WindowState.Minimized)
+        if (WindowState != WindowState.Normal)
         {
             WindowState = WindowState.Normal;
             if (_hwnd != IntPtr.Zero)
             {
                 DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
             }
+            EnsureWidgetSize();
         }
     }
 
@@ -779,6 +822,23 @@ public partial class WidgetWindow : Window
         WidgetContentHost.Content = border;
     }
 
+    private void EnsureWidgetSize()
+    {
+        if (WindowState != WindowState.Normal)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        double targetW = Settings.Width > 0 ? Settings.Width : (Width > 0 ? Width : 200);
+        double targetH = Settings.Height > 0 ? Settings.Height : (Height > 0 ? Height : 200);
+
+        if (Math.Abs(Width - targetW) > 1 || Math.Abs(Height - targetH) > 1)
+        {
+            Width = targetW;
+            Height = targetH;
+        }
+    }
+
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsClickThrough && !Settings.IsLocked)
@@ -789,8 +849,18 @@ public partial class WidgetWindow : Window
                 return;
             }
 
-            DragMove();
-            SnapToScreen();
+            try
+            {
+                _isDragMoving = true;
+                DragMove();
+            }
+            catch { }
+            finally
+            {
+                _isDragMoving = false;
+                EnsureWidgetSize();
+                SnapToScreen();
+            }
         }
     }
 
@@ -798,9 +868,19 @@ public partial class WidgetWindow : Window
     {
         if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsLocked)
         {
-            DragMove();
-            SnapToScreen();
-            e.Handled = true;
+            try
+            {
+                _isDragMoving = true;
+                DragMove();
+            }
+            catch { }
+            finally
+            {
+                _isDragMoving = false;
+                EnsureWidgetSize();
+                SnapToScreen();
+                e.Handled = true;
+            }
         }
     }
 
@@ -822,6 +902,7 @@ public partial class WidgetWindow : Window
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!IsLoaded || WindowState != WindowState.Normal) return;
+        if (_isDragMoving) return;
 
         double newW = Math.Round(e.NewSize.Width);
         double newH = Math.Round(e.NewSize.Height);
@@ -858,9 +939,19 @@ public partial class WidgetWindow : Window
         Dispatcher.Invoke(() =>
         {
             if (Settings.IsClickThrough || Settings.IsLocked) return;
-            Win32Native.ReleaseCapture();
-            Win32Native.SendMessage(_hwnd, Win32Native.WM_NCLBUTTONDOWN, (IntPtr)Win32Native.HTCAPTION, IntPtr.Zero);
-            SnapToScreen();
+            try
+            {
+                _isDragMoving = true;
+                Win32Native.ReleaseCapture();
+                Win32Native.SendMessage(_hwnd, (uint)Win32Native.WM_NCLBUTTONDOWN, (IntPtr)Win32Native.HTCAPTION, IntPtr.Zero);
+            }
+            catch { }
+            finally
+            {
+                _isDragMoving = false;
+                EnsureWidgetSize();
+                SnapToScreen();
+            }
         });
     }
 

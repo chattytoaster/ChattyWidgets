@@ -44,6 +44,9 @@ public static class Win32Native
 
     public const uint WS_POPUP = 0x80000000;
     public const uint WS_CHILD = 0x40000000;
+    public const uint WS_MAXIMIZEBOX = 0x00010000;
+    public const uint WS_MINIMIZEBOX = 0x00020000;
+    public const uint WS_THICKFRAME = 0x00040000;
 
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
@@ -64,6 +67,41 @@ public static class Win32Native
     public const int WM_RBUTTONUP = 0x0205;
     public const int WM_SIZING = 0x0214;
     public const int WM_MOVING = 0x0216;
+    public const int WM_GETMINMAXINFO = 0x0024;
+    public const int WM_WINDOWPOSCHANGING = 0x0046;
+    public const int WM_SYSCOMMAND = 0x0112;
+    public const int SC_MINIMIZE = 0xF020;
+    public const int SC_MAXIMIZE = 0xF030;
+    public const int SC_RESTORE = 0xF120;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WINDOWPOS
+    {
+        public IntPtr hwnd;
+        public IntPtr hwndInsertAfter;
+        public int x;
+        public int y;
+        public int cx;
+        public int cy;
+        public uint flags;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct MARGINS

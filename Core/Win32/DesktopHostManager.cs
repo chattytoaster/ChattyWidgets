@@ -77,6 +77,7 @@ public class DesktopHostManager
         if (hwnd == IntPtr.Zero) return;
 
         MakeToolWindow(hwnd);
+        DisableAeroSnap(hwnd);
 
         // Always ensure top-level window without owner interference
         Win32Native.SetParent(hwnd, IntPtr.Zero);
@@ -112,6 +113,23 @@ public class DesktopHostManager
         long exStyle = (long)Win32Native.GetWindowLongPtr(hwnd, Win32Native.GWL_EXSTYLE);
         exStyle |= Win32Native.WS_EX_TOOLWINDOW;
         Win32Native.SetWindowLongPtr(hwnd, Win32Native.GWL_EXSTYLE, (IntPtr)exStyle);
+    }
+
+    /// <summary>
+    /// Strips WS_MAXIMIZEBOX and WS_MINIMIZEBOX styles to disable Windows Aero Snap / Snap Assist
+    /// so the widget cannot snap to quarter or half screen when dragged to edges or corners.
+    /// </summary>
+    public static void DisableAeroSnap(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        try
+        {
+            long style = (long)Win32Native.GetWindowLongPtr(hwnd, Win32Native.GWL_STYLE);
+            style &= ~Win32Native.WS_MAXIMIZEBOX;
+            style &= ~Win32Native.WS_MINIMIZEBOX;
+            Win32Native.SetWindowLongPtr(hwnd, Win32Native.GWL_STYLE, (IntPtr)style);
+        }
+        catch { }
     }
 
     /// <summary>
