@@ -178,6 +178,24 @@ public class LocalizationService
         Add("SettingsWindow.Status", "Изменения применяются мгновенно", "Changes apply instantly");
         Add("SettingsWindow.Done", "Готово", "Done");
 
+        // Widget Theme Selector
+        Add("Settings.ThemeTitle", "🎨 Тема оформления", "🎨 Visual Theme");
+        Add("Settings.ThemeSubtitle", "Выберите тему для этого виджета или используйте глобальную настройку Хаба:", "Select theme for this widget or use global Hub setting:");
+        Add("Settings.ThemeAuto", "✦ Как в Хабе (Автоматически)", "✦ Match Hub (Auto)");
+        Add("Settings.ThemeDark", "🌙 Тёмная тема (Dark)", "🌙 Dark Theme");
+        Add("Settings.ThemeLight", "☀️ Светлая тема (Light)", "☀️ Light Theme");
+
+        // System Gauges View & Widget
+        Add("Gauges.HeaderTitle", "СИСТЕМА", "SYSTEM");
+        Add("Gauges.CpuTitle", "Процессор (CPU)", "Processor (CPU)");
+        Add("Gauges.RamTitle", "Память (RAM)", "Memory (RAM)");
+        Add("Gauges.DiskTitle", "Диск (C:)", "Storage (C:)");
+        Add("Gauges.DiskTitleShort", "💾 ДИСК (C:)", "💾 DISK (C:)");
+        Add("Gauges.NetTitle", "Сеть (Network)", "Network");
+        Add("Gauges.NetTitleShort", "🌐 СЕТЬ", "🌐 NETWORK");
+        Add("Gauges.GpuTitle", "Графика (GPU)", "Graphics (GPU)");
+        Add("Gauges.AllDisabled", "Все датчики отключены.\nОткройте Конструктор для включения.", "All sensors disabled.\nOpen Constructor to enable.");
+
         // Gauges Constructor
         Add("GaugesConstructor.Title", "Конструктор формата датчиков", "Sensor Format Constructor");
         Add("GaugesConstructor.Header", "Конструктор формата виджета", "Widget Format Constructor");

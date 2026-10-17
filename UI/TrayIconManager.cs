@@ -128,7 +128,7 @@ public class TrayIconManager : IDisposable
             foreach (var (manifest, dir) in installed)
             {
                 bool isActive = WidgetManager.Instance.IsWidgetActive(manifest.Id);
-                var widgetItem = new ToolStripMenuItem(manifest.Name)
+                var widgetItem = new ToolStripMenuItem(manifest.DisplayName)
                 {
                     Checked = isActive,
                     CheckOnClick = false

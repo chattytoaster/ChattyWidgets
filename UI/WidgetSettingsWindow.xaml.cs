@@ -113,11 +113,12 @@ public partial class WidgetSettingsWindow : Window
 
     private void AddThemeSelectorCard()
     {
+        var loc = LocalizationService.Instance;
         var card = CreateCard();
         var sp = new StackPanel();
         sp.Children.Add(new TextBlock
         {
-            Text = "🎨 Тема оформления",
+            Text = loc.T("Settings.ThemeTitle", "🎨 Тема оформления"),
             FontWeight = FontWeights.SemiBold,
             FontSize = 13,
             Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
@@ -125,7 +126,7 @@ public partial class WidgetSettingsWindow : Window
         });
         sp.Children.Add(new TextBlock
         {
-            Text = "Выберите тему для этого виджета или используйте глобальную настройку Хаба:",
+            Text = loc.T("Settings.ThemeSubtitle", "Выберите тему для этого виджета или используйте глобальную настройку Хаба:"),
             FontSize = 11,
             Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             Margin = new Thickness(0, 0, 0, 8),
@@ -139,9 +140,9 @@ public partial class WidgetSettingsWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255))
         };
-        cb.Items.Add(new ComboBoxItem { Content = "✦ Как в Хабе (Автоматически)", Tag = "auto" });
-        cb.Items.Add(new ComboBoxItem { Content = "🌙 Тёмная тема (Dark)", Tag = "dark" });
-        cb.Items.Add(new ComboBoxItem { Content = "☀️ Светлая тема (Light)", Tag = "light" });
+        cb.Items.Add(new ComboBoxItem { Content = loc.T("Settings.ThemeAuto", "✦ Как в Хабе (Автоматически)"), Tag = "auto" });
+        cb.Items.Add(new ComboBoxItem { Content = loc.T("Settings.ThemeDark", "🌙 Тёмная тема (Dark)"), Tag = "dark" });
+        cb.Items.Add(new ComboBoxItem { Content = loc.T("Settings.ThemeLight", "☀️ Светлая тема (Light)"), Tag = "light" });
 
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
         string curTheme = win?.Settings.Theme ?? "auto";

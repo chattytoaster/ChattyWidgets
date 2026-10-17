@@ -1280,6 +1280,8 @@ public class StoreItemViewModel
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string DisplayName => Item.DisplayName;
+    public string DisplayDescription => Item.DisplayDescription;
     public string Author { get; set; } = string.Empty;
     public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Разработчик: {Author}" : $"Developer: {Author}";
     public string Category { get; set; } = string.Empty;

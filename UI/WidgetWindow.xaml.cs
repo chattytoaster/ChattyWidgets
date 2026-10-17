@@ -82,9 +82,9 @@ public partial class WidgetWindow : Window
         MinWidth = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
         MinHeight = manifest.MinHeight > 0 ? manifest.MinHeight : 50;
 
-        string displayName = !string.IsNullOrWhiteSpace(settings.Title) && settings.Title != manifest.Name
+        string displayName = !string.IsNullOrWhiteSpace(settings.Title) && settings.Title != manifest.Name && settings.Title != manifest.DisplayName
             ? $"{settings.Title} (v{manifest.Version})"
-            : $"{manifest.Name} (v{manifest.Version})";
+            : $"{manifest.DisplayName} (v{manifest.Version})";
         MenuHeader.Header = displayName;
         UpdateMenuChecks();
         UpdateAnchorDotStyle();
@@ -115,6 +115,12 @@ public partial class WidgetWindow : Window
     private void ApplyLocalization()
     {
         var loc = LocalizationService.Instance;
+        string displayName = !string.IsNullOrWhiteSpace(Settings.Title) && Settings.Title != Manifest.Name && Settings.Title != Manifest.DisplayName
+            ? $"{Settings.Title} (v{Manifest.Version})"
+            : $"{Manifest.DisplayName} (v{Manifest.Version})";
+        if (MenuHeader != null) MenuHeader.Header = displayName;
+        Title = !string.IsNullOrWhiteSpace(Settings.Title) ? Settings.Title : Manifest.DisplayName;
+
         if (MenuWidgetSettings != null) MenuWidgetSettings.Header = loc.T("Menu.Settings", "⚙️ Настройки виджета...");
         if (MenuDuplicateWidget != null) MenuDuplicateWidget.Header = loc.T("Menu.Duplicate", "📋 Скопировать виджет (Создать копию)");
         if (MenuDeleteInstance != null) MenuDeleteInstance.Header = loc.T("Menu.Delete", "🗑 Удалить этот виджет");

@@ -1791,6 +1791,16 @@ public class SystemGaugesWidgetViewModel : NativeViewModelBase
     private int _circleColumns = 2;
     public int CircleColumns => _circleColumns;
 
+    public string HeaderTitle => LocalizationService.Instance.T("Gauges.HeaderTitle", "СИСТЕМА");
+    public string CpuTitle => LocalizationService.Instance.T("Gauges.CpuTitle", "Процессор (CPU)");
+    public string RamTitle => LocalizationService.Instance.T("Gauges.RamTitle", "Память (RAM)");
+    public string DiskTitle => LocalizationService.Instance.T("Gauges.DiskTitle", "Диск (C:)");
+    public string DiskTitleShort => LocalizationService.Instance.T("Gauges.DiskTitleShort", "💾 ДИСК (C:)");
+    public string NetTitleShort => LocalizationService.Instance.T("Gauges.NetTitleShort", "🌐 СЕТЬ");
+    public string MemoryDetail => $"{CurrentMetrics.UsedMemoryGb:0.0} / {CurrentMetrics.TotalMemoryGb:0} {(LocalizationService.Instance.IsRussian ? "ГБ" : "GB")}";
+    public string MemoryGbText => $"{CurrentMetrics.UsedMemoryGb:0.0} {(LocalizationService.Instance.IsRussian ? "ГБ" : "GB")}";
+    public string FormattedDownloadSpeed => FormatSpeed(CurrentMetrics.NetworkDownloadKbps);
+    public string FormattedUploadSpeed => FormatSpeed(CurrentMetrics.NetworkUploadKbps);
     public string FormattedCpu => $"{Math.Round(CurrentMetrics.CpuPercent)}%";
     public string FormattedMemory => $"{Math.Round(CurrentMetrics.MemoryPercent)}%";
     public string FormattedDisk => $"{Math.Round(CurrentMetrics.DiskPercent)}%";
@@ -1802,6 +1812,24 @@ public class SystemGaugesWidgetViewModel : NativeViewModelBase
         _instanceId = instanceId;
         LoadSettings();
 
+        LocalizationService.Instance.LanguageChanged += () =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(HeaderTitle));
+                OnPropertyChanged(nameof(CpuTitle));
+                OnPropertyChanged(nameof(RamTitle));
+                OnPropertyChanged(nameof(DiskTitle));
+                OnPropertyChanged(nameof(DiskTitleShort));
+                OnPropertyChanged(nameof(NetTitleShort));
+                OnPropertyChanged(nameof(MemoryDetail));
+                OnPropertyChanged(nameof(MemoryGbText));
+                OnPropertyChanged(nameof(FormattedDownloadSpeed));
+                OnPropertyChanged(nameof(FormattedUploadSpeed));
+                OnPropertyChanged(nameof(FormattedNetTotal));
+            });
+        };
+
         Monitor.MetricsUpdated += (m) =>
         {
             Application.Current?.Dispatcher?.Invoke(() =>
@@ -1812,6 +1840,10 @@ public class SystemGaugesWidgetViewModel : NativeViewModelBase
                 OnPropertyChanged(nameof(FormattedDisk));
                 OnPropertyChanged(nameof(FormattedNetTotal));
                 OnPropertyChanged(nameof(NetSpeedRatio));
+                OnPropertyChanged(nameof(MemoryDetail));
+                OnPropertyChanged(nameof(MemoryGbText));
+                OnPropertyChanged(nameof(FormattedDownloadSpeed));
+                OnPropertyChanged(nameof(FormattedUploadSpeed));
             });
         };
     }
@@ -1885,9 +1917,12 @@ public class SystemGaugesWidgetViewModel : NativeViewModelBase
 
     private static string FormatSpeed(double kbps)
     {
+        bool isRu = LocalizationService.Instance.IsRussian;
+        string unitMb = isRu ? "МБ/с" : "MB/s";
+        string unitKb = isRu ? "КБ/с" : "KB/s";
         if (kbps >= 1024.0)
-            return $"{(kbps / 1024.0):0.0} МБ/с";
-        return $"{kbps:0} КБ/с";
+            return $"{(kbps / 1024.0):0.0} {unitMb}";
+        return $"{kbps:0} {unitKb}";
     }
 }
 

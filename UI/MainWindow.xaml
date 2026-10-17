@@ -262,7 +262,7 @@
                                          <!-- Details -->
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Manifest.Name}" MaxWidth="260" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
+                                                <controls:MarqueeText Text="{Binding Manifest.DisplayName}" MaxWidth="260" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <Border Background="#1E293B" CornerRadius="6" Padding="6,2" Margin="0,0,6,0" VerticalAlignment="Center" Visibility="{Binding ActiveCopiesVisibility}">
                                                     <TextBlock Text="{Binding ActiveCopiesText}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
                                                 </Border>
@@ -274,7 +274,7 @@
                                                 </Border>
                                                 <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Manifest.Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
+                                            <controls:MarqueeText Text="{Binding Manifest.DisplayDescription}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0"/>
                                             <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
 
                                             <!-- Update available badge -->
@@ -325,8 +325,7 @@
                 <Border Grid.Row="1" Background="#141926" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
                     <DockPanel>
                         <TextBlock x:Name="TxtStoreHintTitle" Text="📦 Подсказка: " FontWeight="Bold" Foreground="#38BDF8" DockPanel.Dock="Left"/>
-                        <TextBlock x:Name="TxtStoreHintDesc" Text="Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." Foreground="#94A3B8"
-                                   TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
+                        <controls:MarqueeText x:Name="TxtStoreHintDesc" Text="Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." Foreground="#94A3B8"/>
                     </DockPanel>
                 </Border>
 
@@ -349,7 +348,7 @@
 
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" MaxWidth="260" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
+                                                <controls:MarqueeText Text="{Binding DisplayName}" MaxWidth="260" FontSize="15" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
                                                 </Border>
@@ -362,7 +361,7 @@
                                                     <TextBlock Text="{Binding UpdateBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
+                                            <controls:MarqueeText Text="{Binding DisplayDescription}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0"/>
                                             <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
                                         </StackPanel>
 

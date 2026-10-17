@@ -56,12 +56,47 @@ public partial class SystemGaugesView : UserControl
     {
         ReloadConfig();
         SystemMonitorService.Instance.MetricsUpdated += OnMetricsUpdated;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+        UpdateHeaderAndLocalization();
         UpdateView(SystemMonitorService.Instance.CurrentMetrics);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         SystemMonitorService.Instance.MetricsUpdated -= OnMetricsUpdated;
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            UpdateHeaderAndLocalization();
+            BuildDynamicUI();
+            UpdateView(SystemMonitorService.Instance.CurrentMetrics);
+        });
+    }
+
+    private void UpdateHeaderAndLocalization()
+    {
+        if (TxtHeaderTitle != null)
+        {
+            TxtHeaderTitle.Text = LocalizationService.Instance.T("Gauges.HeaderTitle", "СИСТЕМА");
+        }
+    }
+
+    private string GetLocalizedTitle(MetricGaugeItem item)
+    {
+        var loc = LocalizationService.Instance;
+        return item.Id.ToLowerInvariant() switch
+        {
+            "cpu" => loc.T("Gauges.CpuTitle", "Процессор (CPU)"),
+            "ram" => loc.T("Gauges.RamTitle", "Память (RAM)"),
+            "disk" => loc.T("Gauges.DiskTitle", "Диск (C:)"),
+            "gpu" => loc.T("Gauges.GpuTitle", "Графика (GPU)"),
+            "net" => loc.T("Gauges.NetTitle", "Сеть (Network)"),
+            _ => item.Title
+        };
     }
 
     private void OnMetricsUpdated(SystemMetrics metrics)
@@ -72,6 +107,7 @@ public partial class SystemGaugesView : UserControl
     public void ReloadConfig()
     {
         _config = SystemGaugesConfig.Load(_instanceId);
+        UpdateHeaderAndLocalization();
         if (TxtHeaderTitle != null)
         {
             TxtHeaderTitle.Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184));
@@ -90,7 +126,7 @@ public partial class SystemGaugesView : UserControl
         {
             var emptyNotice = new TextBlock
             {
-                Text = "Все датчики отключены.\nОткройте Конструктор для включения.",
+                Text = LocalizationService.Instance.T("Gauges.AllDisabled", "Все датчики отключены.\nОткройте Конструктор для включения."),
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 FontSize = 11,
                 TextAlignment = TextAlignment.Center,
@@ -178,7 +214,7 @@ public partial class SystemGaugesView : UserControl
 
         var txtTitle = new TextBlock
         {
-            Text = item.Title,
+            Text = GetLocalizedTitle(item),
             FontWeight = FontWeights.SemiBold,
             FontSize = 11,
             Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249)),
@@ -227,7 +263,8 @@ public partial class SystemGaugesView : UserControl
                 _updaters.Add(m =>
                 {
                     gauge.Value = m.MemoryPercent;
-                    txtDetail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ";
+                    string unit = LocalizationService.Instance.IsRussian ? "ГБ" : "GB";
+                    txtDetail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} {unit}";
                 });
                 break;
             case "disk":
@@ -267,21 +304,24 @@ public partial class SystemGaugesView : UserControl
                 ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
                 {
                     gauge.Value = m.CpuPercent;
-                    detail.Text = $"Загрузка: {m.CpuPercent:0}%";
+                    string prefix = LocalizationService.Instance.IsRussian ? "Загрузка: " : "Load: ";
+                    detail.Text = $"{prefix}{m.CpuPercent:0}%";
                 }));
                 break;
             case "ram":
                 ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
                 {
                     gauge.Value = m.MemoryPercent;
-                    detail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ ({m.MemoryPercent:0}%)";
+                    string unit = LocalizationService.Instance.IsRussian ? "ГБ" : "GB";
+                    detail.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} {unit} ({m.MemoryPercent:0}%)";
                 }));
                 break;
             case "disk":
                 ItemsHost.Children.Add(CreateCircleElement(item, (m, gauge, title, detail) =>
                 {
                     gauge.Value = m.DiskPercent;
-                    detail.Text = $"Занято: {m.DiskPercent:0}%";
+                    string prefix = LocalizationService.Instance.IsRussian ? "Занято: " : "Used: ";
+                    detail.Text = $"{prefix}{m.DiskPercent:0}%";
                 }));
                 break;
             case "gpu":
@@ -313,7 +353,8 @@ public partial class SystemGaugesView : UserControl
                 ItemsHost.Children.Add(CreateBarElement(item, (m, pb, val) =>
                 {
                     pb.Value = m.MemoryPercent;
-                    val.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} ГБ";
+                    string unit = LocalizationService.Instance.IsRussian ? "ГБ" : "GB";
+                    val.Text = $"{m.UsedMemoryGb:0.0} / {m.TotalMemoryGb:0} {unit}";
                 }));
                 break;
             case "disk":
@@ -364,7 +405,7 @@ public partial class SystemGaugesView : UserControl
         var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var txtTitle = new TextBlock
         {
-            Text = item.Title,
+            Text = GetLocalizedTitle(item),
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
             Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))
@@ -452,11 +493,14 @@ public partial class SystemGaugesView : UserControl
 
     private static string FormatSpeed(double kbps)
     {
+        bool isRu = LocalizationService.Instance.IsRussian;
+        string unitMb = isRu ? "МБ/с" : "MB/s";
+        string unitKb = isRu ? "КБ/с" : "KB/s";
         if (kbps >= 1024.0)
         {
-            return $"{(kbps / 1024.0):0.0} МБ/с";
+            return $"{(kbps / 1024.0):0.0} {unitMb}";
         }
-        return $"{kbps:0} КБ/с";
+        return $"{kbps:0} {unitKb}";
     }
 
     private UIElement CreateBarElement(MetricGaugeItem item, Action<SystemMetrics, ProgressBar, TextBlock> updateAction)
@@ -468,7 +512,7 @@ public partial class SystemGaugesView : UserControl
         var dock = new DockPanel();
         var txtTitle = new TextBlock
         {
-            Text = item.Title,
+            Text = GetLocalizedTitle(item),
             FontSize = 11.5,
             Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(203, 213, 225))
         };
@@ -530,7 +574,7 @@ public partial class SystemGaugesView : UserControl
         var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var txtTitle = new TextBlock
         {
-            Text = item.Title,
+            Text = GetLocalizedTitle(item),
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
             Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(241, 245, 249))

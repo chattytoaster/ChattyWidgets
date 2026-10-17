@@ -134,6 +134,9 @@ public class StoreItem
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("name_ru")]
+    public string? NameRu { get; set; }
+
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0.0";
 
@@ -142,6 +145,21 @@ public class StoreItem
 
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyName("description_ru")]
+    public string? DescriptionRu { get; set; }
+
+    [JsonIgnore]
+    public string DisplayName =>
+        ChattyWidgets.Core.Services.LocalizationService.Instance.IsRussian && !string.IsNullOrWhiteSpace(NameRu)
+            ? NameRu
+            : (!string.IsNullOrWhiteSpace(Name) ? Name : Id);
+
+    [JsonIgnore]
+    public string DisplayDescription =>
+        ChattyWidgets.Core.Services.LocalizationService.Instance.IsRussian && !string.IsNullOrWhiteSpace(DescriptionRu)
+            ? DescriptionRu
+            : Description;
 
     [JsonPropertyName("category")]
     public string Category { get; set; } = "General";
