@@ -1,11 +1,11 @@
-# ✦ ChattyWidgets 2.0 — Нативный движок виджетов для Windows (.NET 8)
+# ✦ ChattyWidgets 1.0.0 — Нативный движок виджетов для Windows (.NET 8)
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20x64-blue.svg)](https://microsoft.com)
 [![Framework](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Widgets](https://img.shields.io/badge/official%20widgets-12%20native-orange.svg)](StarterWidgets/)
 
-**ChattyWidgets 2.0** — сверхлегковесный, производительный и визуально безупречный движок виджетов для рабочего стола Windows с поддержкой нативного XAML/.NET 8 рантайма, веб-виджетов (HTML5/CSS3/JS WebView2), формата защищенных пакетов **`.chw`** с RSA-4096 криптографической подписью и официального облачного каталога.
+**ChattyWidgets 1.0.0** — сверхлегковесный, производительный и визуально безупречный движок виджетов для рабочего стола Windows с поддержкой нативного XAML/.NET 8 рантайма, веб-виджетов (HTML5/CSS3/JS WebView2), формата защищенных пакетов **`.chw`** с RSA-4096 криптографической подписью и официального облачного каталога.
 
 ---
 

@@ -995,6 +995,20 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OpenUrl(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    private void OnAboutGithubClick(object sender, RoutedEventArgs e) => OpenUrl("https://github.com/chattytoaster/ChattyWidgets");
+    private void OnAboutSiteClick(object sender, RoutedEventArgs e) => OpenUrl("https://chattyapps.dev");
+    private void OnAboutTelegramChannelClick(object sender, RoutedEventArgs e) => OpenUrl("https://t.me/chattyappsdev");
+    private void OnAboutTelegramBotClick(object sender, RoutedEventArgs e) => OpenUrl("https://t.me/chattyappsbot");
+
     private void OnThemeToggleClick(object sender, RoutedEventArgs e)
     {
         string cur = WidgetManager.Instance.Settings.Theme;
@@ -1107,7 +1121,7 @@ public partial class MainWindow : Window
         if (BtnImportChw != null) BtnImportChw.Content = LocalizationService.Instance.T("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)");
         if (BtnOpenAppData != null) BtnOpenAppData.Content = LocalizationService.Instance.T("Hub.OpenAppDataBtn", "Открыть папку данных виджетов (%LocalAppData%)");
         if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
-        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 2.0.0 (.NET 8.0 Windows x64)" : "Version: 2.0.0 (.NET 8.0 Windows x64)";
+        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 1.0.0 (.NET 8.0 Windows x64)" : "Version: 1.0.0 (.NET 8.0 Windows x64)";
         if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
 
         // Window caption controls
@@ -1123,7 +1137,7 @@ public partial class MainWindow : Window
             InputNewWidgetDesc.Text = isRu ? "Полезный виджет для рабочего стола Windows" : "A useful desktop widget for Windows";
 
         // Bottom status bar
-        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v2.0.0" : "ChattyWidgets Engine v2.0.0";
+        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v1.0.0" : "ChattyWidgets Engine v1.0.0";
 
         RenderPresetChips();
         RefreshInstalledWidgets();

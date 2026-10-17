@@ -12,16 +12,23 @@ public partial class App : System.Windows.Application
     [System.Runtime.InteropServices.DllImport("shell32.dll", SetLastError = true)]
     private static extern int SetCurrentProcessExplicitAppUserModelID([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)] string AppID);
 
+    public static void Log(string msg)
+    {
+        try
+        {
+            string logDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+            string appLog = System.IO.Path.Combine(logDir, "app.log");
+            System.IO.File.AppendAllText(appLog, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
+        }
+        catch { }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         try { SetCurrentProcessExplicitAppUserModelID("ChattyWidgets.App"); } catch {}
 
         string logDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
         System.IO.Directory.CreateDirectory(logDir);
-        string appLog = System.IO.Path.Combine(logDir, "app.log");
-        void Log(string msg) {
-            try { System.IO.File.AppendAllText(appLog, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n"); } catch {}
-        }
 
         Log("OnStartup entered");
         AttachConsole(-1);
@@ -151,6 +158,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log($"OnExit called with code: {e.ApplicationExitCode}\nStack: {Environment.StackTrace}");
         try
         {
             WidgetManager.Instance.SaveSettings();

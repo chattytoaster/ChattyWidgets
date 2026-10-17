@@ -585,8 +585,16 @@
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
                             <StackPanel>
                                 <TextBlock x:Name="TxtAboutTitle" Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
-                                <TextBlock x:Name="TxtAboutVersion" Text="Версия: 2.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
                                 <TextBlock x:Name="TxtAboutDesc" Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
+
+                                <!-- Official Links & Community Buttons -->
+                                <WrapPanel Margin="0,14,0,0">
+                                    <Button x:Name="BtnAboutGithub" Content="🐙 GitHub" Style="{StaticResource SecondaryBtn}" Padding="12,7" Margin="0,0,8,8" Click="OnAboutGithubClick" ToolTip="https://github.com/chattytoaster/ChattyWidgets"/>
+                                    <Button x:Name="BtnAboutSite" Content="🌐 chattyapps.dev" Style="{StaticResource SecondaryBtn}" Padding="12,7" Margin="0,0,8,8" Click="OnAboutSiteClick" ToolTip="https://chattyapps.dev"/>
+                                    <Button x:Name="BtnAboutTelegramChannel" Content="📢 @chattyappsdev" Style="{StaticResource SecondaryBtn}" Padding="12,7" Margin="0,0,8,8" Click="OnAboutTelegramChannelClick" ToolTip="https://t.me/chattyappsdev"/>
+                                    <Button x:Name="BtnAboutTelegramBot" Content="🤖 @chattyappsbot" Style="{StaticResource SecondaryBtn}" Padding="12,7" Margin="0,0,8,8" Click="OnAboutTelegramBotClick" ToolTip="https://t.me/chattyappsbot"/>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -599,7 +607,7 @@
         <Border x:Name="BottomStatusBar" Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="TxtStatus" Text="Готово" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
-                <TextBlock x:Name="TxtEngineVersion" Text="ChattyWidgets Engine v2.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtEngineVersion" Text="ChattyWidgets Engine v1.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
     </Grid>
