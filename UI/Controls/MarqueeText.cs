@@ -272,7 +272,7 @@ public class MarqueeText : FrameworkElement
         if (ft == null) return new Size(0, 0);
 
         double w = ft.WidthIncludingTrailingWhitespace;
-        double h = ft.Height;
+        double h = Math.Ceiling(ft.Height) + 4.0;
 
         if (!double.IsPositiveInfinity(availableSize.Width))
         {
@@ -380,8 +380,8 @@ public class MarqueeText : FrameworkElement
         double availableWidth = ActualWidth;
         double textWidth = ft.WidthIncludingTrailingWhitespace;
 
-        // Strictly clip all rendering to this control's arranged bounding box
-        dc.PushClip(new RectangleGeometry(new Rect(0, 0, availableWidth, ActualHeight)));
+        // Strictly clip all rendering to this control's horizontal bounds with vertical headroom
+        dc.PushClip(new RectangleGeometry(new Rect(0, -4, availableWidth, ActualHeight + 8)));
 
         double y = Math.Max(0, (ActualHeight - ft.Height) / 2);
 

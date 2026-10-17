@@ -247,6 +247,7 @@ public class LocalizationService
         Add("Hub.Acrylic", "Включить эффект размытия Acrylic / Mica для прозрачных виджетов", "Enable Acrylic / Mica blur effect for transparent widgets");
         Add("Hub.HotReload", "Включить Hot Reload (авто-перезагрузка при изменении кода виджета)", "Enable Hot Reload (auto-reload on widget code changes)");
         Add("Hub.DevMode", "Режим разработчика (F12 DevTools и расширенная консоль)", "Developer Mode (F12 DevTools and extended console)");
+        Add("Hub.AlwaysResizable", "Виджеты расширяемые все время", "Widgets always resizable");
         Add("Hub.ThemeLabel", "Тема оформления (Хаб и виджеты):", "Theme (Hub and widgets):");
         Add("Hub.ThemeHint", "При светлой теме иконки темные, при темной — светлые", "Dark icons in light mode, light icons in dark mode");
         Add("Hub.LanguageLabel", "Язык интерфейса (Хаб и виджеты):", "Interface Language (Hub & Widgets):");
@@ -258,6 +259,12 @@ public class LocalizationService
         Add("Hub.AboutTitle", "О движке ChattyWidgets", "About ChattyWidgets Engine");
         Add("Hub.AboutVersion", "Версия: 1.0.0 (.NET 8.0 Windows x64)", "Version: 1.0.0 (.NET 8.0 Windows x64)");
         Add("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.", "Engine optimized for 24/7 background operation: native widgets produce 0% CPU overhead and consume minimal memory.");
+        Add("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!", "A new version of ChattyWidgets is available!");
+        Add("Hub.DownloadUpdate", "🚀 Скачать обновление", "🚀 Download Update");
+        Add("Hub.CheckUpdates", "🔄 Проверить обновления", "🔄 Check for Updates");
+        Add("Hub.CheckingUpdates", "Проверка обновлений...", "Checking for updates...");
+        Add("Hub.LatestVersion", "У вас установлена последняя актуальная версия ✓", "You have the latest version installed ✓");
+        Add("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку выше для скачивания.", "New version {0} available! Click download above.");
 
         // Settings Dialog generic
         Add("Settings.WindowTitle", "Настройки виджета", "Widget Settings");

@@ -238,7 +238,7 @@ public partial class WidgetWindow : Window
     }
 
     private bool _isFreeResizeEnabled = false;
-    private const int RESIZE_BORDER_THICKNESS = 8;
+    private const int RESIZE_BORDER_THICKNESS = 10;
 
     private void OnWindowDragOver(object sender, DragEventArgs e)
     {
@@ -271,11 +271,19 @@ public partial class WidgetWindow : Window
 
     private IntPtr CheckResizeHitTest(Point windowPt)
     {
-        if (!_isFreeResizeEnabled)
+        if (Settings.IsLocked)
+            return IntPtr.Zero;
+
+        bool isFree = Settings.IsFreeResize || _isFreeResizeEnabled || (WidgetManager.Instance?.Settings?.AlwaysResizable ?? true);
+        if (!isFree)
             return IntPtr.Zero;
 
         double w = ActualWidth > 0 ? ActualWidth : Width;
         double h = ActualHeight > 0 ? ActualHeight : Height;
+
+        // Skip anchor dot area (top right 36x36) so it can be clicked
+        if (windowPt.X >= (w - 36) && windowPt.Y <= 36)
+            return IntPtr.Zero;
 
         bool left = windowPt.X >= 0 && windowPt.X <= RESIZE_BORDER_THICKNESS;
         bool right = windowPt.X >= (w - RESIZE_BORDER_THICKNESS) && windowPt.X <= w;
@@ -752,6 +760,12 @@ public partial class WidgetWindow : Window
     {
         if (e.ButtonState == MouseButtonState.Pressed && !Settings.IsClickThrough && !Settings.IsLocked)
         {
+            Point pt = e.GetPosition(this);
+            if (CheckResizeHitTest(pt) != IntPtr.Zero)
+            {
+                return;
+            }
+
             DragMove();
             SnapToScreen();
         }
@@ -1336,14 +1350,16 @@ public partial class WidgetWindow : Window
         if (MenuThemeAuto != null) MenuThemeAuto.IsChecked = Settings.Theme == "auto";
         if (MenuThemeDark != null) MenuThemeDark.IsChecked = Settings.Theme == "dark";
         if (MenuThemeLight != null) MenuThemeLight.IsChecked = Settings.Theme == "light";
-        MenuFreeResizeToggle.IsChecked = _isFreeResizeEnabled;
+
+        bool freeResizeActive = !Settings.IsLocked && (Settings.IsFreeResize || _isFreeResizeEnabled || (WidgetManager.Instance?.Settings?.AlwaysResizable ?? true));
+        if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.IsChecked = Settings.IsFreeResize || _isFreeResizeEnabled;
         if (ResizeGripHandle != null)
         {
-            ResizeGripHandle.Visibility = _isFreeResizeEnabled ? Visibility.Visible : Visibility.Collapsed;
+            ResizeGripHandle.Visibility = freeResizeActive ? Visibility.Visible : Visibility.Collapsed;
         }
         if (MenuDevTools != null)
         {
-            MenuDevTools.Visibility = WidgetManager.Instance.Settings.EnableDevMode ? Visibility.Visible : Visibility.Collapsed;
+            MenuDevTools.Visibility = (WidgetManager.Instance?.Settings?.EnableDevMode ?? true) ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -1617,10 +1633,14 @@ public partial class WidgetWindow : Window
     private void OnToggleFreeResizeClick(object sender, RoutedEventArgs e)
     {
         _isFreeResizeEnabled = MenuFreeResizeToggle.IsChecked;
-        if (ResizeGripHandle != null)
-        {
-            ResizeGripHandle.Visibility = _isFreeResizeEnabled ? Visibility.Visible : Visibility.Collapsed;
-        }
+        Settings.IsFreeResize = _isFreeResizeEnabled;
+        SettingsChanged?.Invoke(this);
+        UpdateMenuChecks();
+    }
+
+    public void UpdateResizeState()
+    {
+        Dispatcher.Invoke(UpdateMenuChecks);
     }
 
     private void OnThemeAutoClick(object sender, RoutedEventArgs e)

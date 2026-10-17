@@ -97,6 +97,16 @@ public class WidgetManager
         }
     }
 
+    public void UpdateAlwaysResizable(bool alwaysResizable)
+    {
+        Settings.AlwaysResizable = alwaysResizable;
+        SaveSettings();
+        foreach (var win in _activeWindows.Values)
+        {
+            try { win.UpdateResizeState(); } catch { }
+        }
+    }
+
     public void MoveWidgetToMonitor(string instanceId, int monitorIndex)
     {
         if (_activeWindows.TryGetValue(instanceId, out var window))

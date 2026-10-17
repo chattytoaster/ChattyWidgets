@@ -41,6 +41,9 @@ public class WidgetInstanceSettings
     [JsonPropertyName("isLocked")]
     public bool IsLocked { get; set; } = false;
 
+    [JsonPropertyName("isFreeResize")]
+    public bool IsFreeResize { get; set; } = false;
+
     [JsonPropertyName("opacity")]
     public double Opacity { get; set; } = 1.0;
 
@@ -121,6 +124,9 @@ public class AppSettings
 
     [JsonPropertyName("acrylicBlur")]
     public bool AcrylicBlur { get; set; } = false;
+
+    [JsonPropertyName("alwaysResizable")]
+    public bool AlwaysResizable { get; set; } = true;
 
     [JsonPropertyName("widgets")]
     public Dictionary<string, WidgetInstanceSettings> Widgets { get; set; } = new();

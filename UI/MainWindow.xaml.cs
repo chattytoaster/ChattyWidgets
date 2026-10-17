@@ -131,6 +131,7 @@ public partial class MainWindow : Window
             CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
             CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
             CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+            CheckAlwaysResizable.IsChecked = WidgetManager.Instance.Settings.AlwaysResizable;
             int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
             SliderGridSize.Value = currentGrid;
             TxtGridSizeVal.Text = $"{currentGrid} px";
@@ -141,6 +142,8 @@ public partial class MainWindow : Window
         {
             _isSuppressingSettingsEvents = false;
         }
+
+        _ = CheckForUpdatesSilentlyAsync();
 
         ApplyTheme(WidgetManager.Instance.Settings.Theme);
         LocalizationService.Instance.Initialize(WidgetManager.Instance.Settings.Language);
@@ -1183,6 +1186,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             if (CheckAcrylic != null) CheckAcrylic.IsChecked = WidgetManager.Instance.Settings.AcrylicBlur;
             if (CheckHotReload != null) CheckHotReload.IsChecked = WidgetManager.Instance.Settings.EnableHotReload;
             if (CheckDevMode != null) CheckDevMode.IsChecked = WidgetManager.Instance.Settings.EnableDevMode;
+            if (CheckAlwaysResizable != null) CheckAlwaysResizable.IsChecked = WidgetManager.Instance.Settings.AlwaysResizable;
             if (SliderGridSize != null)
             {
                 int currentGrid = WidgetManager.Instance.Settings.GridSize > 0 ? WidgetManager.Instance.Settings.GridSize : 10;
@@ -1277,6 +1281,16 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             : (devMode ? "Developer Mode (F12) enabled" : "Developer Mode (F12) disabled");
     }
 
+    private void OnAlwaysResizableChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isSuppressingSettingsEvents) return;
+        bool resizable = CheckAlwaysResizable.IsChecked == true;
+        WidgetManager.Instance.UpdateAlwaysResizable(resizable);
+        TxtStatus.Text = LocalizationService.Instance.IsRussian 
+            ? (resizable ? "Свободное изменение размера включено для всех виджетов" : "Свободное изменение размера выключено")
+            : (resizable ? "Free resize enabled for all widgets" : "Free resize disabled");
+    }
+
     private void OnGridSizeSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (TxtGridSizeVal != null)
@@ -1319,6 +1333,73 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
     private void OnAboutSiteClick(object sender, RoutedEventArgs e) => OpenUrl("https://chattyapps.dev");
     private void OnAboutTelegramChannelClick(object sender, RoutedEventArgs e) => OpenUrl("https://t.me/chattyappsdev");
     private void OnAboutTelegramBotClick(object sender, RoutedEventArgs e) => OpenUrl("https://t.me/chattyappsbot");
+
+    private async Task CheckForUpdatesSilentlyAsync()
+    {
+        try
+        {
+            var release = await UpdateService.Instance.CheckForUpdatesAsync();
+            if (release != null && release.IsNewer)
+            {
+                Dispatcher.Invoke(() => ShowUpdateBanner(release));
+            }
+        }
+        catch { }
+    }
+
+    private void ShowUpdateBanner(GitHubReleaseInfo release)
+    {
+        if (TxtUpdateTag != null) TxtUpdateTag.Text = release.TagName;
+        if (TxtUpdateNotice != null)
+        {
+            TxtUpdateNotice.Text = LocalizationService.Instance.IsRussian
+                ? "Доступно новое обновление ChattyWidgets!"
+                : "A new version of ChattyWidgets is available!";
+        }
+        if (BannerNewUpdate != null) BannerNewUpdate.Visibility = Visibility.Visible;
+        if (TxtStatus != null)
+        {
+            TxtStatus.Text = LocalizationService.Instance.IsRussian
+                ? $"Доступна новая версия: {release.TagName}"
+                : $"New version available: {release.TagName}";
+        }
+    }
+
+    private void OnDownloadUpdateClick(object sender, RoutedEventArgs e)
+    {
+        UpdateService.Instance.OpenReleasePage();
+    }
+
+    private void OnDismissUpdateClick(object sender, RoutedEventArgs e)
+    {
+        if (BannerNewUpdate != null) BannerNewUpdate.Visibility = Visibility.Collapsed;
+    }
+
+    private async void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+        if (BtnCheckUpdates == null || TxtUpdateStatus == null) return;
+
+        BtnCheckUpdates.IsEnabled = false;
+        TxtUpdateStatus.Visibility = Visibility.Visible;
+        TxtUpdateStatus.Text = LocalizationService.Instance.T("Hub.CheckingUpdates", "Проверка обновлений...");
+        TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#818CF8")!;
+
+        var release = await UpdateService.Instance.CheckForUpdatesAsync();
+        BtnCheckUpdates.IsEnabled = true;
+
+        if (release != null && release.IsNewer)
+        {
+            ShowUpdateBanner(release);
+            string msg = string.Format(LocalizationService.Instance.T("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку выше для скачивания."), release.TagName);
+            TxtUpdateStatus.Text = msg;
+            TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#38BDF8")!;
+        }
+        else
+        {
+            TxtUpdateStatus.Text = LocalizationService.Instance.T("Hub.LatestVersion", "У вас установлена последняя актуальная версия ✓");
+            TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#34D399")!;
+        }
+    }
 
     private void OnThemeToggleClick(object sender, RoutedEventArgs e)
     {
@@ -1441,6 +1522,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (CheckAcrylic != null) CheckAcrylic.Content = LocalizationService.Instance.T("Hub.Acrylic");
         if (CheckHotReload != null) CheckHotReload.Content = LocalizationService.Instance.T("Hub.HotReload");
         if (CheckDevMode != null) CheckDevMode.Content = LocalizationService.Instance.T("Hub.DevMode");
+        if (CheckAlwaysResizable != null) CheckAlwaysResizable.Content = LocalizationService.Instance.T("Hub.AlwaysResizable", "Виджеты расширяемые все время");
         if (TxtHubThemeLabel != null) TxtHubThemeLabel.Text = LocalizationService.Instance.T("Hub.ThemeLabel");
         if (TxtHubThemeHint != null) TxtHubThemeHint.Text = LocalizationService.Instance.T("Hub.ThemeHint");
         if (TxtHubLanguageLabel != null) TxtHubLanguageLabel.Text = LocalizationService.Instance.T("Hub.LanguageLabel");
@@ -1452,6 +1534,10 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
         if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 1.0.0 (.NET 8.0 Windows x64)" : "Version: 1.0.0 (.NET 8.0 Windows x64)";
         if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
+        if (BtnDownloadUpdate != null) BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadUpdate", "🚀 Скачать обновление");
+        if (BtnCheckUpdates != null) BtnCheckUpdates.Content = LocalizationService.Instance.T("Hub.CheckUpdates", "🔄 Проверить обновления");
+        if (TxtUpdateNotice != null && BannerNewUpdate?.Visibility == Visibility.Visible)
+            TxtUpdateNotice.Text = LocalizationService.Instance.T("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!");
 
         // Window caption controls
         if (BtnThemeToggle != null) BtnThemeToggle.ToolTip = isRu ? "Тема оформления (Тёмная / Светлая)" : "Theme (Dark / Light)";

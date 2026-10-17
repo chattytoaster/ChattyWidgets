@@ -208,7 +208,38 @@
             </Border>
 
         <!-- Main Content Area -->
-        <Grid Grid.Row="1" Margin="24">
+        <DockPanel Grid.Row="1">
+            <!-- Update Notification Banner (Auto height, Collapsed by default) -->
+            <Border x:Name="BannerNewUpdate" DockPanel.Dock="Top" Background="#18233C" BorderBrush="#3B82F6" BorderThickness="0,0,0,1"
+                    Padding="20,10" Visibility="Collapsed">
+                <DockPanel LastChildFill="True">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button x:Name="BtnDownloadUpdate" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}"
+                                Padding="14,6" FontSize="12.5" Click="OnDownloadUpdateClick" Margin="0,0,10,0"/>
+                        <Button x:Name="BtnDismissUpdate" Content="✕" Width="28" Height="28" Background="#20FFFFFF"
+                                Foreground="#94A3B8" BorderThickness="0" Cursor="Hand" Click="OnDismissUpdateClick">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" CornerRadius="6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="✨" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtUpdateNotice" Text="Доступна новая версия ChattyWidgets!"
+                                   FontSize="13.5" FontWeight="SemiBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                        <Border Background="#2563EB" CornerRadius="6" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtUpdateTag" Text="v1.1.0"
+                                       FontSize="11.5" Foreground="#FFFFFF" FontWeight="Bold"/>
+                        </Border>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Grid Margin="24">
             
             <!-- TAB 1: MY WIDGETS -->
             <Grid x:Name="ViewMyWidgets" Visibility="Visible">
@@ -582,6 +613,7 @@
                                 <CheckBox x:Name="CheckAcrylic" Content="Включить эффект размытия Acrylic / Mica для прозрачных виджетов" FontSize="14" Foreground="#F8FAFC" Checked="OnAcrylicChanged" Unchecked="OnAcrylicChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckHotReload" Content="Включить Hot Reload (авто-перезагрузка при изменении кода виджета)" FontSize="14" Foreground="#F8FAFC" Checked="OnHotReloadChanged" Unchecked="OnHotReloadChanged" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="CheckDevMode" Content="Режим разработчика (F12 DevTools и расширенная консоль)" FontSize="14" Foreground="#F8FAFC" Checked="OnDevModeChanged" Unchecked="OnDevModeChanged" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="CheckAlwaysResizable" Content="Виджеты расширяемые все время" FontSize="14" Foreground="#F8FAFC" Checked="OnAlwaysResizableChanged" Unchecked="OnAlwaysResizableChanged" Margin="0,0,0,14"/>
 
                                 <Separator Background="#252A3F" Margin="0,4,0,14"/>
 
@@ -661,7 +693,11 @@
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
                             <StackPanel>
                                 <TextBlock x:Name="TxtAboutTitle" Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
-                                <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                                    <Button x:Name="BtnCheckUpdates" Content="🔄 Проверить обновления" Style="{StaticResource SecondaryBtn}" Padding="10,4" Margin="14,0,0,0" FontSize="11" Click="OnCheckUpdatesClick"/>
+                                </StackPanel>
+                                <TextBlock x:Name="TxtUpdateStatus" Text="" Foreground="#34D399" FontSize="11.5" Margin="0,2,0,6" Visibility="Collapsed"/>
                                 <TextBlock x:Name="TxtAboutDesc" Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
 
                                 <!-- Official Links & Community Buttons -->
@@ -678,6 +714,7 @@
             </Grid>
 
         </Grid>
+        </DockPanel>
 
         <!-- Bottom Status Bar -->
         <Border x:Name="BottomStatusBar" Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
