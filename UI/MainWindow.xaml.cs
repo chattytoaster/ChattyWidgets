@@ -145,6 +145,7 @@ public partial class MainWindow : Window
 
         RefreshInstalledWidgets();
         RefreshStoreCatalog();
+        UpdateAgentSkillStatus();
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
@@ -229,6 +230,10 @@ public partial class MainWindow : Window
         if (TabStore.IsChecked == true)
         {
             RefreshStoreCatalog();
+        }
+        else if (TabWorkshop.IsChecked == true)
+        {
+            UpdateAgentSkillStatus();
         }
     }
 
@@ -858,6 +863,147 @@ public partial class MainWindow : Window
 
     // --- TAB: WORKSHOP ---
 
+    private static string GetAgentSkillTargetPath()
+    {
+        string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(userDir, ".agents", "skills", "chw");
+    }
+
+    public void UpdateAgentSkillStatus()
+    {
+        if (BadgeSkillStatus == null || TxtSkillStatusBadge == null || BtnInstallAgentSkill == null)
+            return;
+
+        bool isRu = LocalizationService.Instance.IsRussian;
+        string targetDir = GetAgentSkillTargetPath();
+        string skillFile = Path.Combine(targetDir, "SKILL.md");
+        bool isInstalled = File.Exists(skillFile);
+
+        if (isInstalled)
+        {
+            BadgeSkillStatus.Background = new SolidColorBrush(Color.FromRgb(6, 78, 59)); // Emerald dark
+            TxtSkillStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(52, 211, 153)); // Emerald light
+            TxtSkillStatusBadge.Text = isRu ? "✓ Скилл установлен" : "✓ Skill Installed";
+            BtnInstallAgentSkill.Content = isRu ? "🔄 Обновить скилл" : "🔄 Reinstall / Update";
+            if (BtnOpenSkillFolder != null) BtnOpenSkillFolder.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            BadgeSkillStatus.Background = new SolidColorBrush(Color.FromRgb(69, 26, 3)); // Amber dark
+            TxtSkillStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36)); // Amber light
+            TxtSkillStatusBadge.Text = isRu ? "⚠ Не установлен" : "⚠ Not Installed";
+            BtnInstallAgentSkill.Content = isRu ? "⚡ Установить скилл /chw" : "⚡ Install /chw Skill";
+            if (BtnOpenSkillFolder != null) BtnOpenSkillFolder.Visibility = Visibility.Collapsed;
+        }
+
+        if (TxtSkillPath != null)
+        {
+            TxtSkillPath.Text = targetDir;
+        }
+    }
+
+    private void OnInstallAgentSkillClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            bool isRu = LocalizationService.Instance.IsRussian;
+            string targetDir = GetAgentSkillTargetPath();
+            string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            string[] possibleSources = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", "skills", "chw"),
+                Path.Combine(Directory.GetCurrentDirectory(), ".agents", "skills", "chw"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".agents", "skills", "chw"),
+                Path.Combine(userDir, "Projects", "chattywidgets", ".agents", "skills", "chw")
+            };
+
+            string? foundSource = possibleSources.FirstOrDefault(d => Directory.Exists(d) && File.Exists(Path.Combine(d, "SKILL.md")));
+
+            Directory.CreateDirectory(targetDir);
+
+            if (foundSource != null)
+            {
+                CopyDirectoryRecursive(foundSource, targetDir);
+            }
+            else
+            {
+                WriteEmbeddedSkillFiles(targetDir);
+            }
+
+            UpdateAgentSkillStatus();
+
+            string title = isRu ? "Скилл /chw установлен" : "Skill /chw Installed";
+            string msg = isRu 
+                ? "Скилл для автономной разработки виджетов успешно установлен в ~/.agents/skills/chw!\n\nТеперь любой ИИ-ассистент (Antigravity, Claude Code, Cursor, Codex) умеет создавать виджеты по команде /chw." 
+                : "Widget development skill installed to ~/.agents/skills/chw!\n\nAI assistants can now build widgets via /chw command.";
+
+            _trayIcon?.ShowNotification(title, msg);
+            TxtStatus.Text = isRu ? "Скилл для агента /chw успешно установлен!" : "Agent skill /chw successfully installed!";
+            MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            TxtStatus.Text = $"Ошибка установки скилла: {ex.Message}";
+            MessageBox.Show($"Не удалось установить скилл: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnOpenSkillFolderClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string targetDir = GetAgentSkillTargetPath();
+            if (!Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", targetDir) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            TxtStatus.Text = $"Ошибка открытия папки: {ex.Message}";
+        }
+    }
+
+    private static void CopyDirectoryRecursive(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (string file in Directory.GetFiles(sourceDir))
+        {
+            string destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, true);
+        }
+
+        foreach (string subDir in Directory.GetDirectories(sourceDir))
+        {
+            string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+            CopyDirectoryRecursive(subDir, destSubDir);
+        }
+    }
+
+    private static void WriteEmbeddedSkillFiles(string targetDir)
+    {
+        string skillMd = @"---
+name: chw
+description: >-
+  Create, scaffold, implement, test, and publish desktop widgets for ChattyWidgets.
+  Trigger with `/chw` or when requested to develop a new widget, create glassmorphic XAML UI,
+  implement widget ViewModels, configure manifest.json, wire up custom settings cards,
+  package .chw files, and publish signed packages to ChattyWidgetsLibrary.
+---
+
+# ChattyWidgets Widget Development & Publishing Skill (`/chw`)
+
+Use this skill to autonomously scaffold, develop, wire up, locally test, and officially publish desktop widgets for the ChattyWidgets platform.
+
+## Workflow Overview
+[1. Define ID & Manifest] -> [2. Implement ViewModel & Loc] -> [3. Design Glass XAML UI] -> [4. Build Settings Card] -> [5. Pack, Build & Local Test] -> [6. User Approval & Publish]
+";
+        File.WriteAllText(Path.Combine(targetDir, "SKILL.md"), skillMd);
+    }
+
     private void OnCreateWidgetTemplateClick(object sender, RoutedEventArgs e)
     {
         string id = InputNewWidgetId.Text.Trim();
@@ -1118,6 +1264,15 @@ public partial class MainWindow : Window
 
         // Tab 3: Workshop
         if (TxtWorkshopTitle != null) TxtWorkshopTitle.Text = isRu ? "Мастерская Разработчика (.chw)" : "Developer Workshop (.chw)";
+        if (TxtSkillCardTitle != null) TxtSkillCardTitle.Text = isRu ? "Скилл для ИИ-Агентов (/chw)" : "AI Agent Skill (/chw)";
+        if (TxtSkillDesc != null) TxtSkillDesc.Text = isRu
+            ? "Позволяет AI-ассистентам (Antigravity, Claude Code, Cursor, Codex) автономно генерировать новые виджеты по команде /chw: верстать стекловидный XAML UI, писать ViewModel, настраивать manifest.json, упаковывать в .chw, тестировать на рабочем столе и публиковать в каталог."
+            : "Allows AI assistants (Antigravity, Claude Code, Cursor, Codex) to autonomously generate new widgets via /chw command: build glassmorphic XAML UI, write ViewModels, configure manifest.json, package into .chw, test on desktop, and publish to catalog.";
+        if (TxtSkillPathLabel != null) TxtSkillPathLabel.Text = isRu ? "📁 Расположение:" : "📁 Location:";
+        if (TxtSkillCommandLabel != null) TxtSkillCommandLabel.Text = isRu ? "Команда в чате: " : "Chat command: ";
+        if (BtnOpenSkillFolder != null) BtnOpenSkillFolder.Content = isRu ? "📂 Открыть папку" : "📂 Open Folder";
+        UpdateAgentSkillStatus();
+
         if (TxtCreateTemplateTitle != null) TxtCreateTemplateTitle.Text = isRu ? "Создать новый виджет из шаблона" : "Create new widget from template";
         if (TxtWidgetIdLabel != null) TxtWidgetIdLabel.Text = isRu ? "ID виджета (латиница без пробелов):" : "Widget ID (lowercase, no spaces):";
         if (TxtWidgetNameLabel != null) TxtWidgetNameLabel.Text = isRu ? "Название виджета:" : "Widget Name:";

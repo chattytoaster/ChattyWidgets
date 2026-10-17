@@ -17,8 +17,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
-
   <ItemGroup>
+    <None Include=".agents\skills\chw\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Resource Include="app.ico" />
     <Resource Include="app.png" />
     <None Include="app.ico">
