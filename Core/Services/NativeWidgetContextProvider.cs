@@ -46,6 +46,50 @@ public abstract class NativeViewModelBase : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
     }
+
+    private bool _isLight;
+    public bool IsLight
+    {
+        get => _isLight;
+        set
+        {
+            if (_isLight != value)
+            {
+                _isLight = value;
+                OnPropertyChanged();
+                OnThemeChanged();
+            }
+        }
+    }
+
+    public virtual void ApplyTheme(bool isLight)
+    {
+        IsLight = isLight;
+    }
+
+    protected virtual void OnThemeChanged() { }
+
+    protected static bool DetectIsLight(string? instanceId)
+    {
+        try
+        {
+            string theme = "";
+            if (!string.IsNullOrEmpty(instanceId) && WidgetManager.Instance?.Settings?.Widgets != null &&
+                WidgetManager.Instance.Settings.Widgets.TryGetValue(instanceId, out var s))
+            {
+                theme = s.Theme;
+            }
+            if (string.IsNullOrEmpty(theme) || theme.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                theme = WidgetManager.Instance?.Settings?.Theme ?? "";
+            }
+            return theme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 
 public static class NativeWidgetContextProvider
@@ -269,7 +313,7 @@ public class ClockWidgetViewModel : NativeViewModelBase
 }
 
 // 1. Calendar ViewModel
-public class CalendarDayItem
+public class CalendarDayItem : NativeViewModelBase
 {
     public int Day { get; set; }
     public string DayText => Day > 0 ? Day.ToString() : (IsWeekNumber ? WeekNumberText : "");
@@ -280,27 +324,27 @@ public class CalendarDayItem
     public bool IsWeekend { get; set; }
     public bool HighlightToday { get; set; } = true;
 
-    public string BgColor => (IsToday && HighlightToday) ? "#3B82F6" : "Transparent";
+    public string BgColor => (IsToday && HighlightToday) ? (IsLight ? "#2563EB" : "#3B82F6") : "Transparent";
     public string FgColor
     {
         get
         {
             if (IsToday && HighlightToday) return "#FFFFFF";
             if (IsWeekNumber) return "#64748B";
-            if (!IsCurrentMonth) return "#334155";
-            if (IsWeekend) return "#FDA4AF";
-            return "#E2E8F0";
+            if (!IsCurrentMonth) return IsLight ? "#94A3B8" : "#334155";
+            if (IsWeekend) return IsLight ? "#E11D48" : "#FDA4AF";
+            return IsLight ? "#0F172A" : "#E2E8F0";
         }
     }
     public FontWeight Weight => (IsToday && HighlightToday) ? FontWeights.Bold : FontWeights.Normal;
 }
 
-public class CalendarHeaderItem
+public class CalendarHeaderItem : NativeViewModelBase
 {
     public string Text { get; set; } = "";
     public bool IsWeekend { get; set; }
     public bool IsWeekNumber { get; set; }
-    public string FgColor => IsWeekNumber ? "#64748B" : (IsWeekend ? "#FDA4AF" : "#94A3B8");
+    public string FgColor => IsWeekNumber ? "#64748B" : (IsWeekend ? (IsLight ? "#E11D48" : "#FDA4AF") : (IsLight ? "#475569" : "#94A3B8"));
 }
 
 public class CalendarWidgetViewModel : NativeViewModelBase
@@ -398,11 +442,38 @@ public class CalendarWidgetViewModel : NativeViewModelBase
     public ICommand NextMonthCommand { get; }
     public ICommand TodayCommand { get; }
 
+    public string MonthYearColor => IsLight ? "#0F172A" : "#F8FAFC";
+    public string TextSecondaryColor => IsLight ? "#64748B" : "#94A3B8";
+    public string NavBtnBackground => IsLight ? "#14000000" : "#14FFFFFF";
+    public string NavBtnForeground => IsLight ? "#0F172A" : "#E2E8F0";
+    public string NavBtnBorder => IsLight ? "#20000000" : "#18FFFFFF";
+    public string TodayBtnBackground => IsLight ? "#154F46E5" : "#266366F1";
+    public string TodayBtnBorder => IsLight ? "#404F46E5" : "#506366F1";
+    public string TodayBtnForeground => IsLight ? "#4338CA" : "#818CF8";
+    public string DividerColor => IsLight ? "#18000000" : "#14FFFFFF";
+    public string TodayFullColor => IsLight ? "#0284C7" : "#38BDF8";
+
+    protected override void OnThemeChanged()
+    {
+        BuildMonth();
+        OnPropertyChanged(nameof(MonthYearColor));
+        OnPropertyChanged(nameof(TextSecondaryColor));
+        OnPropertyChanged(nameof(NavBtnBackground));
+        OnPropertyChanged(nameof(NavBtnForeground));
+        OnPropertyChanged(nameof(NavBtnBorder));
+        OnPropertyChanged(nameof(TodayBtnBackground));
+        OnPropertyChanged(nameof(TodayBtnBorder));
+        OnPropertyChanged(nameof(TodayBtnForeground));
+        OnPropertyChanged(nameof(DividerColor));
+        OnPropertyChanged(nameof(TodayFullColor));
+    }
+
     public CalendarWidgetViewModel() : this(string.Empty) { }
 
     public CalendarWidgetViewModel(string instanceId)
     {
         _instanceId = instanceId;
+        IsLight = DetectIsLight(_instanceId);
         LoadSettings();
 
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
@@ -466,29 +537,29 @@ public class CalendarWidgetViewModel : NativeViewModelBase
         if (_showWeekNumbers)
         {
             string weekHdr = LocalizationService.Instance.T("Calendar.WeekNumHeader", "№");
-            WeekHeaders.Add(new CalendarHeaderItem { Text = weekHdr, IsWeekNumber = true });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = weekHdr, IsWeekNumber = true, IsLight = this.IsLight });
         }
 
         bool isSundayFirst = _firstDayOfWeek.Equals("sunday", StringComparison.OrdinalIgnoreCase);
         if (isSundayFirst)
         {
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sun"), IsWeekend = true });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Mon"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Tue"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Wed"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Thu"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Fri"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sat"), IsWeekend = true });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sun"), IsWeekend = true, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Mon"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Tue"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Wed"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Thu"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Fri"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sat"), IsWeekend = true, IsLight = this.IsLight });
         }
         else
         {
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Mon"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Tue"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Wed"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Thu"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Fri"), IsWeekend = false });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sat"), IsWeekend = true });
-            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sun"), IsWeekend = true });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Mon"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Tue"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Wed"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Thu"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Fri"), IsWeekend = false, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sat"), IsWeekend = true, IsLight = this.IsLight });
+            WeekHeaders.Add(new CalendarHeaderItem { Text = LocalizationService.Instance.T("Calendar.Weekday.Sun"), IsWeekend = true, IsLight = this.IsLight });
         }
 
         Days.Clear();
@@ -510,13 +581,14 @@ public class CalendarWidgetViewModel : NativeViewModelBase
                 WeekNumberText = weekNum.ToString(),
                 IsWeekNumber = true,
                 IsCurrentMonth = true,
-                HighlightToday = false
+                HighlightToday = false,
+                IsLight = this.IsLight
             });
         }
 
         for (int i = 0; i < startDayOffset; i++)
         {
-            Days.Add(new CalendarDayItem { Day = 0, IsCurrentMonth = false, HighlightToday = _highlightToday });
+            Days.Add(new CalendarDayItem { Day = 0, IsCurrentMonth = false, HighlightToday = _highlightToday, IsLight = this.IsLight });
             daysInRow++;
         }
 
@@ -535,7 +607,8 @@ public class CalendarWidgetViewModel : NativeViewModelBase
                         WeekNumberText = weekNum.ToString(),
                         IsWeekNumber = true,
                         IsCurrentMonth = true,
-                        HighlightToday = false
+                        HighlightToday = false,
+                        IsLight = this.IsLight
                     });
                 }
             }
@@ -552,7 +625,8 @@ public class CalendarWidgetViewModel : NativeViewModelBase
                 IsToday = isToday,
                 IsCurrentMonth = true,
                 IsWeekend = isWeekend,
-                HighlightToday = _highlightToday
+                HighlightToday = _highlightToday,
+                IsLight = this.IsLight
             });
             daysInRow++;
         }
@@ -562,7 +636,7 @@ public class CalendarWidgetViewModel : NativeViewModelBase
             int trailingBlanks = 7 - daysInRow;
             for (int i = 0; i < trailingBlanks; i++)
             {
-                Days.Add(new CalendarDayItem { Day = 0, IsCurrentMonth = false, HighlightToday = _highlightToday });
+                Days.Add(new CalendarDayItem { Day = 0, IsCurrentMonth = false, HighlightToday = _highlightToday, IsLight = this.IsLight });
             }
         }
 
@@ -574,7 +648,7 @@ public class CalendarWidgetViewModel : NativeViewModelBase
 }
 
 // 2. Crypto & Currencies ViewModel
-public class CryptoItem
+public class CryptoItem : NativeViewModelBase
 {
     public string Key { get; set; } = "";
     public string Name { get; set; } = "";
@@ -584,6 +658,21 @@ public class CryptoItem
     public bool IsPositive { get; set; }
     public string ChangeColor => IsPositive ? "#10B981" : "#EF4444";
     public string Icon { get; set; } = "●";
+
+    public string SymbolColor => IsLight ? "#0F172A" : "#F8FAFC";
+    public string PriceColor => IsLight ? "#0F172A" : "#F8FAFC";
+    public string NameColor => IsLight ? "#475569" : "#94A3B8";
+    public string CardBackground => IsLight ? "#0A000000" : "#08FFFFFF";
+    public string CardBorder => IsLight ? "#14000000" : "#10FFFFFF";
+
+    public void NotifyTheme()
+    {
+        OnPropertyChanged(nameof(SymbolColor));
+        OnPropertyChanged(nameof(PriceColor));
+        OnPropertyChanged(nameof(NameColor));
+        OnPropertyChanged(nameof(CardBackground));
+        OnPropertyChanged(nameof(CardBorder));
+    }
 }
 
 public record CryptoAssetDef(
@@ -653,6 +742,28 @@ public class CryptoWidgetViewModel : NativeViewModelBase
 
     public string HeaderTitle => LocalizationService.Instance.T("Crypto.HeaderTitle", "💎 КОТИРОВКИ & ВАЛЮТЫ");
     public string RefreshButtonText => LocalizationService.Instance.T("Crypto.RefreshShort", "Обновить ↻");
+
+    public string HeaderColor => IsLight ? "#0284C7" : "#38BDF8";
+    public string BadgeBackground => IsLight ? "#14000000" : "#1CFFFFFF";
+    public string BadgeForeground => IsLight ? "#475569" : "#94A3B8";
+    public string RefreshBtnBackground => IsLight ? "#10000000" : "#14FFFFFF";
+    public string RefreshBtnBorder => IsLight ? "#18000000" : "#18FFFFFF";
+    public string RefreshBtnForeground => IsLight ? "#475569" : "#94A3B8";
+
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(HeaderColor));
+        OnPropertyChanged(nameof(BadgeBackground));
+        OnPropertyChanged(nameof(BadgeForeground));
+        OnPropertyChanged(nameof(RefreshBtnBackground));
+        OnPropertyChanged(nameof(RefreshBtnBorder));
+        OnPropertyChanged(nameof(RefreshBtnForeground));
+        foreach (var item in Items)
+        {
+            item.IsLight = IsLight;
+            item.NotifyTheme();
+        }
+    }
 
     private string _lastUpdatedText = "";
     public string LastUpdatedText
@@ -749,6 +860,7 @@ public class CryptoWidgetViewModel : NativeViewModelBase
     public CryptoWidgetViewModel(string? instanceId = null)
     {
         _instanceId = instanceId;
+        IsLight = DetectIsLight(_instanceId);
         RefreshCommand = new NativeRelayCommand(() => _ = FetchPricesAsync());
 
         LoadCustomSettings();
@@ -1035,7 +1147,8 @@ public class CryptoWidgetViewModel : NativeViewModelBase
                     Price = priceStr,
                     Change = "+0.0%",
                     IsPositive = true,
-                    Icon = def.Icon
+                    Icon = def.Icon,
+                    IsLight = this.IsLight
                 });
             }
             else
@@ -1048,7 +1161,8 @@ public class CryptoWidgetViewModel : NativeViewModelBase
                     Price = "—",
                     Change = "0.0%",
                     IsPositive = true,
-                    Icon = GuessIcon(token)
+                    Icon = GuessIcon(token),
+                    IsLight = this.IsLight
                 });
             }
         }
@@ -1417,7 +1531,11 @@ public class CryptoWidgetViewModel : NativeViewModelBase
             Application.Current?.Dispatcher?.Invoke(() =>
             {
                 Items.Clear();
-                foreach (var item in newItems) Items.Add(item);
+                foreach (var item in newItems)
+                {
+                    item.IsLight = IsLight;
+                    Items.Add(item);
+                }
                 LastUpdatedText = string.Format(loc.T("Crypto.LastUpdated", "Обновлено: {0}"), updatedTime);
                 OnPropertyChanged(nameof(HeaderTitle));
                 OnPropertyChanged(nameof(RefreshButtonText));
@@ -2830,26 +2948,11 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
         _ => Color.FromRgb(239, 68, 68)
     };
 
-    private bool IsLightTheme()
+    private bool IsLightTheme() => IsLight;
+
+    protected override void OnThemeChanged()
     {
-        try
-        {
-            string theme = "";
-            if (!string.IsNullOrEmpty(_instanceId) && WidgetManager.Instance?.Settings?.Widgets != null &&
-                WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
-            {
-                theme = s.Theme;
-            }
-            if (string.IsNullOrEmpty(theme) || theme.Equals("auto", StringComparison.OrdinalIgnoreCase))
-            {
-                theme = WidgetManager.Instance?.Settings?.Theme ?? "";
-            }
-            return theme.Equals("light", StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
+        NotifyAllProperties();
     }
 
     public Brush PillBackground => IsLightTheme()
@@ -3589,13 +3692,28 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
 }
 
 // 8. RSS Reader ViewModel
-public class RssArticleItem
+public class RssArticleItem : NativeViewModelBase
 {
     public string Title { get; set; } = "";
     public string Source { get; set; } = "";
     public string Time { get; set; } = "";
     public string Url { get; set; } = "";
     public ICommand OpenCommand { get; set; } = null!;
+
+    public string TitleColor => IsLight ? "#0F172A" : "#E2E8F0";
+    public string SourceColor => IsLight ? "#0284C7" : "#38BDF8";
+    public string TimeColor => IsLight ? "#64748B" : "#64748B";
+    public string CardBackground => IsLight ? "#08000000" : "#08FFFFFF";
+    public string CardBorder => IsLight ? "#14000000" : "#10FFFFFF";
+
+    public void NotifyTheme()
+    {
+        OnPropertyChanged(nameof(TitleColor));
+        OnPropertyChanged(nameof(SourceColor));
+        OnPropertyChanged(nameof(TimeColor));
+        OnPropertyChanged(nameof(CardBackground));
+        OnPropertyChanged(nameof(CardBorder));
+    }
 }
 
 public class RssWidgetViewModel : NativeViewModelBase
@@ -3614,6 +3732,72 @@ public class RssWidgetViewModel : NativeViewModelBase
     private string _customUrl = "";
     private int _slideIntervalSec = 12;
     private int _currentIndex = 0;
+
+    public Brush FeaturedCardBackground
+    {
+        get
+        {
+            if (IsLight)
+            {
+                var brush = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 1)
+                };
+                brush.GradientStops.Add(new GradientStop(Color.FromArgb(28, 2, 132, 199), 0.0));
+                brush.GradientStops.Add(new GradientStop(Color.FromArgb(45, 56, 189, 248), 1.0));
+                return brush;
+            }
+            else
+            {
+                var brush = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 1)
+                };
+                brush.GradientStops.Add(new GradientStop(Color.FromArgb(176, 30, 41, 59), 0.0));
+                brush.GradientStops.Add(new GradientStop(Color.FromArgb(208, 15, 23, 42), 1.0));
+                return brush;
+            }
+        }
+    }
+
+    public Brush FeaturedCardBorderBrush => IsLight
+        ? new SolidColorBrush(Color.FromArgb(80, 2, 132, 199))
+        : new SolidColorBrush(Color.FromArgb(64, 56, 189, 248));
+
+    public string FeaturedHeadlineColor => IsLight ? "#0F172A" : "#F8FAFC";
+    public string FeaturedTimeColor => IsLight ? "#475569" : "#94A3B8";
+    public string FeaturedLinkColor => IsLight ? "#0284C7" : "#38BDF8";
+
+    public string FeedTitleColor => IsLight ? "#0F172A" : "#F8FAFC";
+    public string PagerBackground => IsLight ? "#10000000" : "#10FFFFFF";
+    public string PagerBorder => IsLight ? "#18000000" : "#18FFFFFF";
+    public string PagerButtonForeground => IsLight ? "#475569" : "#94A3B8";
+    public string PagerRefreshForeground => IsLight ? "#0284C7" : "#38BDF8";
+    public string PagerCounterColor => IsLight ? "#0F172A" : "#CBD5E1";
+    public string SubheaderColor => IsLight ? "#475569" : "#64748B";
+
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(FeaturedCardBackground));
+        OnPropertyChanged(nameof(FeaturedCardBorderBrush));
+        OnPropertyChanged(nameof(FeaturedHeadlineColor));
+        OnPropertyChanged(nameof(FeaturedTimeColor));
+        OnPropertyChanged(nameof(FeaturedLinkColor));
+        OnPropertyChanged(nameof(FeedTitleColor));
+        OnPropertyChanged(nameof(PagerBackground));
+        OnPropertyChanged(nameof(PagerBorder));
+        OnPropertyChanged(nameof(PagerButtonForeground));
+        OnPropertyChanged(nameof(PagerRefreshForeground));
+        OnPropertyChanged(nameof(PagerCounterColor));
+        OnPropertyChanged(nameof(SubheaderColor));
+        foreach (var article in Articles)
+        {
+            article.IsLight = IsLight;
+            article.NotifyTheme();
+        }
+    }
 
     public string Preset
     {
@@ -3692,6 +3876,7 @@ public class RssWidgetViewModel : NativeViewModelBase
     public RssWidgetViewModel(string? instanceId)
     {
         _instanceId = instanceId;
+        IsLight = DetectIsLight(_instanceId);
         LoadCustomSettings();
 
         NextSlideCommand = new NativeRelayCommand(() => NextSlide());
@@ -3836,7 +4021,11 @@ public class RssWidgetViewModel : NativeViewModelBase
                     Application.Current?.Dispatcher?.Invoke(() =>
                     {
                         Articles.Clear();
-                        foreach (var a in newArticles) Articles.Add(a);
+                        foreach (var a in newArticles)
+                        {
+                            a.IsLight = IsLight;
+                            Articles.Add(a);
+                        }
                         _currentIndex = 0;
                         OnPropertyChanged(nameof(FeedTitle));
                         OnPropertyChanged(nameof(CurrentArticle));
@@ -3858,21 +4047,22 @@ public class RssWidgetViewModel : NativeViewModelBase
 
         if (isRu)
         {
-            Articles.Add(new RssArticleItem { Title = "OpenAI и DeepMind анонсировали новые мультимодальные модели следующего поколения", Source = "AI & TECH", Time = "10 мин назад", Url = "https://news.ycombinator.com" });
-            Articles.Add(new RssArticleItem { Title = "Microsoft представила новые визуальные API для Windows 11 с нативной поддержкой Mica", Source = "WINDOWS", Time = "42 мин назад", Url = "https://blogs.windows.com" });
-            Articles.Add(new RssArticleItem { Title = "Биткоин и криптовалютный рынок перешли к активному росту на фоне притока институционалов", Source = "CoinDesk", Time = "1 час назад", Url = "https://coindesk.com" });
-            Articles.Add(new RssArticleItem { Title = "Релиз ChattyWidgets 2.0: Полный переход на нативный стек и сверхбыстрые виджеты", Source = "CHATTY", Time = "2 часа назад", Url = "https://github.com/chattytoaster/ChattyWidgets" });
+            Articles.Add(new RssArticleItem { Title = "OpenAI и DeepMind анонсировали новые мультимодальные модели следующего поколения", Source = "AI & TECH", Time = "10 мин назад", Url = "https://news.ycombinator.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "Microsoft представила новые визуальные API для Windows 11 с нативной поддержкой Mica", Source = "WINDOWS", Time = "42 мин назад", Url = "https://blogs.windows.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "Биткоин и криптовалютный рынок перешли к активному росту на фоне притока институционалов", Source = "CoinDesk", Time = "1 час назад", Url = "https://coindesk.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "Релиз ChattyWidgets 2.0: Полный переход на нативный стек и сверхбыстрые виджеты", Source = "CHATTY", Time = "2 часа назад", Url = "https://github.com/chattytoaster/ChattyWidgets", IsLight = this.IsLight });
         }
         else
         {
-            Articles.Add(new RssArticleItem { Title = "DeepMind and OpenAI unveil next-generation multimodal agent models", Source = "AI & TECH", Time = "10m ago", Url = "https://news.ycombinator.com" });
-            Articles.Add(new RssArticleItem { Title = "Microsoft introduces refreshed Mica visual APIs for Windows desktop apps", Source = "WINDOWS", Time = "42m ago", Url = "https://blogs.windows.com" });
-            Articles.Add(new RssArticleItem { Title = "Bitcoin and major cryptocurrencies surge as weekly trading volume hits all-time high", Source = "CoinDesk", Time = "1h ago", Url = "https://coindesk.com" });
-            Articles.Add(new RssArticleItem { Title = "ChattyWidgets 2.0 release: Full native DirectComposition desktop engine", Source = "CHATTY", Time = "2h ago", Url = "https://github.com/chattytoaster/ChattyWidgets" });
+            Articles.Add(new RssArticleItem { Title = "DeepMind and OpenAI unveil next-generation multimodal agent models", Source = "AI & TECH", Time = "10m ago", Url = "https://news.ycombinator.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "Microsoft introduces refreshed Mica visual APIs for Windows desktop apps", Source = "WINDOWS", Time = "42m ago", Url = "https://blogs.windows.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "Bitcoin and major cryptocurrencies surge as weekly trading volume hits all-time high", Source = "CoinDesk", Time = "1h ago", Url = "https://coindesk.com", IsLight = this.IsLight });
+            Articles.Add(new RssArticleItem { Title = "ChattyWidgets 2.0 release: Full native DirectComposition desktop engine", Source = "CHATTY", Time = "2h ago", Url = "https://github.com/chattytoaster/ChattyWidgets", IsLight = this.IsLight });
         }
 
         foreach (var a in Articles)
         {
+            a.IsLight = IsLight;
             a.OpenCommand = new NativeRelayCommand(() =>
             {
                 try { Process.Start(new ProcessStartInfo(a.Url) { UseShellExecute = true }); } catch { }
@@ -3907,10 +4097,29 @@ public class NoteTaskItem : NativeViewModelBase
     }
 
     public TextDecorationCollection? TextDecoration => IsDone ? TextDecorations.Strikethrough : null;
-    public string TextColor => IsDone ? "#64748B" : "#E2E8F0";
+    public string TextColor
+    {
+        get
+        {
+            if (IsDone) return IsLight ? "#94A3B8" : "#64748B";
+            return IsLight ? "#0F172A" : "#F8FAFC";
+        }
+    }
+
+    public string DeleteColor => IsLight ? "#94A3B8" : "#64748B";
+    public string CardBackground => IsLight ? "#08000000" : "#0AFFFFFF";
+    public string CardBorder => IsLight ? "#15000000" : "#10FFFFFF";
 
     public ICommand DeleteCommand { get; set; } = null!;
     public Action? Toggled { get; set; }
+
+    public void NotifyTheme()
+    {
+        OnPropertyChanged(nameof(TextColor));
+        OnPropertyChanged(nameof(DeleteColor));
+        OnPropertyChanged(nameof(CardBackground));
+        OnPropertyChanged(nameof(CardBorder));
+    }
 }
 
 public class StickyNotesWidgetViewModel : NativeViewModelBase
@@ -3955,32 +4164,59 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
 
     public string HeaderTitle => LocalizationService.Instance.T("StickyNotes.HeaderTitle", "Заметки и задачи");
 
-    public Brush HeaderBrush => _accentColor switch
-    {
-        "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
-        "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
-        "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
-        "slate" => new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-        _ => new SolidColorBrush(Color.FromRgb(251, 191, 36)) // amber
-    };
+    public Brush HeaderBrush => IsLight
+        ? _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromRgb(2, 132, 199)),
+            "emerald" => new SolidColorBrush(Color.FromRgb(5, 150, 105)),
+            "violet" => new SolidColorBrush(Color.FromRgb(124, 58, 237)),
+            "slate" => new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+            _ => new SolidColorBrush(Color.FromRgb(217, 119, 6)) // amber
+        }
+        : _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+            "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
+            "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
+            "slate" => new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+            _ => new SolidColorBrush(Color.FromRgb(251, 191, 36)) // amber
+        };
 
-    public Brush AccentBrush => _accentColor switch
-    {
-        "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
-        "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
-        "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
-        "slate" => new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-        _ => new SolidColorBrush(Color.FromRgb(251, 191, 36))
-    };
+    public Brush AccentBrush => IsLight
+        ? _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromRgb(2, 132, 199)),
+            "emerald" => new SolidColorBrush(Color.FromRgb(5, 150, 105)),
+            "violet" => new SolidColorBrush(Color.FromRgb(124, 58, 237)),
+            "slate" => new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+            _ => new SolidColorBrush(Color.FromRgb(217, 119, 6))
+        }
+        : _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+            "emerald" => new SolidColorBrush(Color.FromRgb(52, 211, 153)),
+            "violet" => new SolidColorBrush(Color.FromRgb(192, 132, 252)),
+            "slate" => new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            _ => new SolidColorBrush(Color.FromRgb(251, 191, 36))
+        };
 
-    public Brush AccentSoftBrush => _accentColor switch
-    {
-        "sky" => new SolidColorBrush(Color.FromArgb(40, 56, 189, 248)),
-        "emerald" => new SolidColorBrush(Color.FromArgb(40, 52, 211, 153)),
-        "violet" => new SolidColorBrush(Color.FromArgb(40, 192, 132, 252)),
-        "slate" => new SolidColorBrush(Color.FromArgb(40, 148, 163, 184)),
-        _ => new SolidColorBrush(Color.FromArgb(40, 251, 191, 36))
-    };
+    public Brush AccentSoftBrush => IsLight
+        ? _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromArgb(30, 2, 132, 199)),
+            "emerald" => new SolidColorBrush(Color.FromArgb(30, 5, 150, 105)),
+            "violet" => new SolidColorBrush(Color.FromArgb(30, 124, 58, 237)),
+            "slate" => new SolidColorBrush(Color.FromArgb(30, 71, 85, 105)),
+            _ => new SolidColorBrush(Color.FromArgb(30, 217, 119, 6))
+        }
+        : _accentColor switch
+        {
+            "sky" => new SolidColorBrush(Color.FromArgb(40, 56, 189, 248)),
+            "emerald" => new SolidColorBrush(Color.FromArgb(40, 52, 211, 153)),
+            "violet" => new SolidColorBrush(Color.FromArgb(40, 192, 132, 252)),
+            "slate" => new SolidColorBrush(Color.FromArgb(40, 148, 163, 184)),
+            _ => new SolidColorBrush(Color.FromArgb(40, 251, 191, 36))
+        };
 
     public Brush BorderAccentBrush => _accentColor switch
     {
@@ -3999,6 +4235,36 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         "slate" => new SolidColorBrush(Color.FromArgb(220, 25, 30, 40)),
         _ => new SolidColorBrush(Color.FromArgb(220, 30, 25, 15)) // amber
     };
+
+    public string InputBackground => IsLight ? "#0A000000" : "#12FFFFFF";
+    public string InputForeground => IsLight ? "#0F172A" : "#F8FAFC";
+    public string InputBorder => IsLight ? "#20000000" : "#20FFFFFF";
+    public string PlaceholderColor => IsLight ? "#94A3B8" : "#64748B";
+    public string CounterColor => IsLight ? "#64748B" : "#475569";
+    public string ActiveCountColor => IsLight ? "#475569" : "#94A3B8";
+    public string EmptyStateColor => IsLight ? "#64748B" : "#64748B";
+    public string AddButtonForeground => IsLight ? "#FFFFFF" : "#0F172A";
+
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(HeaderBrush));
+        OnPropertyChanged(nameof(AccentBrush));
+        OnPropertyChanged(nameof(AccentSoftBrush));
+        OnPropertyChanged(nameof(BorderAccentBrush));
+        OnPropertyChanged(nameof(InputBackground));
+        OnPropertyChanged(nameof(InputForeground));
+        OnPropertyChanged(nameof(InputBorder));
+        OnPropertyChanged(nameof(PlaceholderColor));
+        OnPropertyChanged(nameof(CounterColor));
+        OnPropertyChanged(nameof(ActiveCountColor));
+        OnPropertyChanged(nameof(EmptyStateColor));
+        OnPropertyChanged(nameof(AddButtonForeground));
+        foreach (var task in Tasks)
+        {
+            task.IsLight = IsLight;
+            task.NotifyTheme();
+        }
+    }
 
     public string ActiveCountText
     {
@@ -4037,6 +4303,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     public StickyNotesWidgetViewModel(string instanceId, FrameworkElement? rootElement)
     {
         _instanceId = instanceId;
+        IsLight = DetectIsLight(_instanceId);
         string dir = Path.Combine(ChwPackageService.DataDir, instanceId);
         Directory.CreateDirectory(dir);
         _storageFile = Path.Combine(dir, "tasks.json");
@@ -4048,7 +4315,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         AddTaskCommand = new NativeRelayCommand(() =>
         {
             if (string.IsNullOrWhiteSpace(NewTaskText)) return;
-            var item = new NoteTaskItem { Text = NewTaskText.Trim(), IsDone = false };
+            var item = new NoteTaskItem { Text = NewTaskText.Trim(), IsDone = false, IsLight = this.IsLight };
             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
             item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
             Tasks.Add(item);
@@ -4083,7 +4350,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
 
         foreach (var text in samples)
         {
-            var item = new NoteTaskItem { Text = text, IsDone = false };
+            var item = new NoteTaskItem { Text = text, IsDone = false, IsLight = this.IsLight };
             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
             item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
             Tasks.Add(item);
@@ -4162,7 +4429,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
                         bool done = elem.TryGetProperty("done", out var pDone) && pDone.GetBoolean();
                         if (!string.IsNullOrEmpty(text))
                         {
-                            var item = new NoteTaskItem { Text = text, IsDone = done };
+                            var item = new NoteTaskItem { Text = text, IsDone = done, IsLight = this.IsLight };
                             item.DeleteCommand = new NativeRelayCommand(() => RemoveTask(item));
                             item.Toggled = () => { Save(); UpdateTaskStateNotifications(); };
                             Tasks.Add(item);

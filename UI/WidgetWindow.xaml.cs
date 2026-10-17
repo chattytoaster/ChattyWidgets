@@ -985,9 +985,9 @@ public partial class WidgetWindow : Window
             gaugesView.ApplyTheme(isLight);
         }
 
-        if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is PomodoroWidgetViewModel pomoVm)
+        if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is NativeViewModelBase nativeVm)
         {
-            pomoVm.NotifyAllProperties();
+            nativeVm.ApplyTheme(isLight);
         }
 
         // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)
@@ -1072,6 +1072,78 @@ public partial class WidgetWindow : Window
                     }
                 }
             }
+            else if (child is ChattyWidgets.UI.Controls.MarqueeText mt)
+            {
+                var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(mt, ChattyWidgets.UI.Controls.MarqueeText.ForegroundProperty);
+                if (fgBinding == null)
+                {
+                    if (isLight)
+                    {
+                        if (mt.Tag == null) mt.Tag = mt.Foreground;
+                        if (mt.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                        {
+                            int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                            int max = Math.Max(r, Math.Max(g, b));
+                            int min = Math.Min(r, Math.Min(g, b));
+                            bool isAccent = (max - min) > 70;
+                            if (!isAccent)
+                            {
+                                int brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                                if (brightness >= 180)
+                                {
+                                    mt.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                                }
+                                else if (brightness >= 100)
+                                {
+                                    mt.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (mt.Tag is Brush origBrush)
+                        {
+                            mt.Foreground = origBrush;
+                        }
+                        else if (mt.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
+                        {
+                            mt.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                        }
+                    }
+                }
+            }
+            else if (child is System.Windows.Controls.TextBox txtBox)
+            {
+                var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(txtBox, System.Windows.Controls.TextBox.ForegroundProperty);
+                var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(txtBox, System.Windows.Controls.TextBox.BackgroundProperty);
+                if (isLight)
+                {
+                    if (txtBox.Tag == null) txtBox.Tag = (txtBox.Foreground, txtBox.Background, txtBox.BorderBrush, txtBox.CaretBrush);
+                    if (fgBinding == null)
+                    {
+                        txtBox.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                        txtBox.CaretBrush = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                    }
+                    if (bgBinding == null && txtBox.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    {
+                        if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
+                        {
+                            txtBox.Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0));
+                        }
+                    }
+                }
+                else
+                {
+                    if (txtBox.Tag is ValueTuple<Brush, Brush, Brush, Brush> tuple)
+                    {
+                        if (fgBinding == null) txtBox.Foreground = tuple.Item1;
+                        if (bgBinding == null) txtBox.Background = tuple.Item2;
+                        txtBox.BorderBrush = tuple.Item3;
+                        txtBox.CaretBrush = tuple.Item4;
+                    }
+                }
+            }
             else if (child is Button btn)
             {
                 var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(btn, Button.BackgroundProperty);
@@ -1114,11 +1186,34 @@ public partial class WidgetWindow : Window
                 if (isLight)
                 {
                     if (innerB.Tag == null) innerB.Tag = (innerB.Background, innerB.BorderBrush);
-                    if (bgBinding == null && innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
+                    if (bgBinding == null)
                     {
-                        if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
+                        if (innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                         {
-                            innerB.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
+                            if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
+                            {
+                                innerB.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
+                            }
+                        }
+                        else if (innerB.Background is LinearGradientBrush lgb)
+                        {
+                            bool isDarkGradient = false;
+                            foreach (var stop in lgb.GradientStops)
+                            {
+                                int brightness = (stop.Color.R * 299 + stop.Color.G * 587 + stop.Color.B * 114) / 1000;
+                                if (brightness < 80) isDarkGradient = true;
+                            }
+                            if (isDarkGradient)
+                            {
+                                var lightGrad = new LinearGradientBrush
+                                {
+                                    StartPoint = lgb.StartPoint,
+                                    EndPoint = lgb.EndPoint
+                                };
+                                lightGrad.GradientStops.Add(new GradientStop(Color.FromArgb(28, 2, 132, 199), 0.0));
+                                lightGrad.GradientStops.Add(new GradientStop(Color.FromArgb(40, 56, 189, 248), 1.0));
+                                innerB.Background = lightGrad;
+                            }
                         }
                     }
                     if (bbBinding == null && innerB.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
