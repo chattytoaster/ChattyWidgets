@@ -105,6 +105,58 @@ public partial class WidgetWindow : Window
         MouseLeave += OnWindowMouseLeave;
         WidgetContextMenu.Opened += OnContextMenuOpened;
         WidgetContextMenu.Closed += OnContextMenuClosed;
+
+        ApplyLocalization();
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => Dispatcher.Invoke(ApplyLocalization);
+
+    private void ApplyLocalization()
+    {
+        var loc = LocalizationService.Instance;
+        if (MenuWidgetSettings != null) MenuWidgetSettings.Header = loc.T("Menu.Settings", "⚙️ Настройки виджета...");
+        if (MenuDuplicateWidget != null) MenuDuplicateWidget.Header = loc.T("Menu.Duplicate", "📋 Скопировать виджет (Создать копию)");
+        if (MenuDeleteInstance != null) MenuDeleteInstance.Header = loc.T("Menu.Delete", "🗑 Удалить этот виджет");
+        if (MenuGroupLayer != null) MenuGroupLayer.Header = loc.T("Menu.LayerGroup", "Слой отображения");
+        if (MenuLayerDesktop != null) MenuLayerDesktop.Header = loc.T("Menu.LayerDesktop", "На рабочем столе (под всеми окнами)");
+        if (MenuLayerNormal != null) MenuLayerNormal.Header = loc.T("Menu.LayerNormal", "Плавающее окно");
+        if (MenuLayerTop != null) MenuLayerTop.Header = loc.T("Menu.LayerTop", "Поверх всех окон");
+        if (MenuGroupTheme != null) MenuGroupTheme.Header = loc.T("Menu.ThemeGroup", "Тема оформления");
+        if (MenuThemeAuto != null) MenuThemeAuto.Header = loc.T("Menu.ThemeAuto", "✦ Как в Хабе (Авто)");
+        if (MenuThemeDark != null) MenuThemeDark.Header = loc.T("Menu.ThemeDark", "🌙 Тёмная тема");
+        if (MenuThemeLight != null) MenuThemeLight.Header = loc.T("Menu.ThemeLight", "☀️ Светлая тема");
+        if (MenuLockPosition != null) MenuLockPosition.Header = loc.T("Menu.LockPosition", "Зафиксировать позицию");
+        if (MenuClickThrough != null) MenuClickThrough.Header = loc.T("Menu.ClickThrough", "Клик насквозь (Click-through)");
+        if (MenuAutoHideDot != null) MenuAutoHideDot.Header = loc.T("Menu.AutoHideDot", "Спрятать точку управления");
+        if (MenuGroupResize != null) MenuGroupResize.Header = loc.T("Menu.ResizeGroup", "Изменить размер");
+        if (MenuResize75 != null) MenuResize75.Header = loc.T("Menu.Resize75", "75% (Компактный)");
+        if (MenuResize100 != null) MenuResize100.Header = loc.T("Menu.Resize100", "100% (Обычный)");
+        if (MenuResize125 != null) MenuResize125.Header = loc.T("Menu.Resize125", "125% (Увеличенный)");
+        if (MenuResize150 != null) MenuResize150.Header = loc.T("Menu.Resize150", "150% (Большой)");
+        if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.Header = loc.T("Menu.FreeResize", "Тянуть за края (Свободный размер)");
+        if (MenuGroupOpacity != null) MenuGroupOpacity.Header = loc.T("Menu.OpacityGroup", "Прозрачность фона");
+        if (MenuOpacity100 != null) MenuOpacity100.Header = loc.T("Menu.Opacity100", "100% (Непрозрачный фон)");
+        if (MenuOpacity85 != null) MenuOpacity85.Header = loc.T("Menu.Opacity85", "75% фона");
+        if (MenuOpacity70 != null) MenuOpacity70.Header = loc.T("Menu.Opacity70", "50% фона");
+        if (MenuOpacity50 != null) MenuOpacity50.Header = loc.T("Menu.Opacity50", "25% фона (Стекло)");
+        if (MenuMonitors != null) MenuMonitors.Header = loc.T("Menu.Monitors", "Переместить на монитор...");
+        if (MenuGaugesConstructor != null) MenuGaugesConstructor.Header = loc.T("Menu.GaugesConstructor", "🎨 Изменить формат (Конструктор)...");
+        if (MenuCustomSettings != null) MenuCustomSettings.Header = loc.T("Menu.CustomSettings", "Настройки виджета");
+        if (MenuReloadWidget != null) MenuReloadWidget.Header = loc.T("Menu.Reload", "⟳ Перезагрузить виджет");
+        if (MenuDevTools != null) MenuDevTools.Header = loc.T("Menu.DevTools", "🛠 Открыть DevTools (F12)");
+        if (MenuOpenFolder != null) MenuOpenFolder.Header = loc.T("Menu.OpenFolder", "Открыть папку виджета");
+        if (MenuOpenHub != null) MenuOpenHub.Header = loc.T("Menu.OpenHub", "Открыть Хаб ChattyWidgets");
+        if (MenuCloseWidget != null) MenuCloseWidget.Header = loc.T("Menu.Close", "Скрыть виджет");
+        if (AnchorDot != null) AnchorDot.ToolTip = loc.T("Anchor.ToolTip", "Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)");
+        if (ResizeGripHandle != null) ResizeGripHandle.ToolTip = loc.T("ResizeGrip.ToolTip", "Потяните, чтобы изменить размер виджета");
+        if (TxtLoadingTitle != null) TxtLoadingTitle.Text = loc.T("Loading.Text", "✦ Загрузка виджета...");
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
     }
 
     private static void LogW(string msg)

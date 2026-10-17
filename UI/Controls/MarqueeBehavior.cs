@@ -154,17 +154,25 @@ public static class MarqueeBehavior
         private DependencyPropertyDescriptor? _textPropDesc;
         private TextTrimming _originalTrimming = TextTrimming.CharacterEllipsis;
         private HorizontalAlignment _originalAlignment = HorizontalAlignment.Left;
+        private double _originalWidth = double.NaN;
+        private double _originalMaxWidth = double.PositiveInfinity;
+        private bool _isAnimating = false;
+        private bool _isUpdating = false;
         private bool _isHovered = false;
 
         public MarqueeController(TextBlock tb)
         {
             _tb = tb;
+            _tb.ClipToBounds = false;
             _originalTrimming = tb.TextTrimming;
             _originalAlignment = tb.HorizontalAlignment;
+            _originalWidth = tb.Width;
+            _originalMaxWidth = tb.MaxWidth;
         }
 
         public void Attach()
         {
+            _tb.ClipToBounds = false;
             _tb.Loaded += OnLoaded;
             _tb.Unloaded += OnUnloaded;
             _tb.SizeChanged += OnSizeChanged;
@@ -203,13 +211,20 @@ public static class MarqueeBehavior
                 _transform.X = 0;
             }
 
+            _tb.ClipToBounds = false;
             SetIsAnimating(_tb, false);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            _originalTrimming = _tb.TextTrimming;
-            _originalAlignment = _tb.HorizontalAlignment;
+            if (!_isAnimating)
+            {
+                _originalTrimming = _tb.TextTrimming;
+                _originalAlignment = _tb.HorizontalAlignment;
+                _originalWidth = _tb.Width;
+                _originalMaxWidth = _tb.MaxWidth;
+            }
+            _tb.ClipToBounds = false;
             _tb.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateAnimation);
         }
 
@@ -220,6 +235,7 @@ public static class MarqueeBehavior
 
         private void OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
+            if (_isAnimating) return;
             UpdateAnimation();
         }
 
@@ -256,56 +272,66 @@ public static class MarqueeBehavior
 
         public void UpdateAnimation()
         {
-            if (!_tb.IsVisible || string.IsNullOrEmpty(_tb.Text))
+            if (_isUpdating) return;
+            _isUpdating = true;
+            try
             {
-                StopAnimation();
-                return;
-            }
-
-            double containerWidth = 0;
-
-            if (!double.IsNaN(_tb.MaxWidth) && _tb.MaxWidth > 0)
-            {
-                containerWidth = _tb.MaxWidth;
-            }
-
-            if (_tb.Parent is FrameworkElement p && p.ActualWidth > 0)
-            {
-                double parentAvailable = p.ActualWidth;
-                if (p is Border b)
+                if (!_tb.IsVisible || string.IsNullOrEmpty(_tb.Text))
                 {
-                    parentAvailable -= (b.Padding.Left + b.Padding.Right + b.BorderThickness.Left + b.BorderThickness.Right);
+                    StopAnimation();
+                    return;
                 }
-                if (containerWidth <= 0 || parentAvailable < containerWidth)
+
+                double containerWidth = 0;
+
+                double effectiveMaxWidth = _isAnimating ? _originalMaxWidth : _tb.MaxWidth;
+                if (!double.IsNaN(effectiveMaxWidth) && effectiveMaxWidth > 0 && !double.IsPositiveInfinity(effectiveMaxWidth))
                 {
-                    containerWidth = parentAvailable;
+                    containerWidth = effectiveMaxWidth;
                 }
-            }
 
-            if (containerWidth <= 0 && _tb.ActualWidth > 0)
+                if (_tb.Parent is FrameworkElement p && p.ActualWidth > 0)
+                {
+                    double parentAvailable = p.ActualWidth;
+                    if (p is Border b)
+                    {
+                        parentAvailable -= (b.Padding.Left + b.Padding.Right + b.BorderThickness.Left + b.BorderThickness.Right);
+                    }
+                    if (containerWidth <= 0 || parentAvailable < containerWidth)
+                    {
+                        containerWidth = parentAvailable;
+                    }
+                }
+
+                if (containerWidth <= 0 && !_isAnimating && _tb.ActualWidth > 0)
+                {
+                    containerWidth = _tb.ActualWidth;
+                }
+
+                if (_tb.Margin.Left > 0 || _tb.Margin.Right > 0)
+                {
+                    containerWidth = Math.Max(0, containerWidth - (_tb.Margin.Left + _tb.Margin.Right));
+                }
+
+                if (containerWidth <= 0) return;
+
+                double textWidth = MeasureFormattedTextWidth(_tb);
+                double paddingEnd = GetPaddingEnd(_tb);
+                double overflow = textWidth - containerWidth;
+
+                // Only animate if text actually overflows by more than 2.0px
+                if (overflow <= 2.0)
+                {
+                    StopAnimation();
+                    return;
+                }
+
+                StartAnimation(overflow + paddingEnd, textWidth, paddingEnd);
+            }
+            finally
             {
-                containerWidth = _tb.ActualWidth;
+                _isUpdating = false;
             }
-
-            if (_tb.Margin.Left > 0 || _tb.Margin.Right > 0)
-            {
-                containerWidth = Math.Max(0, containerWidth - (_tb.Margin.Left + _tb.Margin.Right));
-            }
-
-            if (containerWidth <= 0) return;
-
-            double textWidth = MeasureFormattedTextWidth(_tb);
-            double paddingEnd = GetPaddingEnd(_tb);
-            double overflow = textWidth - containerWidth;
-
-            // Only animate if text actually overflows by more than 2.0px
-            if (overflow <= 2.0)
-            {
-                StopAnimation();
-                return;
-            }
-
-            StartAnimation(overflow + paddingEnd);
         }
 
         private static double MeasureFormattedTextWidth(TextBlock tb)
@@ -329,9 +355,18 @@ public static class MarqueeBehavior
             return ft.WidthIncludingTrailingWhitespace;
         }
 
-        private void StartAnimation(double totalDistance)
+        private void StartAnimation(double totalDistance, double textWidth, double paddingEnd)
         {
-            StopAnimation();
+            if (_isAnimating)
+            {
+                StopAnimation();
+            }
+
+            // Store original values before modifying
+            _originalWidth = _tb.Width;
+            _originalMaxWidth = _tb.MaxWidth;
+            _originalTrimming = _tb.TextTrimming;
+            _originalAlignment = _tb.HorizontalAlignment;
 
             // Setup transform safely
             if (_tb.RenderTransform is TranslateTransform existingTt)
@@ -362,14 +397,22 @@ public static class MarqueeBehavior
                 _tb.RenderTransform = _transform;
             }
 
-            // Ensure parent and element clip bounds so moving text is contained
+            // Ensure parent container clips bounds so moving text is contained
             if (_tb.Parent is UIElement pe)
             {
                 pe.ClipToBounds = true;
             }
-            _tb.ClipToBounds = true;
 
-            // Render all characters without clipping ellipsis during scroll
+            // Never clip TextBlock itself so all glyphs remain visible when scrolling
+            _tb.ClipToBounds = false;
+
+            // Mark animating BEFORE updating Width so OnSizeChanged doesn't recurse
+            _isAnimating = true;
+            SetIsAnimating(_tb, true);
+
+            // Expand bounds so TextFormatter formats and renders ALL glyphs to the very end
+            _tb.MaxWidth = double.PositiveInfinity;
+            _tb.Width = textWidth + paddingEnd + 16.0;
             _tb.TextTrimming = TextTrimming.None;
             _tb.HorizontalAlignment = HorizontalAlignment.Left;
 
@@ -406,7 +449,6 @@ public static class MarqueeBehavior
                 _storyboard.Children.Add(anim);
             }
 
-            SetIsAnimating(_tb, true);
             _storyboard.Begin(_tb, isControllable: true);
 
             if (_isHovered && GetHoverPause(_tb))
@@ -432,8 +474,24 @@ public static class MarqueeBehavior
                 _transform.X = 0;
             }
 
+            if (_isAnimating)
+            {
+                if (double.IsNaN(_originalWidth))
+                    _tb.ClearValue(FrameworkElement.WidthProperty);
+                else
+                    _tb.Width = _originalWidth;
+
+                if (double.IsPositiveInfinity(_originalMaxWidth))
+                    _tb.ClearValue(FrameworkElement.MaxWidthProperty);
+                else
+                    _tb.MaxWidth = _originalMaxWidth;
+
+                _isAnimating = false;
+            }
+
             _tb.TextTrimming = _originalTrimming;
             _tb.HorizontalAlignment = _originalAlignment;
+            _tb.ClipToBounds = false;
             SetIsAnimating(_tb, false);
         }
     }

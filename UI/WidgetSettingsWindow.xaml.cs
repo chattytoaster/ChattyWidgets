@@ -33,6 +33,15 @@ public partial class WidgetSettingsWindow : Window
         _onSettingsChanged = onSettingsChanged;
 
         BuildSettingsUI();
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => Dispatcher.Invoke(BuildSettingsUI);
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
     }
 
     private void OnTitleBarMouseDown(object sender, MouseButtonEventArgs e)
@@ -51,6 +60,10 @@ public partial class WidgetSettingsWindow : Window
     private void BuildSettingsUI()
     {
         SettingsPanel.Children.Clear();
+        var loc = LocalizationService.Instance;
+        Title = loc.T("SettingsWindow.Title", "Настройки виджета");
+        if (TxtStatus != null) TxtStatus.Text = loc.T("SettingsWindow.Status", "Изменения применяются мгновенно");
+        if (BtnDone != null) BtnDone.Content = loc.T("SettingsWindow.Done", "Готово");
 
         switch (_baseWidgetId)
         {
@@ -490,16 +503,16 @@ public partial class WidgetSettingsWindow : Window
         // 4.2 Wind
         spUnits.Children.Add(new TextBlock { Text = loc.T("Weather.UnitWind", "Скорость ветра:"), FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 0, 0, 3) });
         var comboWind = new ComboBox { Height = 28, Margin = new Thickness(0, 0, 0, 8), Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)), Foreground = Brushes.White };
-        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMs", "Метры в секунду (м/с)"), Tag = "ms" });
-        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitKmh", "Километры в час (км/ч)"), Tag = "kmh" });
-        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMph", "Мили в час (mph)"), Tag = "mph" });
+        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMsLabel", "Метры в секунду (м/с)"), Tag = "ms" });
+        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitKmhLabel", "Километры в час (км/ч)"), Tag = "kmh" });
+        comboWind.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMphLabel", "Мили в час (mph)"), Tag = "mph" });
         comboWind.SelectedIndex = vm?.UnitWind switch { "kmh" => 1, "mph" => 2, _ => 0 };
 
         // 4.3 Pressure
         spUnits.Children.Add(new TextBlock { Text = loc.T("Weather.UnitPressure", "Атмосферное давление:"), FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 0, 0, 3) });
         var comboPressure = new ComboBox { Height = 28, Margin = new Thickness(0, 0, 0, 8), Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)), Foreground = Brushes.White };
-        comboPressure.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMmhg", "Миллиметры рт. ст. (мм)"), Tag = "mmhg" });
-        comboPressure.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitHpa", "Гектопаскали / мбар (гПа / hPa)"), Tag = "hpa" });
+        comboPressure.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitMmhgLabel", "Миллиметры рт. ст. (мм)"), Tag = "mmhg" });
+        comboPressure.Items.Add(new ComboBoxItem { Content = loc.T("Weather.UnitHpaLabel", "Гектопаскали / мбар (гПа / hPa)"), Tag = "hpa" });
         comboPressure.SelectedIndex = vm?.UnitPressure == "hpa" ? 1 : 0;
 
         void OnUnitChanged()
@@ -1259,7 +1272,7 @@ public partial class WidgetSettingsWindow : Window
         int currentFocus = 25;
         int currentBreak = 5;
         int currentLongBreak = 15;
-        int currentTimer = 10;
+        int currentTimer = 15;
         bool currentAutoStart = false;
         bool currentSound = true;
 
@@ -1509,7 +1522,7 @@ public partial class WidgetSettingsWindow : Window
             (60, "Pomodoro.Timer60m", "60 минут (1 час)")
         };
 
-        int selectedTimerIndex = 3; // Default 10 min
+        int selectedTimerIndex = 4; // Default 15 min
         for (int i = 0; i < timerOptions.Length; i++)
         {
             var opt = timerOptions[i];
@@ -2293,6 +2306,8 @@ public partial class WidgetSettingsWindow : Window
         var presets = new (string Key, string Label)[]
         {
             ("world", loc.T("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)")),
+            ("un_ru", loc.T("Rss.PresetUnRu", "🌐 Новости ООН на русском (UN News)")),
+            ("euronews", loc.T("Rss.PresetEuronews", "🇪🇺 Euronews на русском (Euronews RU)")),
             ("tech", loc.T("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)")),
             ("habr", loc.T("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)")),
             ("crypto", loc.T("Rss.PresetCrypto", "💎 Криптовалюты (CoinDesk)")),

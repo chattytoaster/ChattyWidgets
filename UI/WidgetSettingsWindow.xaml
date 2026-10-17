@@ -67,7 +67,7 @@
                 <DockPanel>
                     <TextBlock x:Name="TxtStatus" Text="Изменения применяются мгновенно" FontSize="11" Foreground="#94A3B8"
                                VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                    <Button Content="Готово" Width="90" Height="32" HorizontalAlignment="Right" DockPanel.Dock="Right"
+                    <Button x:Name="BtnDone" Content="Готово" Width="90" Height="32" HorizontalAlignment="Right" DockPanel.Dock="Right"
                             Background="#38BDF8" Foreground="#0F172A" FontWeight="Bold" FontSize="12"
                             BorderThickness="0" Cursor="Hand" Click="OnCloseClick">
                         <Button.Resources>

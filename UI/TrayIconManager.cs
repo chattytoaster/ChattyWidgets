@@ -31,13 +31,21 @@ public class TrayIconManager : IDisposable
 
         WidgetManager.Instance.WidgetsChanged += BuildContextMenu;
         PresetService.Instance.PresetsChanged += BuildContextMenu;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        System.Windows.Application.Current?.Dispatcher?.Invoke(BuildContextMenu);
     }
 
     public void BuildContextMenu()
     {
+        var loc = LocalizationService.Instance;
+        _notifyIcon.Text = loc.T("Tray.Tooltip", "ChattyWidgets — Движок виджетов рабочего стола");
         var menu = new ContextMenuStrip();
 
-        var openItem = new ToolStripMenuItem("Открыть Хаб ChattyWidgets")
+        var openItem = new ToolStripMenuItem(loc.T("Tray.OpenHub", "Открыть Хаб ChattyWidgets"))
         {
             Font = new Font(menu.Font, System.Drawing.FontStyle.Bold)
         };
@@ -47,11 +55,11 @@ public class TrayIconManager : IDisposable
         menu.Items.Add(new ToolStripSeparator());
 
         // Desktop Presets submenu
-        var presetsItem = new ToolStripMenuItem("Пресеты рабочих столов (.chwp)");
+        var presetsItem = new ToolStripMenuItem(loc.T("Tray.Presets", "Пресеты рабочих столов (.chwp)"));
         var settings = WidgetManager.Instance.Settings;
         if (settings.Presets == null || settings.Presets.Count == 0)
         {
-            presetsItem.DropDownItems.Add(new ToolStripMenuItem("(Нет сохранённых пресетов)") { Enabled = false });
+            presetsItem.DropDownItems.Add(new ToolStripMenuItem(loc.T("Tray.NoPresets", "(Нет сохранённых пресетов)")) { Enabled = false });
         }
         else
         {
@@ -72,15 +80,15 @@ public class TrayIconManager : IDisposable
         }
 
         presetsItem.DropDownItems.Add(new ToolStripSeparator());
-        var importChwpItem = new ToolStripMenuItem("Импортировать .chwp...");
+        var importChwpItem = new ToolStripMenuItem(loc.T("Tray.ImportPreset", "Импортировать .chwp..."));
         importChwpItem.Click += (s, e) =>
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 var ofd = new Microsoft.Win32.OpenFileDialog
                 {
-                    Title = "Импорт пресета .chwp",
-                    Filter = "Пакет пресета ChattyWidgets (*.chwp)|*.chwp|Все файлы (*.*)|*.*"
+                    Title = loc.T("Tray.ImportDialogTitle", "Импорт пресета .chwp"),
+                    Filter = loc.T("Tray.ImportFilter", "Пакет пресета ChattyWidgets (*.chwp)|*.chwp|Все файлы (*.*)|*.*")
                 };
                 if (ofd.ShowDialog() == true)
                 {
@@ -96,24 +104,24 @@ public class TrayIconManager : IDisposable
         menu.Items.Add(presetsItem);
 
         // Quick Hotkeys actions
-        var hideShowItem = new ToolStripMenuItem("Скрыть / Показать виджеты (Win+Alt+W)");
+        var hideShowItem = new ToolStripMenuItem(loc.T("Tray.ToggleWidgets", "Скрыть / Показать виджеты (Win+Alt+W)"));
         hideShowItem.Click += (s, e) => HotkeyService.Instance.ToggleWidgetsVisibility();
         menu.Items.Add(hideShowItem);
 
-        var peekItem = new ToolStripMenuItem("Режим «Быстрый взгляд» (Win+Alt+P)");
+        var peekItem = new ToolStripMenuItem(loc.T("Tray.PeekMode", "Режим «Быстрый взгляд» (Win+Alt+P)"));
         peekItem.Click += (s, e) => HotkeyService.Instance.TogglePeekMode();
         menu.Items.Add(peekItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
         // Quick widget toggles
-        var widgetsHeader = new ToolStripMenuItem("Виджеты на рабочем столе:") { Enabled = false };
+        var widgetsHeader = new ToolStripMenuItem(loc.T("Tray.ActiveWidgets", "Виджеты на рабочем столе:")) { Enabled = false };
         menu.Items.Add(widgetsHeader);
 
         var installed = ChwPackageService.GetInstalledWidgets();
         if (installed.Count == 0)
         {
-            menu.Items.Add(new ToolStripMenuItem("Нет установленных виджетов") { Enabled = false });
+            menu.Items.Add(new ToolStripMenuItem(loc.T("Tray.NoWidgets", "Нет установленных виджетов")) { Enabled = false });
         }
         else
         {
@@ -137,17 +145,17 @@ public class TrayIconManager : IDisposable
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var storeItem = new ToolStripMenuItem("Магазин виджетов...");
+        var storeItem = new ToolStripMenuItem(loc.T("Tray.Store", "Магазин виджетов..."));
         storeItem.Click += (s, e) => _openTabAction("store");
         menu.Items.Add(storeItem);
 
-        var workshopItem = new ToolStripMenuItem("Мастерская виджетов (.chw)...");
+        var workshopItem = new ToolStripMenuItem(loc.T("Tray.Workshop", "Мастерская виджетов (.chw)..."));
         workshopItem.Click += (s, e) => _openTabAction("workshop");
         menu.Items.Add(workshopItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = new ToolStripMenuItem("Выход");
+        var exitItem = new ToolStripMenuItem(loc.T("Tray.Exit", "Выход"));
         exitItem.Click += (s, e) =>
         {
             _notifyIcon.Visible = false;
@@ -204,6 +212,7 @@ public class TrayIconManager : IDisposable
 
     public void Dispose()
     {
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
     }

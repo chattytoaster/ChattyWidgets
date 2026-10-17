@@ -1908,7 +1908,7 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         set { _caption = value; OnPropertyChanged(); }
     }
 
-    private Stretch _stretchMode = Stretch.UniformToFill;
+    private Stretch _stretchMode = Stretch.Uniform;
     public Stretch StretchMode
     {
         get => _stretchMode;
@@ -1942,12 +1942,13 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         get => _slideIntervalSec;
         set
         {
-            if (_slideIntervalSec != value)
+            int safeVal = value > 0 ? Math.Max(3, value) : 0;
+            if (_slideIntervalSec != safeVal)
             {
-                _slideIntervalSec = value;
+                _slideIntervalSec = safeVal;
                 OnPropertyChanged();
                 UpdateTimerInterval();
-                SaveCustomSetting("mediaSlideIntervalSec", value.ToString());
+                SaveCustomSetting("mediaSlideIntervalSec", safeVal.ToString());
             }
         }
     }
@@ -2045,6 +2046,7 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         PrevCommand = new NativeRelayCommand(PrevImage);
 
         _slideTimer = new DispatcherTimer();
+        _slideTimer.Interval = TimeSpan.FromSeconds(Math.Max(3, _slideIntervalSec));
         _slideTimer.Tick += (s, e) => NextImage();
 
         LocalizationService.Instance.LanguageChanged += RefreshLocalization;
@@ -2052,7 +2054,7 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         string? savedSingleFile = null;
         string? savedFolder = null;
         int savedInterval = 10;
-        string savedStretch = "UniformToFill";
+        string savedStretch = "Uniform";
         bool savedShuffle = false;
         bool savedAutoHide = true;
 
@@ -2092,7 +2094,8 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
         _autoHideControls = savedAutoHide;
         _isShuffle = savedShuffle;
-        _slideIntervalSec = savedInterval;
+        _slideIntervalSec = savedInterval > 0 ? Math.Max(3, savedInterval) : 0;
+        _slideTimer.Interval = TimeSpan.FromSeconds(Math.Max(3, _slideIntervalSec));
         if (Enum.TryParse<Stretch>(savedStretch, true, out var st))
         {
             _stretchMode = st;
@@ -2144,23 +2147,17 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
 
     private void UpdateTimerInterval()
     {
-        if (IsSingleFileMode || _images.Count <= 1)
+        if (IsSingleFileMode || _images.Count <= 1 || _slideIntervalSec <= 0)
         {
             _slideTimer.Stop();
             return;
         }
 
-        if (_slideIntervalSec > 0)
+        int intervalSec = Math.Max(3, _slideIntervalSec);
+        _slideTimer.Interval = TimeSpan.FromSeconds(intervalSec);
+        if (!_slideTimer.IsEnabled)
         {
-            _slideTimer.Interval = TimeSpan.FromSeconds(_slideIntervalSec);
-            if (!_slideTimer.IsEnabled)
-            {
-                _slideTimer.Start();
-            }
-        }
-        else
-        {
-            _slideTimer.Stop();
+            _slideTimer.Start();
         }
     }
 
@@ -2214,9 +2211,17 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         OnPropertyChanged(nameof(PlaceholderVisibility));
         OnPropertyChanged(nameof(NavigationButtonsVisibility));
 
-        if (!IsSingleFileMode && _slideIntervalSec > 0 && _images.Count > 1 && !_slideTimer.IsEnabled)
+        if (!IsSingleFileMode && _slideIntervalSec > 0 && _images.Count > 1)
         {
-            _slideTimer.Start();
+            _slideTimer.Interval = TimeSpan.FromSeconds(Math.Max(3, _slideIntervalSec));
+            if (!_slideTimer.IsEnabled)
+            {
+                _slideTimer.Start();
+            }
+        }
+        else
+        {
+            _slideTimer.Stop();
         }
     }
 
@@ -2293,6 +2298,21 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"
         };
 
+        // If a single image file is dropped, show that exact photo statically without loading sibling photos
+        if (filePaths.Length == 1 && File.Exists(filePaths[0]) && validExts.Contains(Path.GetExtension(filePaths[0])))
+        {
+            SetSingleFile(filePaths[0], saveToSettings: true);
+            _slideTimer.Stop();
+            return;
+        }
+
+        // If a single folder is dropped, set it as custom folder and scan it
+        if (filePaths.Length == 1 && Directory.Exists(filePaths[0]))
+        {
+            SetCustomFolder(filePaths[0], saveToSettings: true);
+            return;
+        }
+
         var newImages = new List<string>();
         string? targetImage = null;
         string? rememberedFolder = null;
@@ -2318,26 +2338,9 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             }
         }
 
-        // If a single image was dropped, also scan its folder so user can flip through
-        if (targetImage != null && filePaths.Length == 1 && rememberedFolder != null && Directory.Exists(rememberedFolder))
-        {
-            try
-            {
-                var siblingImages = new List<string>();
-                foreach (var ext in validExts)
-                {
-                    try { siblingImages.AddRange(Directory.GetFiles(rememberedFolder, "*" + ext)); } catch { }
-                }
-                if (siblingImages.Count > 0)
-                {
-                    newImages = siblingImages.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                }
-            }
-            catch { }
-        }
-
         if (newImages.Count > 0)
         {
+            newImages = newImages.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             newImages.Sort(StringComparer.OrdinalIgnoreCase);
             _originalImages.Clear();
             _originalImages.AddRange(newImages);
@@ -2361,16 +2364,13 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
                 _index = 0;
             }
 
-            if (rememberedFolder != null)
-            {
-                _singleFilePath = "";
-                CustomFolder = rememberedFolder;
-                SaveCustomSetting("mediaFolder", rememberedFolder);
-                SaveCustomSetting("mediaSingleFile", "");
-                OnPropertyChanged(nameof(SingleFilePath));
-                OnPropertyChanged(nameof(IsSingleFileMode));
-                OnPropertyChanged(nameof(SourceDisplayName));
-            }
+            _singleFilePath = "";
+            CustomFolder = rememberedFolder ?? "";
+            SaveCustomSetting("mediaFolder", CustomFolder);
+            SaveCustomSetting("mediaSingleFile", "");
+            OnPropertyChanged(nameof(SingleFilePath));
+            OnPropertyChanged(nameof(IsSingleFileMode));
+            OnPropertyChanged(nameof(SourceDisplayName));
 
             ShowImage(_index);
         }
@@ -2717,14 +2717,14 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
     private int _focusMinutes = 25;
     private int _breakMinutes = 5;
     private int _longBreakMinutes = 15;
-    private int _timerMinutes = 10;
-    private int _timerTotalSeconds = 10 * 60;
+    private int _timerMinutes = 15;
+    private int _timerTotalSeconds = 15 * 60;
     private bool _autoStart = false;
     private bool _soundEnabled = true;
 
-    private int _remainingSeconds = 25 * 60;
+    private int _remainingSeconds = 15 * 60;
     private bool _isRunning = false;
-    private PomodoroPhase _currentPhase = PomodoroPhase.Focus;
+    private PomodoroPhase _currentPhase = PomodoroPhase.Timer;
     private int _completedSessions = 0;
 
     public int FocusMinutes => _focusMinutes;
@@ -2971,17 +2971,17 @@ public class PomodoroWidgetViewModel : NativeViewModelBase
 
         SwitchModeCommand = new NativeRelayCommand(() =>
         {
-            if (_currentPhase == PomodoroPhase.Focus)
+            if (_currentPhase == PomodoroPhase.Timer)
+            {
+                SwitchToPhase(PomodoroPhase.Focus);
+            }
+            else if (_currentPhase == PomodoroPhase.Focus)
             {
                 SwitchToPhase(PomodoroPhase.ShortBreak);
             }
-            else if (_currentPhase == PomodoroPhase.ShortBreak || _currentPhase == PomodoroPhase.LongBreak)
-            {
-                SwitchToPhase(PomodoroPhase.Timer);
-            }
             else
             {
-                SwitchToPhase(PomodoroPhase.Focus);
+                SwitchToPhase(PomodoroPhase.Timer);
             }
         });
 
@@ -3565,7 +3565,13 @@ public class RssArticleItem
 
 public class RssWidgetViewModel : NativeViewModelBase
 {
-    private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+    private static readonly HttpClient _httpClient = CreateRssHttpClient();
+    private static HttpClient CreateRssHttpClient()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 ChattyWidgets/1.0");
+        return client;
+    }
     private readonly string? _instanceId;
     private readonly DispatcherTimer _slideTimer;
 
@@ -3627,6 +3633,8 @@ public class RssWidgetViewModel : NativeViewModelBase
             {
                 "tech" => loc.T("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ"),
                 "crypto" => loc.T("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ"),
+                "un_ru" => loc.T("Rss.CategoryUnRu", "НОВОСТИ ООН"),
+                "euronews" => loc.T("Rss.CategoryEuronews", "EURONEWS"),
                 "habr" => "HABR IT",
                 "science" => "NASA & SCIENCE",
                 "custom" => "CUSTOM RSS",
@@ -3730,6 +3738,8 @@ public class RssWidgetViewModel : NativeViewModelBase
         {
             "tech" => "https://news.ycombinator.com/rss",
             "crypto" => "https://www.coindesk.com/arc/outboundfeeds/rss/",
+            "un_ru" => "https://news.un.org/feed/subscribe/ru/news/all/rss.xml",
+            "euronews" => "https://ru.euronews.com/rss",
             "habr" => "https://habr.com/ru/rss/all/all/",
             "science" => "https://www.nasa.gov/rss/dyn/breaking_news.rss",
             "custom" => !string.IsNullOrWhiteSpace(_customUrl) ? _customUrl : "https://feeds.bbci.co.uk/news/world/rss.xml",
@@ -3761,12 +3771,20 @@ public class RssWidgetViewModel : NativeViewModelBase
                         else displayTime = dt.ToString("dd.MM");
                     }
 
+                    string sourceBadge = _preset switch
+                    {
+                        "un_ru" => "ООН",
+                        "euronews" => "EURONEWS",
+                        "habr" => "HABR",
+                        _ => _preset.ToUpperInvariant()
+                    };
+
                     if (!string.IsNullOrEmpty(title))
                     {
                         var article = new RssArticleItem
                         {
                             Title = title,
-                            Source = _preset.ToUpperInvariant(),
+                            Source = sourceBadge,
                             Time = displayTime,
                             Url = link
                         };
@@ -3900,7 +3918,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
         }
     }
 
-    public string HeaderTitle => LocalizationService.Instance.T("StickyNotes.Title", "Заметки и задачи");
+    public string HeaderTitle => LocalizationService.Instance.T("StickyNotes.HeaderTitle", "Заметки и задачи");
 
     public Brush HeaderBrush => _accentColor switch
     {
@@ -4427,7 +4445,7 @@ public class WeatherWidgetViewModel : NativeViewModelBase
                 break;
             case "mph":
                 double mph = _rawWindKmh * 0.621371;
-                WindSpeed = $"{mph:F1} {loc.T("Weather.UnitMph", "mph")}";
+                WindSpeed = $"{mph:F1} {loc.T("Weather.UnitMph", "миль/ч")}";
                 break;
             default: // ms
                 double ms = _rawWindKmh / 3.6;
@@ -4438,19 +4456,19 @@ public class WeatherWidgetViewModel : NativeViewModelBase
         // Pressure conversion
         if (_unitPressure.Equals("hpa", StringComparison.OrdinalIgnoreCase))
         {
-            Pressure = $"{Math.Round(_rawPressureHpa)} {loc.T("Weather.UnitHpa", "hPa")}";
+            Pressure = $"{Math.Round(_rawPressureHpa)} {loc.T("Weather.UnitHpa", "гПа")}";
         }
         else
         {
             int pressMm = (int)Math.Round(_rawPressureHpa * 0.750062);
-            Pressure = $"{pressMm} {loc.T("Weather.UnitMmhg", "мм")}";
+            Pressure = $"{pressMm} {loc.T("Weather.UnitMmhg", "мм рт. ст.")}";
         }
 
         var (wDesc, wIcon) = GetWmoInfo(_rawWeatherCode);
         Condition = wDesc;
         WeatherIcon = wIcon;
         Humidity = $"{_rawHumidity}%";
-        Rain = $"{_rawRainMm:F1} мм";
+        Rain = $"{_rawRainMm:F1} {loc.T("Weather.UnitMm", "мм")}";
     }
 
     public async Task RefreshWeatherAsync()

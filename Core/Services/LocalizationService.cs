@@ -118,6 +118,84 @@ public class LocalizationService
         // Hub Navigation & Title
         Add("Hub.AppTitle", "ChattyWidgets", "ChattyWidgets");
         Add("Hub.AppSubtitle", "Desktop Widget Engine", "Desktop Widget Engine");
+
+        // Context Menu (Right-click on widgets)
+        Add("Menu.Settings", "⚙️ Настройки виджета...", "⚙️ Widget Settings...");
+        Add("Menu.Duplicate", "📋 Скопировать виджет (Создать копию)", "📋 Duplicate Widget (Create copy)");
+        Add("Menu.Delete", "🗑 Удалить этот виджет", "🗑 Delete this widget");
+        Add("Menu.LayerGroup", "Слой отображения", "Display Layer");
+        Add("Menu.LayerDesktop", "На рабочем столе (под всеми окнами)", "On Desktop (under all windows)");
+        Add("Menu.LayerNormal", "Плавающее окно", "Floating Window");
+        Add("Menu.LayerTop", "Поверх всех окон", "Always On Top");
+        Add("Menu.ThemeGroup", "Тема оформления", "Theme");
+        Add("Menu.ThemeAuto", "✦ Как в Хабе (Авто)", "✦ Match Hub (Auto)");
+        Add("Menu.ThemeDark", "🌙 Тёмная тема", "🌙 Dark Theme");
+        Add("Menu.ThemeLight", "☀️ Светлая тема", "☀️ Light Theme");
+        Add("Menu.LockPosition", "Зафиксировать позицию", "Lock Position");
+        Add("Menu.ClickThrough", "Клик насквозь (Click-through)", "Click-through");
+        Add("Menu.AutoHideDot", "Спрятать точку управления", "Auto-hide Anchor Dot");
+        Add("Menu.ResizeGroup", "Изменить размер", "Resize");
+        Add("Menu.Resize75", "75% (Компактный)", "75% (Compact)");
+        Add("Menu.Resize100", "100% (Обычный)", "100% (Normal)");
+        Add("Menu.Resize125", "125% (Увеличенный)", "125% (Large)");
+        Add("Menu.Resize150", "150% (Большой)", "150% (Extra Large)");
+        Add("Menu.FreeResize", "Тянуть за края (Свободный размер)", "Drag edges to resize (Free resize)");
+        Add("Menu.OpacityGroup", "Прозрачность фона", "Background Opacity");
+        Add("Menu.Opacity100", "100% (Непрозрачный фон)", "100% (Opaque)");
+        Add("Menu.Opacity85", "75% фона", "75% opacity");
+        Add("Menu.Opacity70", "50% фона", "50% opacity");
+        Add("Menu.Opacity50", "25% фона (Стекло)", "25% opacity (Glass)");
+        Add("Menu.Monitors", "Переместить на монитор...", "Move to Monitor...");
+        Add("Menu.GaugesConstructor", "🎨 Изменить формат (Конструктор)...", "🎨 Custom Format (Constructor)...");
+        Add("Menu.CustomSettings", "Настройки виджета", "Widget Settings");
+        Add("Menu.Reload", "⟳ Перезагрузить виджет", "⟳ Reload Widget");
+        Add("Menu.DevTools", "🛠 Открыть DevTools (F12)", "🛠 Open DevTools (F12)");
+        Add("Menu.OpenFolder", "Открыть папку виджета", "Open Widget Folder");
+        Add("Menu.OpenHub", "Открыть Хаб ChattyWidgets", "Open ChattyWidgets Hub");
+        Add("Menu.Close", "Скрыть виджет", "Hide Widget");
+        Add("Anchor.ToolTip", "Точка управления ChattyWidgets (ПКМ — меню, ЛКМ — переместить)", "ChattyWidgets Anchor (Right-click: menu, Left-click: drag)");
+        Add("ResizeGrip.ToolTip", "Потяните, чтобы изменить размер виджета", "Drag to resize widget");
+        Add("Loading.Text", "✦ Загрузка виджета...", "✦ Loading widget...");
+
+        // Tray Icon Context Menu
+        Add("Tray.Tooltip", "ChattyWidgets — Движок виджетов рабочего стола", "ChattyWidgets — Desktop Widget Engine");
+        Add("Tray.OpenHub", "Открыть Хаб ChattyWidgets", "Open ChattyWidgets Hub");
+        Add("Tray.Presets", "Пресеты рабочих столов (.chwp)", "Desktop Presets (.chwp)");
+        Add("Tray.NoPresets", "(Нет сохранённых пресетов)", "(No saved presets)");
+        Add("Tray.ImportPreset", "Импортировать .chwp...", "Import .chwp...");
+        Add("Tray.ToggleWidgets", "Скрыть / Показать виджеты (Win+Alt+W)", "Hide / Show Widgets (Win+Alt+W)");
+        Add("Tray.PeekMode", "Режим «Быстрый взгляд» (Win+Alt+P)", "Peek Mode (Win+Alt+P)");
+        Add("Tray.ActiveWidgets", "Виджеты на рабочем столе:", "Active Desktop Widgets:");
+        Add("Tray.NoWidgets", "Нет установленных виджетов", "No installed widgets");
+        Add("Tray.Store", "Магазин виджетов...", "Widget Store...");
+        Add("Tray.Workshop", "Мастерская виджетов (.chw)...", "Widget Workshop (.chw)...");
+        Add("Tray.Exit", "Выход", "Exit");
+        Add("Tray.ImportDialogTitle", "Импорт пресета .chwp", "Import .chwp Preset");
+        Add("Tray.ImportFilter", "Пакет пресета ChattyWidgets (*.chwp)|*.chwp|Все файлы (*.*)|*.*", "ChattyWidgets Preset (*.chwp)|*.chwp|All Files (*.*)|*.*");
+
+        // Settings Window
+        Add("SettingsWindow.Title", "Настройки виджета", "Widget Settings");
+        Add("SettingsWindow.Status", "Изменения применяются мгновенно", "Changes apply instantly");
+        Add("SettingsWindow.Done", "Готово", "Done");
+
+        // Gauges Constructor
+        Add("GaugesConstructor.Title", "Конструктор формата датчиков", "Sensor Format Constructor");
+        Add("GaugesConstructor.Header", "Конструктор формата виджета", "Widget Format Constructor");
+        Add("GaugesConstructor.Desc1", "Настройте элементы, их порядок и вид отображения:", "Configure items, their order and display mode:");
+        Add("GaugesConstructor.Desc2", "Вы можете перемещать метрики кнопками ▲ и ▼, включать GPU и выбирать между полоской и круговой диаграммой.", "You can reorder metrics with ▲ and ▼, toggle GPU, and choose between bars and circular rings.");
+        Add("GaugesConstructor.CirclesLabel", "Круговые диаграммы:", "Circular Gauges:");
+        Add("GaugesConstructor.Cols2", "2 в ряд (Сетка)", "2 in a row (Grid)");
+        Add("GaugesConstructor.Cols1", "1 в ряд (Список)", "1 in a row (List)");
+        Add("GaugesConstructor.Reset", "↺ По умолчанию", "↺ Reset Defaults");
+        Add("GaugesConstructor.Cancel", "Отмена", "Cancel");
+        Add("GaugesConstructor.Apply", "Применить", "Apply");
+
+        // System Gauges Sensors
+        Add("SystemGauges.Cpu", "Процессор (CPU)", "Processor (CPU)");
+        Add("SystemGauges.Ram", "Память (RAM)", "Memory (RAM)");
+        Add("SystemGauges.Disk", "Накопитель (Диск C:)", "Storage (Drive C:)");
+        Add("SystemGauges.Gpu", "Видеокарта (GPU)", "Graphics (GPU)");
+        Add("SystemGauges.Net", "Сеть (Скорость)", "Network (Speed)");
         Add("Hub.TabMyWidgets", "📱 Мои виджеты", "📱 My Widgets");
         Add("Hub.TabStore", "🛍 Магазин", "🛍 Store");
         Add("Hub.TabWorkshop", "🛠 Мастерская", "🛠 Workshop");
@@ -181,12 +259,18 @@ public class LocalizationService
         Add("Weather.UnitCelsius", "Градусы Цельсия (°C)", "Celsius (°C)");
         Add("Weather.UnitFahrenheit", "Градусы Фаренгейта (°F)", "Fahrenheit (°F)");
         Add("Weather.UnitWind", "Единицы скорости ветра:", "Wind Speed Units:");
-        Add("Weather.UnitMs", "Метры в секунду (м/с)", "Meters per second (m/s)");
-        Add("Weather.UnitKmh", "Километры в час (км/ч)", "Kilometers per hour (km/h)");
-        Add("Weather.UnitMph", "Мили в час (mph)", "Miles per hour (mph)");
+        Add("Weather.UnitMs", "м/с", "m/s");
+        Add("Weather.UnitKmh", "км/ч", "km/h");
+        Add("Weather.UnitMph", "миль/ч", "mph");
         Add("Weather.UnitPressure", "Атмосферное давление:", "Atmospheric Pressure:");
-        Add("Weather.UnitMmhg", "Миллиметры рт. ст. (мм)", "Millimeters of mercury (mmHg)");
-        Add("Weather.UnitHpa", "Гектопаскали / мбар (гПа / hPa)", "Hectopascals / mbar (hPa)");
+        Add("Weather.UnitMmhg", "мм рт. ст.", "mmHg");
+        Add("Weather.UnitHpa", "гПа", "hPa");
+        Add("Weather.UnitMm", "мм", "mm");
+        Add("Weather.UnitMsLabel", "Метры в секунду (м/с)", "Meters per second (m/s)");
+        Add("Weather.UnitKmhLabel", "Километры в час (км/ч)", "Kilometers per hour (km/h)");
+        Add("Weather.UnitMphLabel", "Мили в час (mph)", "Miles per hour (mph)");
+        Add("Weather.UnitMmhgLabel", "Миллиметры рт. ст. (мм)", "Millimeters of mercury (mmHg)");
+        Add("Weather.UnitHpaLabel", "Гектопаскали / мбар (гПа / hPa)", "Hectopascals / mbar (hPa)");
         Add("Weather.RefreshBtn", "⟳ Обновить прогноз погоды сейчас", "⟳ Refresh weather forecast now");
         Add("Weather.CityChanged", "Город изменен на {0}. Загрузка прогноза...", "City changed to {0}. Loading forecast...");
         Add("Weather.Refreshed", "Погода успешно обновлена!", "Weather updated successfully!");
@@ -279,6 +363,8 @@ public class LocalizationService
         Add("Rss.HeaderSub", "Выбор международных каналов, IT, технологий и скорости листания", "International channels, tech, world news and slideshow duration");
         Add("Rss.FeedPreset", "Категория и источник новостей:", "News Category & Source:");
         Add("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)", "🌍 World News (BBC World / Reuters)");
+        Add("Rss.PresetUnRu", "🌐 Новости ООН на русском (UN News)", "🌐 UN News in Russian");
+        Add("Rss.PresetEuronews", "🇪🇺 Euronews на русском (Euronews RU)", "🇪🇺 Euronews in Russian");
         Add("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)", "💻 Tech & AI (Hacker News / TechCrunch)");
         Add("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)", "🚀 Developer Community (Habr IT)");
         Add("Rss.PresetCrypto", "💎 Криптовалюты (CoinDesk)", "💎 Cryptocurrency (CoinDesk)");
@@ -294,6 +380,8 @@ public class LocalizationService
         Add("Rss.ReadMore", "Читать источник ↗", "Read more ↗");
         Add("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ", "AI & TECHNOLOGY");
         Add("Rss.CategoryWorld", "МИРОВЫЕ НОВОСТИ", "WORLD NEWS");
+        Add("Rss.CategoryUnRu", "НОВОСТИ ООН", "UN NEWS");
+        Add("Rss.CategoryEuronews", "EURONEWS", "EURONEWS");
         Add("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ", "CRYPTOCURRENCY");
         Add("Rss.CategoryWindows", "WINDOWS & СТЕК", "WINDOWS & TECH");
         Add("Rss.CustomUrl", "Пользовательский RSS URL:", "Custom RSS Feed URL:");
@@ -484,6 +572,7 @@ public class LocalizationService
 
         // 9. Sticky Notes Widget
         Add("StickyNotes.Title", "Настройки Заметок & Задач", "Sticky Notes & Tasks Settings");
+        Add("StickyNotes.HeaderTitle", "Заметки и задачи", "Notes & Tasks");
         Add("StickyNotes.Header", "📌 Управление списком задач", "📌 Task List Management");
         Add("StickyNotes.HeaderSub", "Быстрые действия с чек-листом, стили и фильтры", "Checklist actions, styles and filters");
         Add("StickyNotes.BtnClearDone", "✓ Удалить все выполненные задачи", "✓ Delete all completed tasks");

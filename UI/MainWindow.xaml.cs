@@ -202,6 +202,8 @@ public partial class MainWindow : Window
                 updatesCount++;
             }
 
+            string launchText = LocalizationService.Instance.T("Hub.BtnLaunch", "Запустить");
+            string stopText = LocalizationService.Instance.T("Hub.BtnStop", "Остановить");
             viewModels.Add(new InstalledWidgetViewModel
             {
                 Manifest = manifest,
@@ -209,7 +211,7 @@ public partial class MainWindow : Window
                 IsActive = isActive,
                 ActiveCopiesCount = copies,
                 TypeBadge = manifest.Type == "native" ? "⚡" : "🌐",
-                ToggleButtonText = isActive ? "Остановить" : "Запустить",
+                ToggleButtonText = isActive ? stopText : launchText,
                 ToggleButtonBg = isActive
                     ? new SolidColorBrush(Color.FromRgb(239, 68, 68)) // Red
                     : new SolidColorBrush(Color.FromRgb(16, 185, 129)), // Green
@@ -220,14 +222,21 @@ public partial class MainWindow : Window
         }
 
         InstalledWidgetsList.ItemsSource = viewModels;
-        TxtActiveCount.Text = $"{totalActiveCopies} активно из {installed.Count}";
+        bool isRu = LocalizationService.Instance.IsRussian;
+        TxtActiveCount.Text = isRu 
+            ? $"{totalActiveCopies} активно из {installed.Count}" 
+            : $"{totalActiveCopies} active of {installed.Count}";
         if (updatesCount > 0)
         {
-            TxtStatus.Text = $"Загружено {installed.Count} виджетов. Доступно обновлений: {updatesCount}!";
+            TxtStatus.Text = isRu 
+                ? $"Загружено {installed.Count} виджетов. Доступно обновлений: {updatesCount}!" 
+                : $"Loaded {installed.Count} widgets. Updates available: {updatesCount}!";
         }
         else
         {
-            TxtStatus.Text = $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}.";
+            TxtStatus.Text = isRu 
+                ? $"Загружено {installed.Count} виджетов. Активно экземпляров: {totalActiveCopies}." 
+                : $"Loaded {installed.Count} widgets. Active instances: {totalActiveCopies}.";
         }
     }
 
@@ -374,12 +383,15 @@ public partial class MainWindow : Window
         PresetChipsPanel.Children.Clear();
         var presets = WidgetManager.Instance.Settings.Presets;
         string activeId = WidgetManager.Instance.Settings.ActivePresetId;
+        bool isRu = LocalizationService.Instance.IsRussian;
 
         if (presets == null || presets.Count == 0)
         {
             var hint = new TextBlock
             {
-                Text = "Пресеты не созданы. Расположите виджеты и нажмите «+ Сохранить текущий вид» или «📥 Импорт .chwp»",
+                Text = isRu 
+                    ? "Пресеты не созданы. Расположите виджеты и нажмите «+ Сохранить текущий вид» или «📥 Импорт .chwp»"
+                    : "No presets yet. Arrange widgets and click \"+ Save current layout\" or \"📥 Import .chwp\"",
                 Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -401,18 +413,20 @@ public partial class MainWindow : Window
                 FontWeight = isCurrent ? FontWeights.Bold : FontWeights.Normal,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 Tag = p,
-                ToolTip = $"ЛКМ: применить пресет\nПКМ: экспортировать в .chwp или удалить\nВиджетов в пресете: {p.Widgets.Count}",
+                ToolTip = isRu
+                    ? $"ЛКМ: применить пресет\nПКМ: экспортировать в .chwp или удалить\nВиджетов в пресете: {p.Widgets.Count}"
+                    : $"Left-click: apply preset\nRight-click: export to .chwp or delete\nWidgets in preset: {p.Widgets.Count}",
                 Style = isCurrent ? (Style)FindResource("PrimaryBtn") : (Style)FindResource("SecondaryBtn")
             };
             btn.Click += OnPresetChipClick;
 
             // Context Menu: Export to .chwp / Delete
             var contextMenu = new ContextMenu();
-            var exportItem = new MenuItem { Header = "💾 Экспортировать в файл .chwp..." };
+            var exportItem = new MenuItem { Header = isRu ? "💾 Экспортировать в файл .chwp..." : "💾 Export to .chwp file..." };
             exportItem.Click += (s, e) => ExportPreset(p);
             contextMenu.Items.Add(exportItem);
 
-            var deleteItem = new MenuItem { Header = "🗑 Удалить пресет" };
+            var deleteItem = new MenuItem { Header = isRu ? "🗑 Удалить пресет" : "🗑 Delete preset" };
             deleteItem.Click += (s, e) => DeletePreset(p);
             contextMenu.Items.Add(deleteItem);
 
@@ -555,13 +569,16 @@ public partial class MainWindow : Window
 
     public async Task RefreshStoreCatalogAsync()
     {
-        TxtStatus.Text = "Загрузка каталога магазина...";
+        bool isRu = LocalizationService.Instance.IsRussian;
+        TxtStatus.Text = isRu ? "Загрузка каталога магазина..." : "Loading store catalog...";
         var catalog = await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
 
         var viewModels = catalog.Select(item =>
         {
             bool isOfficial = item.IsOfficial || item.Id.StartsWith(SecurityService.OfficialPrefix, StringComparison.OrdinalIgnoreCase);
-            string badgeText = isOfficial ? "✦ Официальный" : $"{item.Author} (GitHub)";
+            string badgeText = isOfficial 
+                ? (isRu ? "✦ Официальный" : "✦ Official") 
+                : $"{item.Author} (GitHub)";
             var badgeBg = isOfficial
                 ? new SolidColorBrush(Color.FromRgb(30, 42, 74))
                 : new SolidColorBrush(Color.FromRgb(6, 78, 59));
@@ -571,8 +588,10 @@ public partial class MainWindow : Window
 
             bool canAction = !item.IsInstalled || item.HasUpdate;
             string actionText = item.HasUpdate
-                ? $"Обновить до v{item.Version} ⬆"
-                : (item.IsInstalled ? "Установлен ✓" : "Установить ⬇");
+                ? (isRu ? $"Обновить до v{item.Version} ⬆" : $"Update to v{item.Version} ⬆")
+                : (item.IsInstalled 
+                    ? (isRu ? "Установлен ✓" : "Installed ✓") 
+                    : (isRu ? "Установить ⬇" : "Install ⬇"));
 
             var actionBg = item.HasUpdate
                 ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) // Emerald green for update
@@ -602,11 +621,15 @@ public partial class MainWindow : Window
         int updatesCount = catalog.Count(x => x.HasUpdate);
         if (updatesCount > 0)
         {
-            TxtStatus.Text = $"Магазин: доступно {catalog.Count} виджетов. Доступно обновлений: {updatesCount}!";
+            TxtStatus.Text = isRu 
+                ? $"Магазин: доступно {catalog.Count} виджетов. Доступно обновлений: {updatesCount}!" 
+                : $"Store: {catalog.Count} widgets available. Updates available: {updatesCount}!";
         }
         else
         {
-            TxtStatus.Text = $"Магазин: доступно {catalog.Count} виджетов.";
+            TxtStatus.Text = isRu 
+                ? $"Магазин: доступно {catalog.Count} виджетов." 
+                : $"Store: {catalog.Count} widgets available.";
         }
     }
 
@@ -959,7 +982,47 @@ public partial class MainWindow : Window
         if (TabWorkshop != null) TabWorkshop.Content = LocalizationService.Instance.T("Hub.TabWorkshop");
         if (TabSettings != null) TabSettings.Content = LocalizationService.Instance.T("Hub.TabSettings");
 
-        // Settings items
+        // Tab 1: My Widgets
+        if (TxtInstalledTitle != null) TxtInstalledTitle.Text = LocalizationService.Instance.T("Hub.InstalledTitle", "Установленные виджеты");
+        if (BtnRefreshInstalled != null) BtnRefreshInstalled.Content = LocalizationService.Instance.T("Hub.RefreshBtn", "Обновить");
+        if (TxtPresetsLabel != null) TxtPresetsLabel.Text = LocalizationService.Instance.T("Hub.PresetsLabel", "🎨 Пресеты стола:");
+        if (BtnImportPreset != null)
+        {
+            BtnImportPreset.Content = LocalizationService.Instance.T("Hub.ImportPresetBtn", "📥 Импорт .chwp");
+            BtnImportPreset.ToolTip = LocalizationService.Instance.T("Hub.ImportPresetTip", "Загрузить пресет рабочего стола из файла .chwp");
+        }
+        if (BtnSavePreset != null)
+        {
+            BtnSavePreset.Content = LocalizationService.Instance.T("Hub.SavePresetBtn", "+ Сохранить текущий вид");
+            BtnSavePreset.ToolTip = LocalizationService.Instance.T("Hub.SavePresetTip", "Сохранить текущее расположение виджетов на экране как пресет");
+        }
+
+        // Tab 2: Store
+        if (TxtStoreTitle != null) TxtStoreTitle.Text = isRu ? "Магазин Виджетов" : "Widget Store";
+        if (BtnRefreshStore != null) BtnRefreshStore.Content = isRu ? "Проверить обновления" : "Check Updates";
+        if (TxtStoreHintTitle != null) TxtStoreHintTitle.Text = isRu ? "📦 Подсказка: " : "📦 Tip: ";
+        if (TxtStoreHintDesc != null) TxtStoreHintDesc.Text = isRu 
+            ? "Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." 
+            : "Drag and drop any .chw file directly into this window to install the widget instantly.";
+
+        // Tab 3: Workshop
+        if (TxtWorkshopTitle != null) TxtWorkshopTitle.Text = isRu ? "Мастерская Разработчика (.chw)" : "Developer Workshop (.chw)";
+        if (TxtCreateTemplateTitle != null) TxtCreateTemplateTitle.Text = isRu ? "Создать новый виджет из шаблона" : "Create new widget from template";
+        if (TxtWidgetIdLabel != null) TxtWidgetIdLabel.Text = isRu ? "ID виджета (латиница без пробелов):" : "Widget ID (lowercase, no spaces):";
+        if (TxtWidgetNameLabel != null) TxtWidgetNameLabel.Text = isRu ? "Название виджета:" : "Widget Name:";
+        if (TxtAuthorLabel != null) TxtAuthorLabel.Text = isRu ? "Имя автора:" : "Author Name:";
+        if (TxtRuntimeTypeLabel != null) TxtRuntimeTypeLabel.Text = isRu ? "Тип рантайма:" : "Runtime Type:";
+        if (TxtDescLabel != null) TxtDescLabel.Text = isRu ? "Краткое описание:" : "Short Description:";
+        if (BtnCreateWidgetTemplate != null) BtnCreateWidgetTemplate.Content = isRu ? "✨ Создать каркас проекта виджета" : "✨ Scaffold Widget Project";
+        if (TxtPackTitle != null) TxtPackTitle.Text = isRu ? "Экспорт папки в пакет .chw (Сборщик)" : "Export Folder to .chw Package (Builder)";
+        if (TxtPackDesc != null) TxtPackDesc.Text = isRu 
+            ? "Выберите папку с manifest.json и ресурсами виджета для упаковки в распространяемый файл .chw:" 
+            : "Select a folder containing manifest.json and widget resources to package into a .chw file:";
+        if (BtnBrowseFolderToPack != null) BtnBrowseFolderToPack.Content = isRu ? "Обзор папки..." : "Browse folder...";
+        if (BtnExportPackage != null) BtnExportPackage.Content = isRu ? "📦 Собрать пакет .chw" : "📦 Build .chw Package";
+
+        // Tab 4: Settings items
+        if (TxtSettingsTitle != null) TxtSettingsTitle.Text = LocalizationService.Instance.T("Hub.SettingsTitle", "Настройки движка");
         if (CheckAutostart != null) CheckAutostart.Content = LocalizationService.Instance.T("Hub.Autostart");
         if (CheckSnapGrid != null) CheckSnapGrid.Content = LocalizationService.Instance.T("Hub.SnapGrid");
         if (CheckHotkeys != null) CheckHotkeys.Content = LocalizationService.Instance.T("Hub.Hotkeys");
@@ -970,8 +1033,32 @@ public partial class MainWindow : Window
         if (TxtHubThemeHint != null) TxtHubThemeHint.Text = LocalizationService.Instance.T("Hub.ThemeHint");
         if (TxtHubLanguageLabel != null) TxtHubLanguageLabel.Text = LocalizationService.Instance.T("Hub.LanguageLabel");
         if (TxtHubLanguageHint != null) TxtHubLanguageHint.Text = LocalizationService.Instance.T("Hub.LanguageHint");
+        if (TxtSnapGridLabel != null) TxtSnapGridLabel.Text = LocalizationService.Instance.T("Hub.GridStep", "Шаг сетки прилипания виджетов:");
+        if (TxtDefaultOpacityLabel != null) TxtDefaultOpacityLabel.Text = LocalizationService.Instance.T("Hub.OpacityLabel", "Прозрачность фона виджетов по умолчанию:");
+        if (BtnImportChw != null) BtnImportChw.Content = LocalizationService.Instance.T("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)");
+        if (BtnOpenAppData != null) BtnOpenAppData.Content = LocalizationService.Instance.T("Hub.OpenAppDataBtn", "Открыть папку данных виджетов (%LocalAppData%)");
+        if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
+        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 2.0.0 (.NET 8.0 Windows x64)" : "Version: 2.0.0 (.NET 8.0 Windows x64)";
+        if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
 
+        // Window caption controls
+        if (BtnThemeToggle != null) BtnThemeToggle.ToolTip = isRu ? "Тема оформления (Тёмная / Светлая)" : "Theme (Dark / Light)";
+        if (BtnMinimizeWindow != null) BtnMinimizeWindow.ToolTip = isRu ? "Свернуть" : "Minimize";
+        if (BtnMaximizeRestore != null) BtnMaximizeRestore.ToolTip = isRu ? "Развернуть" : "Maximize";
+        if (BtnCloseWindow != null) BtnCloseWindow.ToolTip = isRu ? "Закрыть в трей" : "Close to tray";
+
+        // Workshop inputs default text
+        if (InputNewWidgetName != null && (InputNewWidgetName.Text == "Мой Новый Виджет" || InputNewWidgetName.Text == "My New Widget"))
+            InputNewWidgetName.Text = isRu ? "Мой Новый Виджет" : "My New Widget";
+        if (InputNewWidgetDesc != null && (InputNewWidgetDesc.Text == "Полезный виджет для рабочего стола Windows" || InputNewWidgetDesc.Text == "A useful desktop widget for Windows"))
+            InputNewWidgetDesc.Text = isRu ? "Полезный виджет для рабочего стола Windows" : "A useful desktop widget for Windows";
+
+        // Bottom status bar
+        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v2.0.0" : "ChattyWidgets Engine v2.0.0";
+
+        RenderPresetChips();
         RefreshInstalledWidgets();
+        RefreshStoreCatalog();
     }
 
     public void ApplyTheme(string theme)
@@ -1154,7 +1241,9 @@ public class InstalledWidgetViewModel
     public string DirectoryPath { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int ActiveCopiesCount { get; set; }
-    public string ActiveCopiesText => ActiveCopiesCount > 1 ? $"({ActiveCopiesCount} шт.)" : "";
+    public string ActiveCopiesText => ActiveCopiesCount > 1 
+        ? (LocalizationService.Instance.IsRussian ? $"({ActiveCopiesCount} шт.)" : $"({ActiveCopiesCount} copies)") 
+        : "";
     public Visibility ActiveCopiesVisibility => ActiveCopiesCount > 1 ? Visibility.Visible : Visibility.Collapsed;
     public string TypeBadge { get; set; } = "🌐";
     public string ToggleButtonText { get; set; } = "Запустить";
@@ -1163,12 +1252,22 @@ public class InstalledWidgetViewModel
 
     public bool HasUpdate { get; set; }
     public string NewVersion { get; set; } = string.Empty;
-    public string UpdateBadgeText => $"▲ Доступно обновление до v{NewVersion}";
+    public string UpdateBadgeText => LocalizationService.Instance.IsRussian 
+        ? $"▲ Доступно обновление до v{NewVersion}" 
+        : $"▲ Update available to v{NewVersion}";
     public Visibility UpdateBadgeVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
 
     public Brush BadgeBg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeBg)!;
     public Brush BadgeFg => (Brush)new BrushConverter().ConvertFromString(Trust.BadgeFg)!;
     public string DisplayAuthor => Trust.DisplayAuthor;
+    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Автор: {DisplayAuthor}" : $"Author: {DisplayAuthor}";
+    public string AddInstanceButtonText => LocalizationService.Instance.IsRussian ? "➕ Добавить" : "➕ Add";
+    public string AddInstanceTooltip => LocalizationService.Instance.IsRussian ? "Добавить еще один экземпляр виджета на рабочий стол" : "Add another instance of this widget to the desktop";
+    public string FolderButtonText => LocalizationService.Instance.IsRussian ? "Папка" : "Folder";
+    public string DeleteButtonText => LocalizationService.Instance.IsRussian ? "Удалить" : "Delete";
+    public string ConfigureTooltip => LocalizationService.Instance.IsRussian ? "Настройки виджета" : "Widget settings";
+    public string UpdateButtonText => LocalizationService.Instance.IsRussian ? "Обновить" : "Update";
+
     public string BadgeText => Trust.BadgeText;
     public bool HasWarning => !string.IsNullOrEmpty(Trust.WarningMessage);
     public string WarningMessage => Trust.WarningMessage;
@@ -1182,6 +1281,7 @@ public class StoreItemViewModel
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
+    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Разработчик: {Author}" : $"Developer: {Author}";
     public string Category { get; set; } = string.Empty;
     public string Size { get; set; } = string.Empty;
     public bool CanInstall { get; set; } = true;
@@ -1193,6 +1293,6 @@ public class StoreItemViewModel
 
     public bool HasUpdate => Item.HasUpdate;
     public Visibility UpdateBadgeVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
-    public string UpdateBadgeText => $"▲ Доступно обновление v{Item.Version}";
+    public string UpdateBadgeText => LocalizationService.Instance.IsRussian ? $"▲ Доступно обновление v{Item.Version}" : $"▲ Update available v{Item.Version}";
     public string DisplayVersion => Item.IsInstalled ? $"v{Item.InstalledVersion}" : $"v{Item.Version}";
 }

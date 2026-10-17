@@ -191,9 +191,9 @@
                                 WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="BtnLanguageToggle" Content="🇷🇺" Style="{StaticResource CaptionBtnStyle}" Click="OnLanguageToggleClick" ToolTip="Язык / Language (RU / EN)"/>
                         <Button x:Name="BtnThemeToggle" Content="🌙" Style="{StaticResource CaptionBtnStyle}" Click="OnThemeToggleClick" ToolTip="Тема оформления (Тёмная / Светлая)"/>
-                        <Button Content="—" Style="{StaticResource CaptionBtnStyle}" Click="OnMinimizeWindowClick" ToolTip="Свернуть"/>
+                        <Button x:Name="BtnMinimizeWindow" Content="—" Style="{StaticResource CaptionBtnStyle}" Click="OnMinimizeWindowClick" ToolTip="Свернуть"/>
                         <Button x:Name="BtnMaximizeRestore" Content="▢" Style="{StaticResource CaptionBtnStyle}" Click="OnMaximizeRestoreWindowClick" ToolTip="Развернуть"/>
-                        <Button Content="✕" Style="{StaticResource CloseCaptionBtnStyle}" Click="OnCloseWindowClick" ToolTip="Закрыть в трей"/>
+                        <Button x:Name="BtnCloseWindow" Content="✕" Style="{StaticResource CloseCaptionBtnStyle}" Click="OnCloseWindowClick" ToolTip="Закрыть в трей"/>
                     </StackPanel>
 
                     <!-- Navigation Tabs -->
@@ -218,10 +218,10 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                    <TextBlock Text="Установленные виджеты" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtInstalledTitle" Text="Установленные виджеты" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock x:Name="TxtActiveCount" Text="0 активно" Foreground="#10B981" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <Button Content="Обновить" Style="{StaticResource SecondaryBtn}" Click="OnRefreshInstalledClick"/>
+                        <Button x:Name="BtnRefreshInstalled" Content="Обновить" Style="{StaticResource SecondaryBtn}" Click="OnRefreshInstalledClick"/>
                     </StackPanel>
                 </DockPanel>
 
@@ -229,12 +229,12 @@
                 <Border Grid.Row="1" Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
                     <DockPanel LastChildFill="True">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,14,0">
-                            <TextBlock Text="🎨 Пресеты стола:" FontSize="13" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtPresetsLabel" Text="🎨 Пресеты стола:" FontSize="13" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
-                            <Button Content="📥 Импорт .chwp" Style="{StaticResource SecondaryBtn}" Click="OnImportPresetFileClick" Margin="0,0,8,0"
+                            <Button x:Name="BtnImportPreset" Content="📥 Импорт .chwp" Style="{StaticResource SecondaryBtn}" Click="OnImportPresetFileClick" Margin="0,0,8,0"
                                     ToolTip="Загрузить пресет рабочего стола из файла .chwp"/>
-                            <Button Content="+ Сохранить текущий вид" Style="{StaticResource PrimaryBtn}" Click="OnSaveCurrentPresetClick"
+                            <Button x:Name="BtnSavePreset" Content="+ Сохранить текущий вид" Style="{StaticResource PrimaryBtn}" Click="OnSaveCurrentPresetClick"
                                     ToolTip="Сохранить текущее расположение виджетов на экране как пресет"/>
                         </StackPanel>
                         <WrapPanel x:Name="PresetChipsPanel" VerticalAlignment="Center" Orientation="Horizontal"/>
@@ -275,14 +275,14 @@
                                                 <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Manifest.Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
-                                            <TextBlock Text="{Binding DisplayAuthor, StringFormat='Автор: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
 
                                             <!-- Update available badge -->
                                             <Border Background="#163326" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
                                                     Visibility="{Binding UpdateBadgeVisibility}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="{Binding UpdateBadgeText}" FontSize="11" Foreground="#34D399" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                    <Button Content="Обновить" Style="{StaticResource SecondaryBtn}" Padding="8,2" Margin="10,0,0,0" Tag="{Binding Manifest.Id}" Click="OnUpdateWidgetClick" Foreground="#34D399"/>
+                                                    <Button Content="{Binding UpdateButtonText}" Style="{StaticResource SecondaryBtn}" Padding="8,2" Margin="10,0,0,0" Tag="{Binding Manifest.Id}" Click="OnUpdateWidgetClick" Foreground="#34D399"/>
                                                 </StackPanel>
                                             </Border>
 
@@ -294,10 +294,10 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Content="⚙️" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnConfigureWidgetFromHubClick" ToolTip="Настройки виджета"/>
-                                            <Button Content="➕ Добавить" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="Добавить еще один экземпляр виджета на рабочий стол"/>
-                                            <Button Content="Папка" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
-                                            <Button Content="Удалить" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>
+                                            <Button Content="⚙️" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnConfigureWidgetFromHubClick" ToolTip="{Binding ConfigureTooltip}"/>
+                                            <Button Content="{Binding AddInstanceButtonText}" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding Manifest.Id}" Click="OnDuplicateFromHubClick" ToolTip="{Binding AddInstanceTooltip}"/>
+                                            <Button Content="{Binding FolderButtonText}" Style="{StaticResource SecondaryBtn}" Margin="0,0,8,0" Tag="{Binding DirectoryPath}" Click="OnOpenWidgetFolderClick"/>
+                                            <Button Content="{Binding DeleteButtonText}" Style="{StaticResource SecondaryBtn}" Margin="0,0,12,0" Foreground="#EF4444" Tag="{Binding Manifest.Id}" Click="OnDeleteWidgetClick"/>
                                             <Button Content="{Binding ToggleButtonText}" Style="{StaticResource PrimaryBtn}" Background="{Binding ToggleButtonBg}" Tag="{Binding Manifest.Id}" Click="OnToggleWidgetClick"/>
                                         </StackPanel>
                                     </Grid>
@@ -317,15 +317,15 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,16">
-                    <TextBlock Text="Магазин Виджетов" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC"/>
-                    <Button Content="Проверить обновления" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Right" Click="OnRefreshStoreClick"/>
+                    <TextBlock x:Name="TxtStoreTitle" Text="Магазин Виджетов" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC"/>
+                    <Button x:Name="BtnRefreshStore" Content="Проверить обновления" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Right" Click="OnRefreshStoreClick"/>
                 </DockPanel>
 
                 <!-- Drag & drop box hint -->
                 <Border Grid.Row="1" Background="#141926" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
                     <DockPanel>
-                        <TextBlock Text="📦 Подсказка: " FontWeight="Bold" Foreground="#38BDF8" DockPanel.Dock="Left"/>
-                        <TextBlock Text="Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." Foreground="#94A3B8"
+                        <TextBlock x:Name="TxtStoreHintTitle" Text="📦 Подсказка: " FontWeight="Bold" Foreground="#38BDF8" DockPanel.Dock="Left"/>
+                        <TextBlock x:Name="TxtStoreHintDesc" Text="Перетащите любой файл .chw прямо в это окно для мгновенной установки виджета." Foreground="#94A3B8"
                                    TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
                     </DockPanel>
                 </Border>
@@ -363,7 +363,7 @@
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" controls:MarqueeBehavior.EnableMarquee="True"/>
-                                            <TextBlock Text="{Binding Author, StringFormat='Разработчик: {0}'}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding AuthorLabel}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
@@ -386,14 +386,14 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Мастерская Разработчика (.chw)" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+                <TextBlock x:Name="TxtWorkshopTitle" Text="Мастерская Разработчика (.chw)" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <!-- Form: Create New Widget -->
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,0,0,16">
                             <StackPanel>
-                                <TextBlock Text="Создать новый виджет из шаблона" FontSize="15" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,12"/>
+                                <TextBlock x:Name="TxtCreateTemplateTitle" Text="Создать новый виджет из шаблона" FontSize="15" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,12"/>
 
                                 <Grid Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
@@ -402,11 +402,11 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="ID виджета (латиница без пробелов):" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtWidgetIdLabel" Text="ID виджета (латиница без пробелов):" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                                         <TextBox x:Name="InputNewWidgetId" Text="com.myname.cool-widget" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Название виджета:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtWidgetNameLabel" Text="Название виджета:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                                         <TextBox x:Name="InputNewWidgetName" Text="Мой Новый Виджет" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
                                     </StackPanel>
                                 </Grid>
@@ -418,11 +418,11 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Имя автора:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtAuthorLabel" Text="Имя автора:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                                         <TextBox x:Name="InputNewWidgetAuthor" Text="Developer" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Тип рантайма:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtRuntimeTypeLabel" Text="Тип рантайма:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                                         <ComboBox x:Name="ComboNewWidgetType" SelectedIndex="0">
                                             <ComboBoxItem Content="Web (HTML/CSS/JavaScript + Edge WebView2)"/>
                                             <ComboBoxItem Content="Native (Чистый XAML / .NET 8 с 0% CPU)"/>
@@ -430,25 +430,25 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Краткое описание:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="TxtDescLabel" Text="Краткое описание:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                                 <TextBox x:Name="InputNewWidgetDesc" Text="Полезный виджет для рабочего стола Windows" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13" Margin="0,0,0,16"/>
 
-                                <Button Content="✨ Создать каркас проекта виджета" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="OnCreateWidgetTemplateClick"/>
+                                <Button x:Name="BtnCreateWidgetTemplate" Content="✨ Создать каркас проекта виджета" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="OnCreateWidgetTemplateClick"/>
                             </StackPanel>
                         </Border>
 
                         <!-- Form: Pack to .chw -->
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
                             <StackPanel>
-                                <TextBlock Text="Экспорт папки в пакет .chw (Сборщик)" FontSize="15" FontWeight="Bold" Foreground="#10B981" Margin="0,0,0,12"/>
-                                <TextBlock Text="Выберите папку с manifest.json и ресурсами виджета для упаковки в распространяемый файл .chw:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="TxtPackTitle" Text="Экспорт папки в пакет .chw (Сборщик)" FontSize="15" FontWeight="Bold" Foreground="#10B981" Margin="0,0,0,12"/>
+                                <TextBlock x:Name="TxtPackDesc" Text="Выберите папку с manifest.json и ресурсами виджета для упаковки в распространяемый файл .chw:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,8"/>
 
                                 <DockPanel Margin="0,0,0,12">
-                                    <Button Content="Обзор папки..." Style="{StaticResource SecondaryBtn}" DockPanel.Dock="Right" Margin="8,0,0,0" Click="OnBrowseFolderToPackClick"/>
+                                    <Button x:Name="BtnBrowseFolderToPack" Content="Обзор папки..." Style="{StaticResource SecondaryBtn}" DockPanel.Dock="Right" Margin="8,0,0,0" Click="OnBrowseFolderToPackClick"/>
                                     <TextBox x:Name="InputPackFolderPath" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
                                 </DockPanel>
 
-                                <Button Content="📦 Собрать пакет .chw" Style="{StaticResource PrimaryBtn}" Background="#10B981" HorizontalAlignment="Left" Click="OnExportChwPackageClick"/>
+                                <Button x:Name="BtnExportPackage" Content="📦 Собрать пакет .chw" Style="{StaticResource PrimaryBtn}" Background="#10B981" HorizontalAlignment="Left" Click="OnExportChwPackageClick"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -462,7 +462,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Настройки движка" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+                <TextBlock x:Name="TxtSettingsTitle" Text="Настройки движка" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -517,7 +517,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Шаг сетки прилипания виджетов:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtSnapGridLabel" Grid.Column="0" Text="Шаг сетки прилипания виджетов:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Slider x:Name="SliderGridSize" Width="260" Minimum="5" Maximum="40" Value="10" SmallChange="1" LargeChange="5"
                                                 ValueChanged="OnGridSizeSliderChanged" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -533,7 +533,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Прозрачность фона виджетов по умолчанию:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtDefaultOpacityLabel" Grid.Column="0" Text="Прозрачность фона виджетов по умолчанию:" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Slider x:Name="SliderDefaultOpacity" Width="260" Minimum="25" Maximum="100" Value="100" SmallChange="5" LargeChange="15"
                                                 ValueChanged="OnDefaultOpacitySliderChanged" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -544,17 +544,17 @@
                                 </Grid>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                    <Button Content="➕ Импортировать виджет (.chw)" Style="{StaticResource PrimaryBtn}" Margin="0,0,12,0" Click="OnImportChwClick"/>
-                                    <Button Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" Click="OnOpenAppDataClick"/>
+                                    <Button x:Name="BtnImportChw" Content="➕ Импортировать виджет (.chw)" Style="{StaticResource PrimaryBtn}" Margin="0,0,12,0" Click="OnImportChwClick"/>
+                                    <Button x:Name="BtnOpenAppData" Content="Открыть папку данных виджетов (%LocalAppData%)" Style="{StaticResource SecondaryBtn}" Click="OnOpenAppDataClick"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
                         <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20">
                             <StackPanel>
-                                <TextBlock Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
-                                <TextBlock Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
-                                <TextBlock Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TxtAboutTitle" Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="TxtAboutVersion" Text="Версия: 2.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="TxtAboutDesc" Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -567,7 +567,7 @@
         <Border x:Name="BottomStatusBar" Grid.Row="2" Background="#0C0E15" BorderBrush="#1A1E2C" BorderThickness="0,1,0,0" Padding="24,0">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="TxtStatus" Text="Готово" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
-                <TextBlock Text="ChattyWidgets Engine v1.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtEngineVersion" Text="ChattyWidgets Engine v2.0.0" FontSize="11" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
     </Grid>

@@ -19,15 +19,15 @@
             <MenuItem x:Name="MenuHeader" Header="ChattyWidget" IsEnabled="False" FontWeight="Bold"/>
             <Separator/>
             <MenuItem x:Name="MenuWidgetSettings" Header="⚙️ Настройки виджета..." Click="OnOpenWidgetSettingsClick"/>
-            <MenuItem Header="📋 Скопировать виджет (Создать копию)" Click="OnDuplicateWidgetClick"/>
-            <MenuItem Header="🗑 Удалить этот виджет" Click="OnDeleteInstanceClick" Foreground="#EF4444"/>
+            <MenuItem x:Name="MenuDuplicateWidget" Header="📋 Скопировать виджет (Создать копию)" Click="OnDuplicateWidgetClick"/>
+            <MenuItem x:Name="MenuDeleteInstance" Header="🗑 Удалить этот виджет" Click="OnDeleteInstanceClick" Foreground="#EF4444"/>
             <Separator/>
-            <MenuItem Header="Слой отображения">
+            <MenuItem x:Name="MenuGroupLayer" Header="Слой отображения">
                 <MenuItem x:Name="MenuLayerDesktop" Header="На рабочем столе (под всеми окнами)" Click="OnLayerDesktopClick"/>
                 <MenuItem x:Name="MenuLayerNormal" Header="Плавающее окно" Click="OnLayerNormalClick"/>
                 <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" Click="OnLayerTopClick"/>
             </MenuItem>
-            <MenuItem Header="Тема оформления">
+            <MenuItem x:Name="MenuGroupTheme" Header="Тема оформления">
                 <MenuItem x:Name="MenuThemeAuto" Header="✦ Как в Хабе (Авто)" IsCheckable="True" Click="OnThemeAutoClick"/>
                 <MenuItem x:Name="MenuThemeDark" Header="🌙 Тёмная тема" IsCheckable="True" Click="OnThemeDarkClick"/>
                 <MenuItem x:Name="MenuThemeLight" Header="☀️ Светлая тема" IsCheckable="True" Click="OnThemeLightClick"/>
@@ -35,31 +35,31 @@
             <MenuItem x:Name="MenuLockPosition" Header="Зафиксировать позицию" IsCheckable="True" Click="OnLockPositionClick"/>
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>
             <MenuItem x:Name="MenuAutoHideDot" Header="Спрятать точку управления" IsCheckable="True" Click="OnAutoHideDotClick"/>
-            <MenuItem Header="Изменить размер">
-                <MenuItem Header="75% (Компактный)" Click="OnResize75Click"/>
-                <MenuItem Header="100% (Обычный)" Click="OnResize100Click"/>
-                <MenuItem Header="125% (Увеличенный)" Click="OnResize125Click"/>
-                <MenuItem Header="150% (Большой)" Click="OnResize150Click"/>
+            <MenuItem x:Name="MenuGroupResize" Header="Изменить размер">
+                <MenuItem x:Name="MenuResize75" Header="75% (Компактный)" Click="OnResize75Click"/>
+                <MenuItem x:Name="MenuResize100" Header="100% (Обычный)" Click="OnResize100Click"/>
+                <MenuItem x:Name="MenuResize125" Header="125% (Увеличенный)" Click="OnResize125Click"/>
+                <MenuItem x:Name="MenuResize150" Header="150% (Большой)" Click="OnResize150Click"/>
                 <Separator/>
                 <MenuItem x:Name="MenuFreeResizeToggle" Header="Тянуть за края (Свободный размер)" IsCheckable="True" Click="OnToggleFreeResizeClick"/>
             </MenuItem>
-            <MenuItem Header="Прозрачность фона">
-                <MenuItem Header="100% (Непрозрачный фон)" Click="OnOpacity100Click"/>
-                <MenuItem Header="75% фона" Click="OnOpacity85Click"/>
-                <MenuItem Header="50% фона" Click="OnOpacity70Click"/>
-                <MenuItem Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
+            <MenuItem x:Name="MenuGroupOpacity" Header="Прозрачность фона">
+                <MenuItem x:Name="MenuOpacity100" Header="100% (Непрозрачный фон)" Click="OnOpacity100Click"/>
+                <MenuItem x:Name="MenuOpacity85" Header="75% фона" Click="OnOpacity85Click"/>
+                <MenuItem x:Name="MenuOpacity70" Header="50% фона" Click="OnOpacity70Click"/>
+                <MenuItem x:Name="MenuOpacity50" Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
             </MenuItem>
             <MenuItem x:Name="MenuMonitors" Header="Переместить на монитор..."/>
             <MenuItem x:Name="MenuGaugesConstructor" Header="🎨 Изменить формат (Конструктор)..." Visibility="Collapsed" Click="OnOpenGaugesConstructorClick"/>
             <Separator x:Name="MenuCustomSeparator" Visibility="Collapsed"/>
             <MenuItem x:Name="MenuCustomSettings" Header="Настройки виджета" Visibility="Collapsed"/>
             <Separator/>
-            <MenuItem Header="⟳ Перезагрузить виджет" Click="OnReloadWidgetClick"/>
+            <MenuItem x:Name="MenuReloadWidget" Header="⟳ Перезагрузить виджет" Click="OnReloadWidgetClick"/>
             <MenuItem x:Name="MenuDevTools" Header="🛠 Открыть DevTools (F12)" Click="OnOpenDevToolsClick"/>
-            <MenuItem Header="Открыть папку виджета" Click="OnOpenFolderClick"/>
-            <MenuItem Header="Открыть Хаб ChattyWidgets" Click="OnOpenHubClick"/>
+            <MenuItem x:Name="MenuOpenFolder" Header="Открыть папку виджета" Click="OnOpenFolderClick"/>
+            <MenuItem x:Name="MenuOpenHub" Header="Открыть Хаб ChattyWidgets" Click="OnOpenHubClick"/>
             <Separator/>
-            <MenuItem Header="Скрыть виджет" Click="OnCloseWidgetClick" Foreground="#EF4444"/>
+            <MenuItem x:Name="MenuCloseWidget" Header="Скрыть виджет" Click="OnCloseWidgetClick" Foreground="#EF4444"/>
         </ContextMenu>
     </Window.ContextMenu>
 
