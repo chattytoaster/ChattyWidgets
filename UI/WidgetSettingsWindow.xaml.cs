@@ -683,7 +683,7 @@ public partial class WidgetSettingsWindow : Window
         bool isRu = loc.IsRussian;
         TxtWindowTitle.Text = loc.T("Crypto.Title", "Настройки Котировок & Валют");
         AddSectionHeader(loc.T("Crypto.Header", "💎 Котировки криптовалют и курсы валют"),
-                         loc.T("Crypto.HeaderSub", "Актуальные цены Binance API, Грам (GRAM 💎), ЦБ РФ и мировые валюты"));
+                         loc.T("Crypto.HeaderSub", "Актуальные цены Binance API, ЦБ РФ и мировые валюты"));
 
         var cryptoVm = _viewModel as CryptoWidgetViewModel;
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
@@ -775,7 +775,7 @@ public partial class WidgetSettingsWindow : Window
         });
         spAdd.Children.Add(new TextBlock
         {
-            Text = loc.T("Crypto.AddCustomHint", "Введите любой тикер криптовалюты (DOGE, AVAX, NEAR, SUI, PEPE...) или валютную пару (USD/CNY, KZT/RUB, EUR/USD, ETH/BTC). TON автоматически распознается как Грам (GRAM 💎):"),
+            Text = loc.T("Crypto.AddCustomHint", "Введите любой тикер криптовалюты (DOGE, AVAX, NEAR, SUI, PEPE...) или валютную пару (USD/CNY, KZT/RUB, EUR/USD, ETH/BTC):"),
             FontSize = 11,
             Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             TextWrapping = TextWrapping.Wrap,
@@ -2295,7 +2295,7 @@ public partial class WidgetSettingsWindow : Window
             ("world", loc.T("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)")),
             ("tech", loc.T("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)")),
             ("habr", loc.T("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)")),
-            ("crypto", loc.T("Rss.PresetCrypto", "💎 Криптовалюты & Грам (CoinDesk & Gram)")),
+            ("crypto", loc.T("Rss.PresetCrypto", "💎 Криптовалюты (CoinDesk)")),
             ("science", loc.T("Rss.PresetScience", "🔬 Наука и Космос (NASA & Science)")),
             ("custom", loc.IsRussian ? "🔗 Пользовательский RSS URL" : "🔗 Custom RSS Feed URL")
         };

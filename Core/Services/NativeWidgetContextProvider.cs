@@ -3626,7 +3626,7 @@ public class RssWidgetViewModel : NativeViewModelBase
             return _preset switch
             {
                 "tech" => loc.T("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ"),
-                "crypto" => loc.T("Rss.CategoryCrypto", "ГРАМ И КРИПТА"),
+                "crypto" => loc.T("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ"),
                 "habr" => "HABR IT",
                 "science" => "NASA & SCIENCE",
                 "custom" => "CUSTOM RSS",
@@ -3807,14 +3807,14 @@ public class RssWidgetViewModel : NativeViewModelBase
         {
             Articles.Add(new RssArticleItem { Title = "OpenAI и DeepMind анонсировали новые мультимодальные модели следующего поколения", Source = "AI & TECH", Time = "10 мин назад", Url = "https://news.ycombinator.com" });
             Articles.Add(new RssArticleItem { Title = "Microsoft представила новые визуальные API для Windows 11 с нативной поддержкой Mica", Source = "WINDOWS", Time = "42 мин назад", Url = "https://blogs.windows.com" });
-            Articles.Add(new RssArticleItem { Title = "Сеть Грам (GRAM) установила рекорд скорости транзакций и активных кошельков", Source = "ГРАМ", Time = "1 час назад", Url = "https://ton.org" });
+            Articles.Add(new RssArticleItem { Title = "Биткоин и криптовалютный рынок перешли к активному росту на фоне притока институционалов", Source = "CoinDesk", Time = "1 час назад", Url = "https://coindesk.com" });
             Articles.Add(new RssArticleItem { Title = "Релиз ChattyWidgets 2.0: Полный переход на нативный стек и сверхбыстрые виджеты", Source = "CHATTY", Time = "2 часа назад", Url = "https://github.com/chattytoaster/ChattyWidgets" });
         }
         else
         {
             Articles.Add(new RssArticleItem { Title = "DeepMind and OpenAI unveil next-generation multimodal agent models", Source = "AI & TECH", Time = "10m ago", Url = "https://news.ycombinator.com" });
             Articles.Add(new RssArticleItem { Title = "Microsoft introduces refreshed Mica visual APIs for Windows desktop apps", Source = "WINDOWS", Time = "42m ago", Url = "https://blogs.windows.com" });
-            Articles.Add(new RssArticleItem { Title = "Gram (GRAM) network hits all-time record throughput and active addresses", Source = "GRAM", Time = "1h ago", Url = "https://ton.org" });
+            Articles.Add(new RssArticleItem { Title = "Bitcoin and major cryptocurrencies surge as weekly trading volume hits all-time high", Source = "CoinDesk", Time = "1h ago", Url = "https://coindesk.com" });
             Articles.Add(new RssArticleItem { Title = "ChattyWidgets 2.0 release: Full native DirectComposition desktop engine", Source = "CHATTY", Time = "2h ago", Url = "https://github.com/chattytoaster/ChattyWidgets" });
         }
 

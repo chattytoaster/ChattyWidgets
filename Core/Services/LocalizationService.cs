@@ -231,10 +231,10 @@ public class LocalizationService
         Add("Clock.TzNewYork", "🇺🇸 Нью-Йорк (New York, EST)", "🇺🇸 New York (EST/EDT)");
         Add("Clock.TzLosAngeles", "🇺🇸 Лос-Анджелес (LA, PST)", "🇺🇸 Los Angeles (PST/PDT)");
 
-        // 3. Crypto & Gram Widget (Gram is now Gram!)
+        // 3. Crypto & Currency Widget
         Add("Crypto.Title", "Настройки Котировок & Валют", "Market Rates & Crypto Settings");
         Add("Crypto.Header", "💎 Котировки криптовалют и курсы валют", "💎 Crypto Assets & Currency Rates");
-        Add("Crypto.HeaderSub", "Актуальные цены через Binance API, Грам (GRAM) и центробанки", "Real-time rates via Binance API, Gram (GRAM) and Central Banks");
+        Add("Crypto.HeaderSub", "Актуальные цены через Binance API и центробанки", "Real-time rates via Binance API and Central Banks");
         Add("Crypto.HeaderTitle", "💎 КОТИРОВКИ & ВАЛЮТЫ", "💎 CRYPTO & FIAT");
         Add("Crypto.BaseCurrency", "Базовая валюта отображения:", "Display Base Currency:");
         Add("Crypto.BaseCurrencyHint", "Конвертировать все котировки в выбранную валюту", "Convert all prices to the selected base currency");
@@ -281,7 +281,7 @@ public class LocalizationService
         Add("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)", "🌍 World News (BBC World / Reuters)");
         Add("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)", "💻 Tech & AI (Hacker News / TechCrunch)");
         Add("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)", "🚀 Developer Community (Habr IT)");
-        Add("Rss.PresetCrypto", "💎 Криптовалюты & Грам (CoinDesk & Gram)", "💎 Crypto & Gram News (CoinDesk & Gram)");
+        Add("Rss.PresetCrypto", "💎 Криптовалюты (CoinDesk)", "💎 Cryptocurrency (CoinDesk)");
         Add("Rss.PresetScience", "🔬 Наука и Космос (NASA & Science)", "🔬 Science & Space (NASA & Science)");
         Add("Rss.AutoSlide", "Интервал авто-переключения:", "Auto-slide Interval:");
         Add("Rss.Slide8s", "8 секунд", "8 seconds");
@@ -294,7 +294,7 @@ public class LocalizationService
         Add("Rss.ReadMore", "Читать источник ↗", "Read more ↗");
         Add("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ", "AI & TECHNOLOGY");
         Add("Rss.CategoryWorld", "МИРОВЫЕ НОВОСТИ", "WORLD NEWS");
-        Add("Rss.CategoryCrypto", "ГРАМ И КРИПТА", "GRAM & CRYPTO");
+        Add("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ", "CRYPTOCURRENCY");
         Add("Rss.CategoryWindows", "WINDOWS & СТЕК", "WINDOWS & TECH");
         Add("Rss.CustomUrl", "Пользовательский RSS URL:", "Custom RSS Feed URL:");
         Add("Rss.CustomUrlPlaceholder", "https://example.com/rss.xml", "https://example.com/rss.xml");
