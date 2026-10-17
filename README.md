@@ -1,145 +1,147 @@
-# ✦ ChattyWidgets 1.0.0 — Нативный движок виджетов для Windows (.NET 8)
+# ✦ ChattyWidgets 1.0.0 — Native Desktop Widget Engine for Windows (.NET 8)
+
+> **Language / Язык:** **[🇬🇧 English](README.md)** • **[🇷🇺 Русский](README.ru.md)**
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20x64-blue.svg)](https://microsoft.com)
 [![Framework](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Widgets](https://img.shields.io/badge/official%20widgets-12%20native-orange.svg)](https://github.com/chattytoaster/ChattyWidgetsLibrary)
 
-**ChattyWidgets 1.0.0** — сверхлегковесный, производительный и визуально безупречный движок виджетов для рабочего стола Windows с поддержкой нативного XAML/.NET 8 рантайма, веб-виджетов (HTML5/CSS3/JS WebView2), формата защищенных пакетов **`.chw`** с RSA-4096 криптографической подписью и официального облачного каталога.
+**ChattyWidgets 1.0.0** is an ultra-lightweight, high-performance, and visually stunning desktop widget engine for Windows 10 & 11 built on .NET 8, WPF, and DirectX. It natively supports glassmorphic XAML widgets, web widgets (HTML5/CSS3/JS via Microsoft Edge WebView2), desktop layer management (`WorkerW`/`Progman` desktop pinning, normal window, and always-on-top), `.chw` packages cryptographically signed with RSA-4096, desktop layout presets (`.chwp`), and an autonomous AI agent development skill (`/chw`).
 
 ---
 
-## 🚀 Ключевые преимущества и архитектура
+## 🚀 Key Advantages & Architecture
 
-- **Ультра-низкое потребление ресурсов**:
-  - Нативные XAML виджеты: **0% нагрузки на CPU** в фоновом режиме, мгновенный рендеринг через аппаратное ускорение DirectX/WPF, минимальный объем оперативной памяти (~15–25 МБ на экземпляр).
-  - Веб-виджеты: изоляция в процессах Microsoft Edge WebView2 с доступом к системным API через двусторонний мост `window.chatty`.
-- **Глубокая интеграция с рабочим столом (Rainmeter-style)**:
-  - **Слой «Рабочий стол» (`WorkerW` / `Progman`)**: виджет закрепляется под всеми окнами на уровне обоев рабочего стола и не сворачивается при нажатии `Win + D` («Показать рабочий стол»).
-  - **Слои «Обычное окно» и «Поверх всех окон» (Always on Top)**.
-  - **Клик насквозь (`WS_EX_TRANSPARENT`)**: прозрачный пропуск кликов мыши на иконки рабочего стола и лежащие ниже окна.
-  - **Умное прилипание (Snap to Grid & Edges)** к границам мониторов и настраиваемой сетке (от 5 до 40 px).
-- **Пресеты рабочего стола (.chwp)**:
-  - Сохранение текущего расположения всех запущенных виджетов на экране в один клик.
-  - Быстрое переключение рабочих пространств через чипы пресетов в Хабе (`Рабочий`, `Компактный`, `Мониторинг`).
-  - Экспорт и импорт файлов конфигураций `.chwp`.
-  - Умная проверка недостающих виджетов при импорте пресета с предложением установить их в 1 клик.
-- **Гибкое изменение размеров (Always Resizable)**:
-  - Опция в настройках Хаба «Виджеты расширяемые все время» позволяет интерактивно менять размер любых виджетов перетаскиванием рамки, даже если в манифесте задан фиксированный размер.
-  - Индивидуальная настройка свободного растягивания для каждого запущенного экземпляра.
-- **Универсальная бегущая строка (Marquee Behavior)**:
-  - Автоматическое плавное горизонтальное скроллирование текста (пинг-понг или непрерывный цикл), если название песни, новость или котировка не помещаются в блок.
-  - Остановка анимации при наведении курсора мыши.
-- **Автоматическая проверка обновлений**:
-  - Фоновая проверка релизов на GitHub с ненавязчивым уведомлением в Хабе и кнопкой быстрой загрузки.
-- **Двуязычный интерфейс и темы**:
-  - Мгновенное переключение языка (Русский 🇷🇺 / English 🇬🇧) без перезапуска приложения в Хабе и во всех виджетах.
-  - Темная 🌙 и Светлая ☀️ темы оформления с автоматической адаптацией контрастности и иконок.
-- **Безопасность и формат `.chw`**:
-  - Каждый виджет упакован в защищенный архив `.chw` с манифестом `manifest.json`.
-  - Все 12 официальных виджетов подписаны цифровой подписью RSA-4096 (знак верификации `✦ Официальный`).
-  - Интеграция проводника Windows (выбор файлов, папок и иконок через нативные системные диалоги).
+- **Ultra-Low Resource Footprint**:
+  - Native XAML Widgets: **0% CPU usage** when idle, hardware-accelerated DirectX rendering, minimal RAM footprint (~15–25 MB per instance).
+  - Web Widgets: Isolated in lightweight WebView2 processes with a secure two-way `window.chatty` bridge.
+- **Deep Windows Desktop Integration (Rainmeter-style)**:
+  - **Desktop Layer (`WorkerW` / `Progman`)**: Pins widgets behind all application windows directly onto the desktop wallpaper; never minimizes when pressing `Win + D` ("Show Desktop").
+  - **Normal & TopMost Layers**: Switchable on the fly.
+  - **Click-Through Mode (`WS_EX_TRANSPARENT`)**: Forwards mouse clicks through transparent regions directly to desktop icons and background apps.
+  - **Smart Snap-to-Grid & Screen Edges**: Magnetic snapping to monitor edges and configurable grid intervals (5px to 40px).
+- **Desktop Presets (`.chwp`)**:
+  - Save and restore entire multi-monitor widget layouts in one click.
+  - Quick workspace switching in the Hub (`Default`, `Work`, `Monitoring`, `Compact`).
+  - Export and import `.chwp` files with automatic detection of missing widgets and a 1-click installation prompt.
+- **Always-Resizable Mode**:
+  - Global setting in Hub Settings («Always Resizable Widgets» / `AppSettings.AlwaysResizable`) allowing interactive resizing of any widget by dragging borders, regardless of manifest constraints.
+  - Per-instance free resizing toggle in the context menu.
+- **Universal Running Marquee Text**:
+  - Smooth automatic horizontal ticker scrolling (ping-pong or continuous loop) whenever text (song titles, news headlines, crypto prices) exceeds container bounds.
+  - Automatically pauses on mouse hover.
+- **Automatic GitHub Update Checks**:
+  - Silent background release checks with an unobtrusive banner in the Hub and manual checking in the About settings section.
+- **Bilingual Interface & Adaptive Themes**:
+  - Instant on-the-fly switching between **English 🇬🇧** and **Russian 🇷🇺** across the Hub, settings windows, and widgets without restarting.
+  - Dark 🌙 and Light ☀️ themes with automatic contrast and icon adaptation.
+- **Security & Signed `.chw` Packages**:
+  - Secure zip containers with strict manifest validation (`manifest.json`).
+  - All official widgets are signed with RSA-4096 cryptographic signatures (`✦ Official` badge).
+  - Native Windows file and folder picker integration.
 
 ---
 
-## 📦 Каталог из 12 официальных нативных виджетов
+## 📦 Catalog of 12 Official Native Widgets
 
-В официальную облачную библиотеку [**ChattyWidgetsLibrary**](https://github.com/chattytoaster/ChattyWidgetsLibrary) входят **12 нативных виджетов**, доступных для установки в 1 клик прямо из встроенного Магазина:
+Available in 1 click from the built-in Store powered by the official [**ChattyWidgetsLibrary**](https://github.com/chattytoaster/ChattyWidgetsLibrary):
 
-| Иконка | Виджет | ID | Описание и возможности |
+| Icon | Widget | ID | Features & Description |
 | :---: | :--- | :--- | :--- |
-| ⏱️ | **Таймер & Фокус** | `com.chatty.pomodoro-timer` | Режим обычного таймера на 1 месте (+1м, +5м, +10м), режимы «Фокус» (Pomodoro) и «Отдых», звуковые сигналы завершения. |
-| 🕒 | **Стеклянные Часы** | `com.chatty.clock-glass` | Мировое время и мировые столицы (UTC, Лондон, Нью-Йорк, Токио, Москва и др.), форматы 12/24ч, секунды, дата на RU/EN. |
-| 📊 | **Системный Монитор** | `com.chatty.system-gauges` | Мониторинг CPU, RAM, системного SSD и скорости сети. Линейные полосы, круговые кольцевые датчики и компактная сетка 2 в ряд. |
-| 🎮 | **GPU Монитор** | `com.chatty.gpu-monitor` | Аппаратные счетчики Windows DWM: загрузка 3D-ядра GPU (%), выделенная видеопамять VRAM (ГБ и %), линейный и круговой стили. |
-| 🎵 | **Мини-Медиаплеер** | `com.chatty.music-player` | Управление воспроизведением (Spotify, Яндекс.Музыка, YouTube, браузер), крутящаяся виниловая пластинка, бегущая строка трека. |
-| 🌤️ | **Прогноз Погоды** | `com.chatty.weather-card` | Онлайн-погода и 5-дневный прогноз (Open-Meteo), точный поиск городов, стандартные единицы (м/с, мм рт. ст., км/ч, hPa). |
-| 💎 | **Котировки и Крипта** | `com.chatty.crypto-tracker` | Отслеживание любых криптовалют и валютных пар (BTC, ETH, SOL, Грам [GRAM 💎], USD, EUR, RUB, GBP) через Binance API и CoinGecko. |
-| 📝 | **Заметки и Задачи** | `com.chatty.sticky-notes` | Интерактивный список дел с сохранением состояния, счетчик задач, умный пустой экран, 5 цветовых акцентов (Amber, Sky, Emerald, Violet, Slate). |
-| 🚀 | **Панель Дока** | `com.chatty.quick-dock` | Панель быстрого запуска приложений, выбор программ и иконок через Проводник Windows, горизонтальная и вертикальная ориентация. |
-| 📅 | **Стеклянный Календарь** | `com.chatty.calendar-glass` | Интерактивный календарь с перелистыванием месяцев, выбором первого дня недели (Понедельник / Воскресенье) и подсветкой сегодняшнего дня. |
-| 🖼️ | **Медиа-Фоторамка** | `com.chatty.media-frame` | Просмотр локальных фотоальбомов и отдельных снимков, скругление углов фото, идеальное центрирование, скрываемая панель стрелок навигации. |
-| 📰 | **RSS Новости** | `com.chatty.rss-reader` | Лента мировых новостей: Новости ООН на русском (un_ru), Euronews на русском, IT & AI, Habr, Криптовалюты, Наука и космос, свой RSS URL. |
+| ⏱️ | **Timer & Focus** | `com.chatty.pomodoro-timer` | Regular countdown timer on 1st place with quick buttons (+1m, +5m, +10m), Pomodoro Focus & Break intervals, audio completion alerts. |
+| 🕒 | **Glass Clock** | `com.chatty.clock-glass` | World timezones and major cities (UTC, London, New York, Tokyo, Moscow, etc.), 12/24-hour formats, seconds toggle, localized date. |
+| 📊 | **System Gauges** | `com.chatty.system-gauges` | CPU, RAM, system SSD, and network throughput monitor. Linear bars, circular rings, and compact 2-in-a-row grid layout. |
+| 🎮 | **GPU Monitor** | `com.chatty.gpu-monitor` | Hardware DirectX/DWM counters: 3D Core load %, dedicated VRAM (GB and %), temperature, circular rings and linear styles. |
+| 🎵 | **Mini Music Player** | `com.chatty.music-player` | Windows SMTC integration (Spotify, Yandex.Music, YouTube, web browsers), realistic spinning vinyl disc, running text marquee without button clipping. |
+| 🌤️ | **Weather Card** | `com.chatty.weather-card` | Real-time weather and 5-day forecast (Open-Meteo), accurate city search, clean short units (m/s, mmHg, km/h, hPa). |
+| 💎 | **Crypto & Currency** | `com.chatty.crypto-tracker` | Live rates for any crypto and fiat pairs (BTC, ETH, SOL, Gram [GRAM 💎], USD, EUR, RUB, GBP) via Binance API and CoinGecko. |
+| 📝 | **Sticky Notes & Tasks** | `com.chatty.sticky-notes` | Interactive task checklist with persistent state, task counters, smart empty state, 5 accent colors (Amber, Sky, Emerald, Violet, Slate). |
+| 🚀 | **Quick Dock** | `com.chatty.quick-dock` | Floating application launcher, custom file and icon selection via Windows Explorer, horizontal and vertical orientation. |
+| 📅 | **Glass Calendar** | `com.chatty.calendar-glass` | Interactive calendar with month flipping, first day of week selection (Monday / Sunday), and today highlight. |
+| 🖼️ | **Media Photo Frame** | `com.chatty.media-frame` | Local photo albums and single photo mode, rounded photo corners, centered cropping, auto-hiding navigation arrows. |
+| 📰 | **RSS News Reader** | `com.chatty.rss-reader` | Live news ticker: UN News in Russian (un_ru), Euronews, Tech & AI, Habr, Crypto, Science, and custom RSS feed URLs. |
 
 ---
 
-## 🛠 Установка и запуск
+## 🛠 Installation & Quick Start
 
-### Вариант 1. Установщик ChattyWidgetsSetup.exe (Рекомендуется)
-1. Скачайте актуальный файл **`ChattyWidgetsSetup.exe`** из раздела [**Releases**](https://github.com/chattytoaster/ChattyWidgets/releases).
-2. Запустите установщик. Он оснащён современным стеклянным интерфейсом и позволяет в 1 клик:
-   - Выбрать папку установки (по умолчанию `%LocalAppData%\Programs\ChattyWidgets`).
-   - Создать ярлыки на рабочем столе и в меню «Пуск».
-   - Настроить автозапуск вместе с Windows.
-   - Зарегистрировать системные ассоциации для файлов виджетов **`.chw`** и пресетов **`.chwp`**.
-   - **Установить навык `/chw` для AI-ассистентов** (Google Antigravity, Claude Code, Cursor).
+### Method 1: Bilingual Installer (Recommended)
+1. Download the latest **`ChattyWidgetsSetup.exe`** from [**Releases**](https://github.com/chattytoaster/ChattyWidgets/releases).
+2. Run the installer. It features a modern glassmorphic UI with runtime **EN 🇬🇧 / RU 🇷🇺** language switching:
+   - Choose destination folder (defaults to `%LocalAppData%\Programs\ChattyWidgets`).
+   - Create Desktop and Start Menu shortcuts.
+   - Configure Windows autostart.
+   - Register system file associations for **`.chw`** (Widget Packages) and **`.chwp`** (Desktop Presets).
+   - **Install the AI Agent Skill (`/chw`)** for Google Antigravity, Claude Code, and Cursor.
 
-### Вариант 2. Сборка из исходного кода
-- **ОС**: Windows 10 (версия 1809+) или Windows 11 (x64)
-- **Среда сборки**: [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+### Method 2: Build From Source
+- **Operating System**: Windows 10 (version 1809+) or Windows 11 (x64)
+- **SDK**: [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ```powershell
-# 1. Клонирование репозитория
+# 1. Clone repository
 git clone https://github.com/chattytoaster/chattywidgets.git
 cd chattywidgets
 
-# 2. Сборка решения
+# 2. Build solution
 dotnet build -c Release
 
-# 3. Запуск приложения
+# 3. Run application
 dotnet run -c Release
 ```
 
-### Запуск встроенных тестов движка
+### Run Built-in Engine Self-Tests
 ```powershell
 dotnet run -- --test
 ```
 
 ---
 
-## 🤖 Навык для AI-ассистентов (`/chw`)
+## 🤖 AI Agent Skill (`/chw`)
 
-В ChattyWidgets встроена прямая поддержка взаимодействия с AI-агентами (Google Antigravity, Claude Code, Cursor, Windsurf и другими agentic CLI):
-- При установке через `ChattyWidgetsSetup.exe` навык автоматически размещается в `~/.agents/skills/chw/`.
-- Вызовом команды **`/chw`** агент может автономно:
-  1. Создавать структуру виджета (`manifest.json`, `Widget.xaml`).
-  2. Генерировать ViewModel и регистрировать ключи локализации (RU/EN).
-  3. Проектировать адаптивный стеклянный XAML UI с поддержкой темной и светлой тем.
-  4. Создавать панель настроек виджета.
-  5. Собирать и тестировать подписанный `.chw` пакет на рабочем столе.
-  6. Публиковать виджет в каталог `ChattyWidgetsLibrary`.
+ChattyWidgets features built-in pair programming support for agentic AI tools (Google Antigravity, Claude Code, Cursor, Windsurf, etc.):
+- Installed automatically by `ChattyWidgetsSetup.exe` into `~/.agents/skills/chw/`.
+- Triggered with **`/chw`** in chat to let AI agents autonomously:
+  1. Scaffold widget packages (`manifest.json`, `Widget.xaml`).
+  2. Implement ViewModels and register localization keys (EN/RU).
+  3. Design adaptive glassmorphic XAML UI with dark/light theme support.
+  4. Create widget configuration settings cards.
+  5. Package, cryptographically sign, and locally test widgets on the desktop.
+  6. Publish verified widgets to `ChattyWidgetsLibrary`.
 
 ---
 
-## ⌨️ Глобальные горячие клавиши
+## ⌨️ Global Keyboard Shortcuts
 
-| Сочетание клавиш | Действие |
+| Shortcut | Action |
 | :--- | :--- |
-| **`Win + Alt + W`** | Показать / скрыть все активные виджеты на экране |
-| **`Win + Alt + P`** | Режим «Быстрый взгляд» (Peek) — временно выводит виджеты поверх всех окон |
-| **`Win + Alt + H`** | Открыть главное окно Хаба управления виджетами |
+| **`Win + Alt + W`** | Toggle visibility of all active desktop widgets |
+| **`Win + Alt + P`** | Peek mode — temporarily brings widgets to the foreground |
+| **`Win + Alt + H`** | Open ChattyWidgets Management Hub |
 
 ---
 
-## 📦 Спецификация пакета виджета `.chw`
+## 📦 Widget Package Specification (`.chw`)
 
-Файл `.chw` представляет собой стандартный zip-контейнер со следующей структурой:
+A `.chw` package is a standard zip container with the following structure:
 ```text
 my-widget.chw
-├── manifest.json       # Описание, права, геометрия и точка входа
-├── icon.png            # Иконка виджета для магазина и хаба (64x64 или 128x128)
-├── Widget.xaml         # Разметка нативного виджета (для type="native")
-└── index.html          # Код веб-виджета (для type="web")
+├── manifest.json       # Metadata, permissions, dimensions, and entry point
+├── icon.png            # Widget icon (64x64 or 128x128 px)
+├── Widget.xaml         # Native XAML layout (for type="native")
+└── index.html          # Web widget frontend (for type="web")
 ```
 
-Пример `manifest.json`:
+Example `manifest.json`:
 ```json
 {
   "id": "com.developer.my-widget",
-  "name": "Мой Виджет",
+  "name": "My Widget",
+  "name_ru": "Мой Виджет",
   "version": "1.0.0",
   "author": "Developer",
-  "description": "Полезный виджет для рабочего стола Windows",
+  "description": "Clean, glassmorphic desktop widget for Windows",
   "type": "native",
   "entry": "Widget.xaml",
   "icon": "icon.png",
@@ -156,15 +158,15 @@ my-widget.chw
 
 ---
 
-## 🛠 Мастерская разработчика (Workshop)
+## 🛠 Developer Workshop
 
-1. Откройте в Хабе вкладку **🛠 Мастерская**.
-2. Укажите название, ID и автора виджета, выберите рантайм (**Native** или **Web**) и нажмите **«✨ Создать каркас проекта»**.
-3. Редактируйте созданные файлы в любимой IDE — изменения подхватываются на лету благодаря **Hot Reload**.
-4. Нажмите **«📦 Собрать пакет .chw»**, чтобы упаковать готовый виджет для распространения или загрузки в каталог.
+1. Open the **🛠 Workshop** tab in the Hub.
+2. Enter widget name, ID, author, select runtime (**Native** or **Web**), and click **«✨ Create Scaffold»**.
+3. Edit files in your favorite IDE — changes reload instantly thanks to **Hot Reload**.
+4. Click **«📦 Build .chw Package»** to package and sign your widget for distribution.
 
 ---
 
-## 📄 Лицензия
+## 📄 License
 
-Проект распространяется под открытой лицензией **MIT License**. См. файл `LICENSE` для подробной информации.
+This project is licensed under the **MIT License**. See the `LICENSE` file for details.

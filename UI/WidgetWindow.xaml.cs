@@ -382,7 +382,30 @@ public partial class WidgetWindow : Window
             handled = true;
             return IntPtr.Zero;
         }
+        else if (msg == 0x0112 /* WM_SYSCOMMAND */)
+        {
+            int command = (int)(wParam.ToInt64() & 0xFFF0);
+            if (command == 0xF020 /* SC_MINIMIZE */)
+            {
+                // Prevent Windows / Explorer from minimizing widgets on Show Desktop (Win+D or taskbar button)
+                handled = true;
+                return IntPtr.Zero;
+            }
+        }
         return IntPtr.Zero;
+    }
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+            if (_hwnd != IntPtr.Zero)
+            {
+                DesktopHostManager.ApplyLayer(_hwnd, Settings.Layer);
+            }
+        }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)

@@ -3771,7 +3771,11 @@ public class RssWidgetViewModel : NativeViewModelBase
     private static readonly HttpClient _httpClient = CreateRssHttpClient();
     private static HttpClient CreateRssHttpClient()
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        };
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 ChattyWidgets/1.0");
         return client;
     }
@@ -3903,6 +3907,8 @@ public class RssWidgetViewModel : NativeViewModelBase
                 "tech" => loc.T("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ"),
                 "crypto" => loc.T("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ"),
                 "un_ru" => loc.T("Rss.CategoryUnRu", "НОВОСТИ ООН"),
+                "rbc" => loc.T("Rss.CategoryRbc", "РБК НОВОСТИ"),
+                "kommersant" => loc.T("Rss.CategoryKommersant", "КОММЕРСАНТЪ"),
                 "euronews" => loc.T("Rss.CategoryEuronews", "EURONEWS"),
                 "habr" => "HABR IT",
                 "science" => "NASA & SCIENCE",
@@ -4009,11 +4015,13 @@ public class RssWidgetViewModel : NativeViewModelBase
             "tech" => "https://news.ycombinator.com/rss",
             "crypto" => "https://www.coindesk.com/arc/outboundfeeds/rss/",
             "un_ru" => "https://news.un.org/feed/subscribe/ru/news/all/rss.xml",
+            "rbc" => "https://rssexport.rbc.ru/rbcnews/news/30/full.rss",
+            "kommersant" => "https://www.kommersant.ru/RSS/news.xml",
             "euronews" => "https://ru.euronews.com/rss",
             "habr" => "https://habr.com/ru/rss/all/all/",
             "science" => "https://www.nasa.gov/rss/dyn/breaking_news.rss",
             "custom" => !string.IsNullOrWhiteSpace(_customUrl) ? _customUrl : "https://feeds.bbci.co.uk/news/world/rss.xml",
-            _ => "https://feeds.bbci.co.uk/news/world/rss.xml"
+            _ => "https://news.un.org/feed/subscribe/ru/news/all/rss.xml"
         };
 
         try
@@ -4044,6 +4052,8 @@ public class RssWidgetViewModel : NativeViewModelBase
                     string sourceBadge = _preset switch
                     {
                         "un_ru" => "ООН",
+                        "rbc" => "РБК",
+                        "kommersant" => "КОММЕРСАНТЪ",
                         "euronews" => "EURONEWS",
                         "habr" => "HABR",
                         _ => _preset.ToUpperInvariant()

@@ -2326,8 +2326,10 @@ public partial class WidgetSettingsWindow : Window
 
         var presets = new (string Key, string Label)[]
         {
-            ("world", loc.T("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)")),
             ("un_ru", loc.T("Rss.PresetUnRu", "🌐 Новости ООН на русском (UN News)")),
+            ("rbc", loc.T("Rss.PresetRbc", "📰 РБК (Главные и мировые новости)")),
+            ("kommersant", loc.T("Rss.PresetKommersant", "💼 Коммерсантъ (Мир и бизнес)")),
+            ("world", loc.T("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)")),
             ("euronews", loc.T("Rss.PresetEuronews", "🇪🇺 Euronews на русском (Euronews RU)")),
             ("tech", loc.T("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)")),
             ("habr", loc.T("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)")),

@@ -81,6 +81,9 @@ public class DesktopHostManager
         // Always ensure top-level window without owner interference
         Win32Native.SetParent(hwnd, IntPtr.Zero);
 
+        // Attach to desktop shell (Progman) as owner so "Show Desktop" (Win+D / taskbar button) never minimizes or hides widgets
+        AttachToDesktop(hwnd);
+
         switch (layer)
         {
             case WidgetLayer.Desktop:

@@ -24,6 +24,10 @@ public class InstallService
     [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
+    public string Language { get; set; } = "ru";
+
+    private string Msg(string ru, string en) => Language == "ru" ? ru : en;
+
     public event Action<double, string>? ProgressChanged;
 
     public async Task<bool> InstallAsync(InstallOptions options)
@@ -32,14 +36,14 @@ public class InstallService
         {
             try
             {
-                ReportProgress(5, "Подготовка к установке...");
+                ReportProgress(5, Msg("Подготовка к установке...", "Preparing for installation..."));
 
                 string targetDir = options.TargetDirectory;
                 Directory.CreateDirectory(targetDir);
 
                 // 1. Locate source files or embedded payload
                 string? sourceDir = FindSourceDirectory();
-                ReportProgress(15, "Копирование исполняемых файлов и библиотек...");
+                ReportProgress(15, Msg("Копирование исполняемых файлов и библиотек...", "Copying application binaries and libraries..."));
 
                 if (sourceDir != null && Directory.Exists(sourceDir))
                 {
@@ -56,21 +60,21 @@ public class InstallService
                 // 2. Register file associations (.chw and .chwp)
                 if (options.RegisterFileAssociations && File.Exists(targetExe))
                 {
-                    ReportProgress(70, "Регистрация ассоциаций файлов .chw и .chwp...");
+                    ReportProgress(70, Msg("Регистрация ассоциаций файлов .chw и .chwp...", "Registering .chw and .chwp file associations..."));
                     RegisterFileAssociations(targetExe);
                 }
 
                 // 3. Install Agent Skill for AI assistants (~/.agents/skills/chw)
                 if (options.InstallAgentSkill)
                 {
-                    ReportProgress(80, "Установка скилла /chw для AI-ассистентов...");
+                    ReportProgress(80, Msg("Установка скилла /chw для AI-ассистентов...", "Installing /chw skill for AI assistants..."));
                     InstallAgentSkillFiles(sourceDir ?? targetDir);
                 }
 
                 // 4. Create Shortcuts (Desktop & Start Menu)
                 if (File.Exists(targetExe))
                 {
-                    ReportProgress(88, "Создание ярлыков...");
+                    ReportProgress(88, Msg("Создание ярлыков...", "Creating desktop and start menu shortcuts..."));
                     if (options.CreateDesktopShortcut)
                     {
                         string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ChattyWidgets.lnk");
@@ -88,17 +92,17 @@ public class InstallService
                 // 5. Windows Autostart
                 if (options.StartWithWindows && File.Exists(targetExe))
                 {
-                    ReportProgress(94, "Настройка автозапуска с Windows...");
+                    ReportProgress(94, Msg("Настройка автозапуска с Windows...", "Configuring Windows autostart..."));
                     SetAutostart(targetExe, true);
                 }
 
-                ReportProgress(100, "Установка успешно завершена!");
+                ReportProgress(100, Msg("Установка успешно завершена!", "Installation completed successfully!"));
                 return true;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[InstallService] Error: {ex}");
-                ReportProgress(100, $"Ошибка установки: {ex.Message}");
+                ReportProgress(100, $"{Msg("Ошибка установки", "Installation error")}: {ex.Message}");
                 return false;
             }
         });
@@ -189,7 +193,7 @@ public class InstallService
             File.Copy(file, dest, true);
 
             double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
-            ReportProgress(pct, $"Копирование: {Path.GetFileName(file)}");
+            ReportProgress(pct, $"{Msg("Копирование", "Copying")}: {Path.GetFileName(file)}");
         }
     }
 
@@ -225,7 +229,7 @@ public class InstallService
             entry.ExtractToFile(destPath, true);
 
             double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
-            ReportProgress(pct, $"Извлечение: {entry.Name}");
+            ReportProgress(pct, $"{Msg("Извлечение", "Extracting")}: {entry.Name}");
         }
     }
 

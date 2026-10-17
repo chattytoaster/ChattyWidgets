@@ -739,5 +739,35 @@ public class LocalizationService
         Add("GpuMonitor.StatusNormal", "Сенсоры в норме", "Sensors normal");
         Add("GpuMonitor.StatusAlert", "Внимание: Перегрев / Высокая нагрузка!", "Warning: High Temp / High Load!");
         Add("GpuMonitor.MemoryActive", "Память активна", "Memory active");
+
+        // 13. RSS News Reader Widget
+        Add("Rss.Title", "Настройки Новостей", "News Reader Settings");
+        Add("Rss.Header", "📰 Параметры новостной ленты", "📰 News Feed Options");
+        Add("Rss.HeaderSub", "Выбор международных каналов, IT, технологий и скорости листания", "Select international feeds, tech, AI, and scroll interval");
+        Add("Rss.FeedPreset", "Категория и источник новостей:", "Category & News Source:");
+        Add("Rss.PresetWorld", "🌍 Мировые новости (BBC World / Reuters)", "🌍 World News (BBC World / Reuters)");
+        Add("Rss.PresetUnRu", "🌐 Новости ООН на русском (UN News)", "🌐 UN News in Russian (Official UN)");
+        Add("Rss.PresetRbc", "📰 РБК (Главные и мировые новости)", "📰 RBC News (Top Headlines)");
+        Add("Rss.PresetKommersant", "💼 Коммерсантъ (Мир и бизнес)", "💼 Kommersant News (World & Business)");
+        Add("Rss.PresetEuronews", "🇪🇺 Euronews на русском (Euronews RU)", "🇪🇺 Euronews in Russian");
+        Add("Rss.PresetTech", "💻 Технологии и AI (Hacker News / TechCrunch)", "💻 Tech & AI (Hacker News / TechCrunch)");
+        Add("Rss.PresetHabr", "🚀 Хабр и Разработка (Habr IT)", "🚀 Habr IT & Dev (Habr)");
+        Add("Rss.PresetCrypto", "💎 Криптовалюты (CoinDesk)", "💎 Crypto News (CoinDesk)");
+        Add("Rss.PresetScience", "🔬 Наука и Космос (NASA & Science)", "🔬 Science & Space (NASA)");
+        Add("Rss.AutoSlide", "Интервал авто-переключения:", "Auto-Slide Interval:");
+        Add("Rss.Slide8s", "8 секунд", "8 seconds");
+        Add("Rss.Slide12s", "12 секунд (По умолчанию)", "12 seconds (Default)");
+        Add("Rss.Slide20s", "20 секунд", "20 seconds");
+        Add("Rss.Slide30s", "30 секунд", "30 seconds");
+        Add("Rss.SlideManual", "Только вручную", "Manual only");
+        Add("Rss.CustomUrl", "Пользовательский RSS URL:", "Custom RSS URL:");
+        Add("Rss.ApplyUrl", "Применить URL", "Apply URL");
+        Add("Rss.CategoryTech", "AI И ТЕХНОЛОГИИ", "TECH & AI");
+        Add("Rss.CategoryCrypto", "КРИПТОВАЛЮТЫ", "CRYPTO");
+        Add("Rss.CategoryUnRu", "НОВОСТИ ООН", "UN NEWS");
+        Add("Rss.CategoryRbc", "РБК НОВОСТИ", "RBC NEWS");
+        Add("Rss.CategoryKommersant", "КОММЕРСАНТЪ", "KOMMERSANT");
+        Add("Rss.CategoryEuronews", "EURONEWS", "EURONEWS");
+        Add("Rss.CategoryWorld", "МИРОВЫЕ НОВОСТИ", "WORLD NEWS");
     }
 }
