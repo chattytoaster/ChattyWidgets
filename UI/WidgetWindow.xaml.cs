@@ -932,6 +932,10 @@ public partial class WidgetWindow : Window
     {
         Settings.Opacity = Math.Clamp(opacity, 0.15, 1.0);
         ApplyBackgroundOpacity(Settings.Opacity);
+        if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is NativeViewModelBase nativeVm)
+        {
+            nativeVm.ApplyOpacity(Settings.Opacity);
+        }
         SettingsChanged?.Invoke(this);
     }
 
@@ -985,9 +989,10 @@ public partial class WidgetWindow : Window
             gaugesView.ApplyTheme(isLight);
         }
 
-        if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is NativeViewModelBase nativeVm)
+        if (WidgetContentHost.Content is FrameworkElement hostElem && hostElem.DataContext is NativeViewModelBase nativeViewModel)
         {
-            nativeVm.ApplyTheme(isLight);
+            nativeViewModel.ApplyTheme(isLight);
+            nativeViewModel.ApplyOpacity(Settings.Opacity);
         }
 
         // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)

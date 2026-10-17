@@ -69,6 +69,28 @@ public abstract class NativeViewModelBase : INotifyPropertyChanged
 
     protected virtual void OnThemeChanged() { }
 
+    private double _widgetOpacity = 1.0;
+    public double WidgetOpacity
+    {
+        get => _widgetOpacity;
+        set
+        {
+            if (Math.Abs(_widgetOpacity - value) > 0.001)
+            {
+                _widgetOpacity = value;
+                OnPropertyChanged();
+                OnOpacityChanged();
+            }
+        }
+    }
+
+    public virtual void ApplyOpacity(double opacity)
+    {
+        WidgetOpacity = opacity;
+    }
+
+    protected virtual void OnOpacityChanged() { }
+
     protected static bool DetectIsLight(string? instanceId)
     {
         try
@@ -2061,6 +2083,15 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
         set { _caption = value; OnPropertyChanged(); }
     }
 
+    public double PhotoOpacity => Math.Clamp(WidgetOpacity, 0.10, 1.0);
+    public double BlurredBackdropOpacity => Math.Clamp(WidgetOpacity * 0.35, 0.04, 0.40);
+
+    protected override void OnOpacityChanged()
+    {
+        OnPropertyChanged(nameof(PhotoOpacity));
+        OnPropertyChanged(nameof(BlurredBackdropOpacity));
+    }
+
     private Stretch _stretchMode = Stretch.Uniform;
     public Stretch StretchMode
     {
@@ -2242,6 +2273,11 @@ public class MediaFrameWidgetViewModel : NativeViewModelBase
             if (s.CustomSettings.TryGetValue("mediaAutoHideControls", out var ahStr) && bool.TryParse(ahStr, out var ahVal))
             {
                 savedAutoHide = ahVal;
+            }
+
+            if (s.Opacity > 0.05)
+            {
+                WidgetOpacity = s.Opacity;
             }
         }
 

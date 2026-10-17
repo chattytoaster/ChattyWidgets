@@ -31,13 +31,43 @@ public partial class MainWindow : Window
 
         try
         {
-            string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
-            if (System.IO.File.Exists(iconPath))
+            string pngPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
+            if (System.IO.File.Exists(pngPath))
             {
-                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(iconPath));
+                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(pngPath));
+            }
+            else
+            {
+                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    var decoder = new System.Windows.Media.Imaging.IconBitmapDecoder(
+                        new Uri(iconPath),
+                        System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                    var bestFrame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault();
+                    if (bestFrame != null) Icon = bestFrame;
+                }
             }
         }
         catch { }
+
+        SourceInitialized += (s, e) =>
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                string icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+                if (System.IO.File.Exists(icoPath))
+                {
+                    using var iconBig = new System.Drawing.Icon(icoPath, 64, 64);
+                    using var iconSmall = new System.Drawing.Icon(icoPath, 32, 32);
+                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)1 /*ICON_BIG*/, iconBig.Handle);
+                    ChattyWidgets.Core.Win32.Win32Native.SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)0 /*ICON_SMALL*/, iconSmall.Handle);
+                }
+            }
+            catch { }
+        };
 
         Loaded += OnWindowLoaded;
         Closing += OnWindowClosing;
@@ -1326,7 +1356,8 @@ public class StoreItemViewModel
     public string DisplayName => Item.DisplayName;
     public string DisplayDescription => Item.DisplayDescription;
     public string Author { get; set; } = string.Empty;
-    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Разработчик: {Author}" : $"Developer: {Author}";
+    public string DisplayAuthor => Author.Equals("ChattyWidgets", StringComparison.OrdinalIgnoreCase) ? "ChattyWidgets ✔" : Author;
+    public string AuthorLabel => LocalizationService.Instance.IsRussian ? $"Разработчик: {DisplayAuthor}" : $"Developer: {DisplayAuthor}";
     public string Category { get; set; } = string.Empty;
     public string Size { get; set; } = string.Empty;
     public bool CanInstall { get; set; } = true;

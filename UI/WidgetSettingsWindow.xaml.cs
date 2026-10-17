@@ -2809,6 +2809,121 @@ public partial class WidgetSettingsWindow : Window
 
         shuffleCard.Child = shuffleSp;
         SettingsPanel.Children.Add(shuffleCard);
+
+        // 5. Opacity Card (Прозрачность фоторамки и фото)
+        var opacityCard = CreateCard();
+        var opacitySp = new StackPanel();
+
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        double currentOpacity = win?.Settings.Opacity ?? frameVm.WidgetOpacity;
+        if (currentOpacity < 0.15) currentOpacity = 1.0;
+
+        opacitySp.Children.Add(new TextBlock
+        {
+            Text = "🎨 " + LocalizationService.Instance.T("MediaFrame.OpacityTitle", "Прозрачность фоторамки и фото"),
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+
+        var spOpacityHeader = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        spOpacityHeader.Children.Add(new TextBlock
+        {
+            Text = LocalizationService.Instance.T("MediaFrame.OpacityLevel", "Уровень непрозрачности (от 15% до 100%):"),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            HorizontalAlignment = HorizontalAlignment.Left
+        });
+
+        var txtOpacityValue = new TextBlock
+        {
+            Text = $"{Math.Round(currentOpacity * 100)}%",
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        spOpacityHeader.Children.Add(txtOpacityValue);
+        opacitySp.Children.Add(spOpacityHeader);
+
+        var sliderOpacity = new Slider
+        {
+            Minimum = 15,
+            Maximum = 100,
+            Value = Math.Round(currentOpacity * 100),
+            TickFrequency = 5,
+            IsSnapToTickEnabled = true,
+            SmallChange = 5,
+            LargeChange = 10,
+            Margin = new Thickness(0, 0, 0, 8),
+            Cursor = Cursors.Hand
+        };
+
+        sliderOpacity.ValueChanged += (s, e) =>
+        {
+            int val = (int)Math.Round(sliderOpacity.Value);
+            txtOpacityValue.Text = $"{val}%";
+            double opFraction = val / 100.0;
+            frameVm.ApplyOpacity(opFraction);
+            if (win != null)
+            {
+                win.SetWidgetOpacity(opFraction);
+            }
+            _onSettingsChanged?.Invoke();
+        };
+        opacitySp.Children.Add(sliderOpacity);
+
+        // Preset buttons: 100%, 75%, 50%, 25%
+        var presetsGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        for (int i = 0; i < 4; i++)
+        {
+            presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (i < 3)
+                presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6, GridUnitType.Pixel) });
+        }
+
+        var opacityPresets = new (int Percent, string Label)[]
+        {
+            (100, "100%"),
+            (75, "75%"),
+            (50, "50%"),
+            (25, "25%")
+        };
+
+        for (int i = 0; i < opacityPresets.Length; i++)
+        {
+            var p = opacityPresets[i];
+            var btnPreset = new Button
+            {
+                Content = p.Label,
+                Height = 26,
+                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
+                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand
+            };
+            btnPreset.Click += (s, e) =>
+            {
+                sliderOpacity.Value = p.Percent;
+            };
+            Grid.SetColumn(btnPreset, i * 2);
+            presetsGrid.Children.Add(btnPreset);
+        }
+        opacitySp.Children.Add(presetsGrid);
+
+        opacitySp.Children.Add(new TextBlock
+        {
+            Text = LocalizationService.Instance.T("MediaFrame.OpacityHint", "Прозрачность плавно применяется как к стеклянной рамке, так и к самой фотографии"),
+            FontSize = 10.5,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        opacityCard.Child = opacitySp;
+        SettingsPanel.Children.Add(opacityCard);
     }
 
     // 11. System Gauges

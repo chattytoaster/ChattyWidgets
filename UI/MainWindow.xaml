@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:ChattyWidgets.UI.Controls"
         Title="ChattyWidgets Hub"
+        Icon="app.png"
         Height="680" Width="980"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterScreen"
@@ -181,7 +182,10 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,28,0">
                         <Image Source="/app.png" Width="34" Height="34" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="TxtAppTitle" Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="TxtAppTitle" Text="ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text=" ✔" FontSize="13" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center" ToolTip="Официально верифицировано / Verified Official"/>
+                            </StackPanel>
                             <TextBlock x:Name="TxtAppSubtitle" Text="Desktop Widget Engine" FontSize="10" Foreground="#64748B"/>
                         </StackPanel>
                     </StackPanel>

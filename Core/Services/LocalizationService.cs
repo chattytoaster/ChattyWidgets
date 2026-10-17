@@ -493,6 +493,9 @@ public class LocalizationService
         Add("MediaFrame.ControlsSection", "Панель навигации и стрелки", "Navigation Controls & Arrows");
         Add("MediaFrame.AutoHideControls", "Скрывать панель (показывать только при наведении)", "Auto-hide control bar (show on hover)");
         Add("MediaFrame.AutoHideControlsHint", "Стрелки навигации и подпись плавно появляются при наведении курсора на фоторамку", "Navigation arrows and caption smoothly appear when hovering over the widget");
+        Add("MediaFrame.OpacityTitle", "Прозрачность фоторамки и фото", "Frame & Photo Transparency");
+        Add("MediaFrame.OpacityLevel", "Уровень непрозрачности (от 15% до 100%):", "Opacity level (from 15% to 100%):");
+        Add("MediaFrame.OpacityHint", "Прозрачность плавно применяется как к стеклянной рамке, так и к самой фотографии", "Transparency smoothly applies to both the glass frame and the photo itself");
 
         // 7. Music Player Widget
         Add("Music.Title", "Настройки Медиаплеера", "Music Player Settings");
