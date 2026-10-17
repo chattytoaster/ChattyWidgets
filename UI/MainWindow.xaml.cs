@@ -537,13 +537,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnPresetChipClick(object sender, RoutedEventArgs e)
+    private async void OnPresetChipClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is DesktopPreset preset)
         {
-            PresetService.Instance.ApplyPreset(preset.Id);
-            RefreshInstalledWidgets();
-            RenderPresetChips();
+            await CheckAndApplyPresetAsync(preset, isNewImport: false);
         }
     }
 
@@ -590,29 +588,97 @@ public partial class MainWindow : Window
         }
     }
 
-    public void ImportPresetFile(string filePath)
+    public async void ImportPresetFile(string filePath)
     {
         try
         {
             var preset = PresetService.Instance.ImportPresetFromFile(filePath);
             RenderPresetChips();
-
-            var res = MessageBox.Show(
-                $"Пресет «{preset.Name}» успешно импортирован!\n(Виджетов: {preset.Widgets.Count})\n\nПрименить этот пресет на рабочий стол прямо сейчас?",
-                "Импорт пресета .chwp",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (res == MessageBoxResult.Yes)
-            {
-                PresetService.Instance.ApplyPreset(preset.Id);
-                RefreshInstalledWidgets();
-                RenderPresetChips();
-            }
+            await CheckAndApplyPresetAsync(preset, isNewImport: true);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Ошибка импорта пресета: {ex.Message}", "Ошибка импорта", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    public async Task CheckAndApplyPresetAsync(DesktopPreset preset, bool isNewImport)
+    {
+        bool isRu = LocalizationService.Instance.IsRussian;
+
+        // Check if any widgets referenced in this preset are not yet installed
+        var requestedWidgetIds = preset.Widgets.Values
+            .Select(w => w.BaseWidgetId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var installed = ChwPackageService.GetInstalledWidgets();
+        var installedIds = new HashSet<string>(installed.Select(i => i.Manifest.Id), StringComparer.OrdinalIgnoreCase);
+        var missingIds = requestedWidgetIds.Where(id => !installedIds.Contains(id)).ToList();
+
+        if (missingIds.Count > 0)
+        {
+            TxtStatus.Text = isRu 
+                ? "Загрузка каталога для недостающих виджетов..." 
+                : "Loading store catalog for missing widgets...";
+
+            var catalog = StoreService.Instance.LastLoadedCatalog 
+                          ?? await StoreService.Instance.GetStoreCatalogAsync(WidgetManager.Instance.Settings.RemoteCatalogUrl);
+
+            var dialog = new MissingWidgetsDialog(preset, missingIds, catalog)
+            {
+                Owner = this
+            };
+
+            bool? res = dialog.ShowDialog();
+            if (res == true && dialog.UserAccepted)
+            {
+                PresetService.Instance.ApplyPreset(preset.Id);
+                RefreshInstalledWidgets();
+                RenderPresetChips();
+
+                int installedCount = dialog.InstalledWidgetsCount;
+                TxtStatus.Text = isRu
+                    ? (installedCount > 0
+                        ? $"Пресет «{preset.Name}» успешно применен! Установлено новых виджетов: {installedCount}."
+                        : $"Пресет «{preset.Name}» применен для установленных виджетов.")
+                    : (installedCount > 0
+                        ? $"Preset «{preset.Name}» applied! Installed {installedCount} new widgets."
+                        : $"Preset «{preset.Name}» applied for installed widgets.");
+            }
+        }
+        else
+        {
+            if (isNewImport)
+            {
+                var res = MessageBox.Show(
+                    isRu 
+                        ? $"Пресет «{preset.Name}» успешно импортирован!\n(Все виджеты {preset.Widgets.Count} шт. уже установлены)\n\nПрименить этот пресет на рабочий стол прямо сейчас?"
+                        : $"Preset «{preset.Name}» imported!\n(All {preset.Widgets.Count} widgets installed)\n\nApply this preset to the desktop now?",
+                    isRu ? "Импорт пресета .chwp" : "Import Preset .chwp",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (res == MessageBoxResult.Yes)
+                {
+                    PresetService.Instance.ApplyPreset(preset.Id);
+                    RefreshInstalledWidgets();
+                    RenderPresetChips();
+                    TxtStatus.Text = isRu 
+                        ? $"Пресет «{preset.Name}» успешно применен на рабочий стол." 
+                        : $"Preset «{preset.Name}» applied to desktop.";
+                }
+            }
+            else
+            {
+                PresetService.Instance.ApplyPreset(preset.Id);
+                RefreshInstalledWidgets();
+                RenderPresetChips();
+                TxtStatus.Text = isRu 
+                    ? $"Пресет «{preset.Name}» применен на рабочий стол." 
+                    : $"Preset «{preset.Name}» applied to desktop.";
+            }
         }
     }
 
@@ -830,6 +896,10 @@ public partial class MainWindow : Window
                 if (Path.GetExtension(file).Equals(".chw", StringComparison.OrdinalIgnoreCase))
                 {
                     InstallChwFile(file);
+                }
+                else if (Path.GetExtension(file).Equals(".chwp", StringComparison.OrdinalIgnoreCase))
+                {
+                    ImportPresetFile(file);
                 }
             }
         }
@@ -1649,6 +1719,9 @@ public class InstalledWidgetViewModel
     public string ConfigureTooltip => LocalizationService.Instance.IsRussian ? "Настройки виджета" : "Widget settings";
     public string UpdateButtonText => LocalizationService.Instance.IsRussian ? "Обновить" : "Update";
 
+    public string DisplayDescription => Manifest.DisplayDescription;
+    public Visibility DescriptionVisibility => string.IsNullOrWhiteSpace(DisplayDescription) ? Visibility.Collapsed : Visibility.Visible;
+
     public string BadgeText => Trust.BadgeText;
     public bool HasWarning => !string.IsNullOrEmpty(Trust.WarningMessage);
     public string WarningMessage => Trust.WarningMessage;
@@ -1663,6 +1736,7 @@ public class StoreItemViewModel
     public string Description { get; set; } = string.Empty;
     public string DisplayName => Item.DisplayName;
     public string DisplayDescription => Item.DisplayDescription;
+    public Visibility DescriptionVisibility => string.IsNullOrWhiteSpace(DisplayDescription) ? Visibility.Collapsed : Visibility.Visible;
     public string Author { get; set; } = string.Empty;
     public string DisplayAuthor => Author;
     public string AuthorPrefix => LocalizationService.Instance.IsRussian ? "Разработчик:" : "Developer:";

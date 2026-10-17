@@ -307,6 +307,11 @@
                                                 </Border>
                                             </StackPanel>
 
+                                            <!-- Description -->
+                                            <TextBlock Text="{Binding DisplayDescription}" FontSize="12" Foreground="#94A3B8" 
+                                                       Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding DescriptionVisibility}"/>
+
                                             <!-- Update available badge -->
                                             <Border Background="#163326" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,6,0,0"
                                                     Visibility="{Binding UpdateBadgeVisibility}">
@@ -410,6 +415,11 @@
                                                     </Viewbox>
                                                 </Border>
                                             </StackPanel>
+
+                                            <!-- Description -->
+                                            <TextBlock Text="{Binding DisplayDescription}" FontSize="12" Foreground="#94A3B8" 
+                                                       Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding DescriptionVisibility}"/>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
