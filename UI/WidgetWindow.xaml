@@ -23,9 +23,9 @@
             <MenuItem x:Name="MenuDeleteInstance" Header="🗑 Удалить этот виджет" Click="OnDeleteInstanceClick" Foreground="#EF4444"/>
             <Separator/>
             <MenuItem x:Name="MenuGroupLayer" Header="Слой отображения">
-                <MenuItem x:Name="MenuLayerDesktop" Header="На рабочем столе (под всеми окнами)" Click="OnLayerDesktopClick"/>
-                <MenuItem x:Name="MenuLayerNormal" Header="Плавающее окно" Click="OnLayerNormalClick"/>
-                <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" Click="OnLayerTopClick"/>
+                <MenuItem x:Name="MenuLayerDesktop" Header="На рабочем столе (под всеми окнами)" IsCheckable="True" Click="OnLayerDesktopClick"/>
+                <MenuItem x:Name="MenuLayerNormal" Header="Плавающее окно" IsCheckable="True" Click="OnLayerNormalClick"/>
+                <MenuItem x:Name="MenuLayerTop" Header="Поверх всех окон" IsCheckable="True" Click="OnLayerTopClick"/>
             </MenuItem>
             <MenuItem x:Name="MenuGroupTheme" Header="Тема оформления">
                 <MenuItem x:Name="MenuThemeAuto" Header="✦ Как в Хабе (Авто)" IsCheckable="True" Click="OnThemeAutoClick"/>

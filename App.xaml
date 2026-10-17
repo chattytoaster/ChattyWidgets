@@ -277,5 +277,211 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Modern Dark Separator Style -->
+        <Style TargetType="{x:Type Separator}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Separator}">
+                        <Border Height="1" Background="#222B3E" Margin="2,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Dark Submenu Item Template -->
+        <ControlTemplate x:Key="DarkSubmenuItemTemplate" TargetType="{x:Type MenuItem}">
+            <Border x:Name="Bg" Background="Transparent" CornerRadius="6" Margin="2,1" Padding="8,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Icon / CheckMark -->
+                    <Grid Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <ContentPresenter x:Name="Icon" ContentSource="Icon" SnapsToDevicePixels="True"/>
+                        <Path x:Name="CheckMark"
+                              Data="M 1 5.5 L 4.5 9 L 11 1.5"
+                              Stroke="#38BDF8"
+                              StrokeThickness="2"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Center"
+                              Visibility="Collapsed"/>
+                    </Grid>
+
+                    <!-- Header Text -->
+                    <ContentPresenter Grid.Column="1"
+                                      ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"
+                                      SnapsToDevicePixels="True"/>
+
+                    <!-- Shortcut / Gesture Text -->
+                    <TextBlock Grid.Column="2"
+                               Text="{TemplateBinding InputGestureText}"
+                               Foreground="#64748B"
+                               FontSize="11"
+                               Margin="16,0,0,0"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="Icon" Value="{x:Null}">
+                    <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                </Trigger>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="Bg" Property="Background" Value="#222B40"/>
+                    <Setter Property="Foreground" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#64748B"/>
+                    <Setter TargetName="Bg" Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Modern Dark Submenu Header Template (Items with nested submenus) -->
+        <ControlTemplate x:Key="DarkSubmenuHeaderTemplate" TargetType="{x:Type MenuItem}">
+            <Border x:Name="Bg" Background="Transparent" CornerRadius="6" Margin="2,1" Padding="8,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Icon -->
+                    <Grid Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <ContentPresenter x:Name="Icon" ContentSource="Icon" SnapsToDevicePixels="True"/>
+                    </Grid>
+
+                    <!-- Header Text -->
+                    <ContentPresenter Grid.Column="1"
+                                      ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"
+                                      SnapsToDevicePixels="True"/>
+
+                    <!-- Submenu Right Arrow -->
+                    <Path Grid.Column="2"
+                          x:Name="RightArrow"
+                          Data="M 0 0 L 4 4 L 0 8"
+                          Stroke="#94A3B8"
+                          StrokeThickness="1.6"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round"
+                          VerticalAlignment="Center"
+                          Margin="12,0,2,0"/>
+
+                    <!-- Popup for Submenu -->
+                    <Popup x:Name="PART_Popup"
+                           AllowsTransparency="True"
+                           Focusable="False"
+                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                           Placement="Right"
+                           PopupAnimation="Fade"
+                           VerticalOffset="-5"
+                           HorizontalOffset="2">
+                        <Border x:Name="SubMenuBorder"
+                                Background="#F2101322"
+                                BorderBrush="#262F46"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="4,6">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="#000000"/>
+                            </Border.Effect>
+                            <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="Icon" Value="{x:Null}">
+                    <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="Bg" Property="Background" Value="#222B40"/>
+                    <Setter TargetName="RightArrow" Property="Stroke" Value="#38BDF8"/>
+                    <Setter Property="Foreground" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsSubmenuOpen" Value="True">
+                    <Setter TargetName="Bg" Property="Background" Value="#1C2335"/>
+                    <Setter TargetName="RightArrow" Property="Stroke" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#64748B"/>
+                    <Setter TargetName="RightArrow" Property="Stroke" Value="#333E54"/>
+                    <Setter TargetName="Bg" Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Modern Dark MenuItem Style -->
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="Role" Value="SubmenuItem">
+                    <Setter Property="Template" Value="{StaticResource DarkSubmenuItemTemplate}"/>
+                </Trigger>
+                <Trigger Property="Role" Value="SubmenuHeader">
+                    <Setter Property="Template" Value="{StaticResource DarkSubmenuHeaderTemplate}"/>
+                </Trigger>
+                <Trigger Property="Role" Value="TopLevelItem">
+                    <Setter Property="Template" Value="{StaticResource DarkSubmenuItemTemplate}"/>
+                </Trigger>
+                <Trigger Property="Role" Value="TopLevelHeader">
+                    <Setter Property="Template" Value="{StaticResource DarkSubmenuHeaderTemplate}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Modern Dark ContextMenu Style -->
+        <Style TargetType="{x:Type ContextMenu}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ContextMenu}">
+                        <Border x:Name="MenuBorder"
+                                Background="#F2101322"
+                                BorderBrush="#262F46"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="4,6"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="#000000"/>
+                            </Border.Effect>
+                            <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>

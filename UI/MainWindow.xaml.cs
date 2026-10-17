@@ -104,10 +104,6 @@ public partial class MainWindow : Window
     {
         base.OnStateChanged(e);
         UpdateMaximizeButtonIcon();
-        if (WindowState == WindowState.Minimized)
-        {
-            Hide();
-        }
     }
 
     private void OnMinimizeWindowClick(object sender, RoutedEventArgs e)
@@ -222,6 +218,12 @@ public partial class MainWindow : Window
         }
 
         InstalledWidgetsList.ItemsSource = viewModels;
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            bool isLight = WidgetManager.Instance?.Settings?.Theme?.Equals("light", StringComparison.OrdinalIgnoreCase) ?? false;
+            ApplyHubThemeToTree(InstalledWidgetsList, isLight);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+
         bool isRu = LocalizationService.Instance.IsRussian;
         TxtActiveCount.Text = isRu 
             ? $"{totalActiveCopies} активно из {installed.Count}" 
@@ -618,6 +620,11 @@ public partial class MainWindow : Window
         }).ToList();
 
         StoreItemsList.ItemsSource = viewModels;
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            bool isLight = WidgetManager.Instance?.Settings?.Theme?.Equals("light", StringComparison.OrdinalIgnoreCase) ?? false;
+            ApplyHubThemeToTree(StoreItemsList, isLight);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
         int updatesCount = catalog.Count(x => x.HasUpdate);
         if (updatesCount > 0)
         {
@@ -1061,6 +1068,22 @@ public partial class MainWindow : Window
         RefreshStoreCatalog();
     }
 
+    private static readonly SolidColorBrush LightTextPrimary = new(Color.FromRgb(15, 23, 42));
+    private static readonly SolidColorBrush LightTextSecondary = new(Color.FromRgb(71, 85, 105));
+    private static readonly SolidColorBrush LightTextMuted = new(Color.FromRgb(100, 116, 139));
+    private static readonly SolidColorBrush LightCardBg = new(Color.FromRgb(255, 255, 255));
+    private static readonly SolidColorBrush LightCardBorder = new(Color.FromRgb(226, 232, 240));
+    private static readonly SolidColorBrush LightSecondaryBtnBg = new(Color.FromRgb(241, 245, 249));
+    private static readonly SolidColorBrush LightSecondaryBtnBorder = new(Color.FromRgb(203, 213, 225));
+
+    private static readonly SolidColorBrush DarkTextPrimary = new(Color.FromRgb(248, 250, 252));
+    private static readonly SolidColorBrush DarkTextSecondary = new(Color.FromRgb(148, 163, 184));
+    private static readonly SolidColorBrush DarkTextMuted = new(Color.FromRgb(100, 116, 139));
+    private static readonly SolidColorBrush DarkCardBg = new(Color.FromRgb(22, 25, 40));
+    private static readonly SolidColorBrush DarkCardBorder = new(Color.FromRgb(37, 42, 63));
+    private static readonly SolidColorBrush DarkSecondaryBtnBg = new(Color.FromRgb(30, 35, 51));
+    private static readonly SolidColorBrush DarkSecondaryBtnBorder = new(Color.FromRgb(51, 59, 82));
+
     public void ApplyTheme(string theme)
     {
         bool isLight = theme.Equals("light", StringComparison.OrdinalIgnoreCase);
@@ -1076,13 +1099,13 @@ public partial class MainWindow : Window
             ComboHubTheme.SelectedIndex = isLight ? 1 : 0;
         }
 
-        var bgBrush = new SolidColorBrush(isLight ? Color.FromRgb(241, 245, 249) : Color.FromRgb(15, 17, 26));
-        var borderBrush = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(37, 42, 63));
-        var topBarBrush = new SolidColorBrush(isLight ? Color.FromRgb(255, 255, 255) : Color.FromRgb(18, 21, 34));
-        var topBarBorder = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(30, 35, 54));
-        var textPrimary = new SolidColorBrush(isLight ? Color.FromRgb(15, 23, 42) : Color.FromRgb(248, 250, 252));
-        var statusBg = new SolidColorBrush(isLight ? Color.FromRgb(241, 245, 249) : Color.FromRgb(12, 14, 21));
-        var statusBorder = new SolidColorBrush(isLight ? Color.FromRgb(226, 232, 240) : Color.FromRgb(26, 30, 44));
+        var bgBrush = isLight ? new SolidColorBrush(Color.FromRgb(241, 245, 249)) : new SolidColorBrush(Color.FromRgb(15, 17, 26));
+        var borderBrush = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(37, 42, 63));
+        var topBarBrush = isLight ? new SolidColorBrush(Color.FromRgb(255, 255, 255)) : new SolidColorBrush(Color.FromRgb(18, 21, 34));
+        var topBarBorder = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(30, 35, 54));
+        var textPrimary = isLight ? LightTextPrimary : DarkTextPrimary;
+        var statusBg = isLight ? new SolidColorBrush(Color.FromRgb(241, 245, 249)) : new SolidColorBrush(Color.FromRgb(12, 14, 21));
+        var statusBorder = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(26, 30, 44));
 
         Background = bgBrush;
         if (MainRootBorder != null)
@@ -1118,94 +1141,118 @@ public partial class MainWindow : Window
 
             if (child is TextBlock tb)
             {
-                if (isLight)
+                if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
                 {
-                    if (tb.Tag == null) tb.Tag = tb.Foreground;
-                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                    byte r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                    int max = Math.Max(r, Math.Max(g, b));
+                    int min = Math.Min(r, Math.Min(g, b));
+                    bool isAccent = (max - min) > 75; // Preserve colored accents (red, green, cyan)
+                    if (!isAccent)
                     {
-                        int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
-                        int max = Math.Max(r, Math.Max(g, b));
-                        int min = Math.Min(r, Math.Min(g, b));
-                        bool isAccent = (max - min) > 70;
-                        if (!isAccent)
+                        if (isLight)
                         {
-                            int brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                            if (brightness >= 180)
-                                tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
-                            else if (brightness >= 100)
-                                tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                            if (tb.FontSize >= 14 || tb.FontWeight == FontWeights.Bold || tb.FontWeight == FontWeights.SemiBold)
+                                tb.Foreground = LightTextPrimary;
+                            else
+                                tb.Foreground = LightTextSecondary;
+                        }
+                        else
+                        {
+                            if (tb.FontSize >= 14 || tb.FontWeight == FontWeights.Bold || tb.FontWeight == FontWeights.SemiBold)
+                                tb.Foreground = DarkTextPrimary;
+                            else
+                                tb.Foreground = DarkTextSecondary;
                         }
                     }
                 }
+            }
+            else if (child is ChattyWidgets.UI.Controls.MarqueeText mt)
+            {
+                if (isLight)
+                {
+                    if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
+                        mt.Foreground = LightTextPrimary;
+                    else
+                        mt.Foreground = LightTextSecondary;
+                }
                 else
                 {
-                    if (tb.Tag is Brush orig)
-                        tb.Foreground = orig;
-                    else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
-                        tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                    if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
+                        mt.Foreground = DarkTextPrimary;
+                    else
+                        mt.Foreground = DarkTextSecondary;
                 }
             }
             else if (child is Button btn)
             {
-                if (isLight)
+                if (btn != BtnThemeToggle && btn != BtnMaximizeRestore && btn != BtnCloseWindow && btn != BtnMinimizeWindow)
                 {
-                    if (btn.Tag == null) btn.Tag = (btn.Foreground, btn.Background, btn.BorderBrush);
-                    if (btn.Foreground is SolidColorBrush fscb &&
-                        fscb.Color != (Color)ColorConverter.ConvertFromString("#EF4444") &&
-                        fscb.Color != (Color)ColorConverter.ConvertFromString("#10B981") &&
-                        fscb.Color != (Color)ColorConverter.ConvertFromString("#34D399"))
+                    // Check if primary launch/stop button
+                    bool isPrimaryLaunchStop = false;
+                    if (btn.Background is SolidColorBrush bgScb)
                     {
-                        btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
-                    }
-                    if (btn.Background is SolidColorBrush bgScb &&
-                        (bgScb.Color == (Color)ColorConverter.ConvertFromString("#1E2333") ||
-                         bgScb.Color == (Color)ColorConverter.ConvertFromString("#2A3146") ||
-                         bgScb.Color == (Color)ColorConverter.ConvertFromString("#161928") ||
-                         bgScb.Color == Colors.Transparent))
-                    {
-                        if (btn != BtnThemeToggle && btn != BtnMaximizeRestore)
+                        if ((bgScb.Color.R > 200 && bgScb.Color.G < 100) || // Red Stop
+                            (bgScb.Color.G > 150 && bgScb.Color.R < 100) || // Green Launch
+                            (bgScb.Color.R == 99 && bgScb.Color.G == 102 && bgScb.Color.B == 241)) // Primary Indigo
                         {
-                            btn.Background = new SolidColorBrush(Color.FromRgb(226, 232, 240));
-                            btn.BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                            isPrimaryLaunchStop = true;
                         }
                     }
-                }
-                else
-                {
-                    if (btn.Tag is ValueTuple<Brush, Brush, Brush> tuple)
+
+                    if (!isPrimaryLaunchStop)
                     {
-                        btn.Foreground = tuple.Item1;
-                        btn.Background = tuple.Item2;
-                        btn.BorderBrush = tuple.Item3;
+                        bool isDangerRed = btn.Foreground is SolidColorBrush fgScb && fgScb.Color.R > 220 && fgScb.Color.G < 100;
+                        if (isLight)
+                        {
+                            if (!isDangerRed) btn.Foreground = LightTextPrimary;
+                            btn.Background = LightSecondaryBtnBg;
+                            btn.BorderBrush = LightSecondaryBtnBorder;
+                        }
+                        else
+                        {
+                            if (!isDangerRed) btn.Foreground = DarkTextSecondary;
+                            btn.Background = DarkSecondaryBtnBg;
+                            btn.BorderBrush = DarkSecondaryBtnBorder;
+                        }
                     }
                 }
             }
             else if (child is Border b && b != MainRootBorder && b != TopHeaderBorder && b != BottomStatusBar)
             {
-                if (isLight)
+                if (b.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                 {
-                    if (b.Tag == null) b.Tag = (b.Background, b.BorderBrush);
-                    if (b.Background is SolidColorBrush bgScb)
+                    byte r = bgScb.Color.R, g = bgScb.Color.G, bCol = bgScb.Color.B;
+                    int max = Math.Max(r, Math.Max(g, bCol));
+                    int min = Math.Min(r, Math.Min(g, bCol));
+                    bool isAccent = (max - min) > 60;
+                    if (!isAccent)
                     {
-                        if (bgScb.Color == (Color)ColorConverter.ConvertFromString("#161928") ||
-                            bgScb.Color == (Color)ColorConverter.ConvertFromString("#1E2338"))
+                        if (isLight)
                         {
-                            b.Background = new SolidColorBrush(Color.FromRgb(255, 255, 255));
-                            b.BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240));
+                            if (b.CornerRadius.TopLeft >= 10)
+                            {
+                                b.Background = LightCardBg;
+                                b.BorderBrush = LightCardBorder;
+                            }
+                            else
+                            {
+                                b.Background = LightSecondaryBtnBg;
+                                b.BorderBrush = LightSecondaryBtnBorder;
+                            }
                         }
-                        else if (bgScb.Color == (Color)ColorConverter.ConvertFromString("#10121C"))
+                        else
                         {
-                            b.Background = new SolidColorBrush(Color.FromRgb(241, 245, 249));
-                            b.BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                            if (b.CornerRadius.TopLeft >= 10)
+                            {
+                                b.Background = DarkCardBg;
+                                b.BorderBrush = DarkCardBorder;
+                            }
+                            else
+                            {
+                                b.Background = new SolidColorBrush(Color.FromRgb(30, 35, 56));
+                                b.BorderBrush = new SolidColorBrush(Color.FromRgb(42, 49, 70));
+                            }
                         }
-                    }
-                }
-                else
-                {
-                    if (b.Tag is ValueTuple<Brush, Brush> orig)
-                    {
-                        b.Background = orig.Item1;
-                        b.BorderBrush = orig.Item2;
                     }
                 }
             }
@@ -1213,20 +1260,16 @@ public partial class MainWindow : Window
             {
                 if (isLight)
                 {
-                    if (rb.Tag == null) rb.Tag = rb.Foreground;
-                    rb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                    rb.Foreground = rb.IsChecked == true ? new SolidColorBrush(Color.FromRgb(2, 132, 199)) : LightTextSecondary;
                 }
                 else
                 {
-                    if (rb.Tag is Brush orig)
-                        rb.Foreground = orig;
-                    else
-                        rb.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                    rb.Foreground = rb.IsChecked == true ? new SolidColorBrush(Color.FromRgb(56, 189, 248)) : DarkTextSecondary;
                 }
             }
             else if (child is CheckBox cb)
             {
-                cb.Foreground = isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                cb.Foreground = isLight ? LightTextPrimary : DarkTextPrimary;
             }
 
             ApplyHubThemeToTree(child, isLight);

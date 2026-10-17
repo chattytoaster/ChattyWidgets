@@ -43,7 +43,12 @@ public class TrayIconManager : IDisposable
     {
         var loc = LocalizationService.Instance;
         _notifyIcon.Text = loc.T("Tray.Tooltip", "ChattyWidgets — Движок виджетов рабочего стола");
-        var menu = new ContextMenuStrip();
+        var menu = new ContextMenuStrip
+        {
+            Renderer = new DarkMenuRenderer(),
+            BackColor = System.Drawing.Color.FromArgb(16, 19, 34),
+            ForeColor = System.Drawing.Color.FromArgb(248, 250, 252)
+        };
 
         var openItem = new ToolStripMenuItem(loc.T("Tray.OpenHub", "Открыть Хаб ChattyWidgets"))
         {
@@ -56,6 +61,9 @@ public class TrayIconManager : IDisposable
 
         // Desktop Presets submenu
         var presetsItem = new ToolStripMenuItem(loc.T("Tray.Presets", "Пресеты рабочих столов (.chwp)"));
+        presetsItem.DropDown.Renderer = menu.Renderer;
+        presetsItem.DropDown.BackColor = System.Drawing.Color.FromArgb(16, 19, 34);
+        presetsItem.DropDown.ForeColor = System.Drawing.Color.FromArgb(248, 250, 252);
         var settings = WidgetManager.Instance.Settings;
         if (settings.Presets == null || settings.Presets.Count == 0)
         {
@@ -231,3 +239,86 @@ public static class GraphicsExtensions
         g.FillPath(brush, path);
     }
 }
+
+public class DarkMenuRenderer : ToolStripProfessionalRenderer
+{
+    public DarkMenuRenderer() : base(new DarkColorTable())
+    {
+        RoundedEdges = true;
+    }
+
+    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+    {
+        if (e.Item == null || !e.Item.Enabled)
+        {
+            e.TextColor = System.Drawing.Color.FromArgb(100, 116, 139);
+        }
+        else if (e.Item.Selected)
+        {
+            e.TextColor = System.Drawing.Color.FromArgb(56, 189, 248);
+        }
+        else
+        {
+            e.TextColor = System.Drawing.Color.FromArgb(248, 250, 252);
+        }
+        base.OnRenderItemText(e);
+    }
+
+    protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+    {
+        e.ArrowColor = (e.Item?.Selected ?? false) ? System.Drawing.Color.FromArgb(56, 189, 248) : System.Drawing.Color.FromArgb(148, 163, 184);
+        base.OnRenderArrow(e);
+    }
+
+    protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var rect = new Rectangle(e.ImageRectangle.X + 2, e.ImageRectangle.Y + 2, 16, 16);
+        using var brush = new SolidBrush(System.Drawing.Color.FromArgb(30, 41, 59));
+        using var pen = new Pen(System.Drawing.Color.FromArgb(56, 189, 248), 1.5f);
+        g.FillRectangle(brush, rect);
+        g.DrawRectangle(pen, rect);
+
+        using var checkPen = new Pen(System.Drawing.Color.FromArgb(56, 189, 248), 2.2f)
+        {
+            StartCap = System.Drawing.Drawing2D.LineCap.Round,
+            EndCap = System.Drawing.Drawing2D.LineCap.Round
+        };
+        g.DrawLines(checkPen, new[]
+        {
+            new System.Drawing.Point(rect.Left + 3, rect.Top + 8),
+            new System.Drawing.Point(rect.Left + 7, rect.Top + 12),
+            new System.Drawing.Point(rect.Left + 13, rect.Top + 4)
+        });
+    }
+}
+
+public class DarkColorTable : ProfessionalColorTable
+{
+    public override System.Drawing.Color MenuBorder => System.Drawing.Color.FromArgb(38, 47, 70);
+    public override System.Drawing.Color ToolStripDropDownBackground => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginGradientBegin => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginGradientMiddle => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginGradientEnd => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginRevealedGradientBegin => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginRevealedGradientMiddle => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color ImageMarginRevealedGradientEnd => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color MenuItemSelected => System.Drawing.Color.FromArgb(34, 43, 64);
+    public override System.Drawing.Color MenuItemBorder => System.Drawing.Color.FromArgb(56, 189, 248);
+    public override System.Drawing.Color MenuItemSelectedGradientBegin => System.Drawing.Color.FromArgb(34, 43, 64);
+    public override System.Drawing.Color MenuItemSelectedGradientEnd => System.Drawing.Color.FromArgb(34, 43, 64);
+    public override System.Drawing.Color MenuItemPressedGradientBegin => System.Drawing.Color.FromArgb(28, 36, 54);
+    public override System.Drawing.Color MenuItemPressedGradientMiddle => System.Drawing.Color.FromArgb(28, 36, 54);
+    public override System.Drawing.Color MenuItemPressedGradientEnd => System.Drawing.Color.FromArgb(28, 36, 54);
+    public override System.Drawing.Color CheckBackground => System.Drawing.Color.FromArgb(2, 132, 199);
+    public override System.Drawing.Color CheckSelectedBackground => System.Drawing.Color.FromArgb(14, 165, 233);
+    public override System.Drawing.Color CheckPressedBackground => System.Drawing.Color.FromArgb(3, 105, 161);
+    public override System.Drawing.Color ButtonCheckedHighlight => System.Drawing.Color.FromArgb(2, 132, 199);
+    public override System.Drawing.Color ButtonCheckedHighlightBorder => System.Drawing.Color.FromArgb(56, 189, 248);
+    public override System.Drawing.Color SeparatorDark => System.Drawing.Color.FromArgb(34, 43, 62);
+    public override System.Drawing.Color SeparatorLight => System.Drawing.Color.FromArgb(34, 43, 62);
+    public override System.Drawing.Color MenuStripGradientBegin => System.Drawing.Color.FromArgb(16, 19, 34);
+    public override System.Drawing.Color MenuStripGradientEnd => System.Drawing.Color.FromArgb(16, 19, 34);
+}
+

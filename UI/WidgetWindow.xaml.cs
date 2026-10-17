@@ -1423,6 +1423,8 @@ public partial class WidgetWindow : Window
 
     private void OnContextMenuOpened(object? sender, RoutedEventArgs e)
     {
+        UpdateMenuChecks();
+
         // Populate Monitors Submenu
         MenuMonitors.Items.Clear();
         var monitors = ScreenHelper.GetMonitors();
