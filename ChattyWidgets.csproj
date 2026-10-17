@@ -18,6 +18,12 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Setup\**" />
+    <Page Remove="Setup\**" />
+    <ApplicationDefinition Remove="Setup\**" />
+    <None Remove="Setup\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include=".agents\skills\chw\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
