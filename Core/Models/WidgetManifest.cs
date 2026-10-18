@@ -85,6 +85,21 @@ public class WidgetManifest
 
     [JsonPropertyName("menuItems")]
     public List<CustomMenuItem> MenuItems { get; set; } = new();
+
+    [JsonPropertyName("userAgent")]
+    public string? UserAgent { get; set; }
+
+    [JsonPropertyName("backgroundColor")]
+    public string? BackgroundColor { get; set; }
+
+    [JsonPropertyName("injectedScript")]
+    public string? InjectedScript { get; set; }
+
+    [JsonPropertyName("customSettings")]
+    public Dictionary<string, string> CustomSettings { get; set; } = new();
+
+    [JsonPropertyName("settingsSchema")]
+    public List<WidgetSettingSchemaItem> SettingsSchema { get; set; } = new();
 }
 
 public class CustomMenuItem
@@ -98,3 +113,70 @@ public class CustomMenuItem
     [JsonPropertyName("icon")]
     public string? Icon { get; set; }
 }
+
+public class WidgetSettingSchemaItem
+{
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "text"; // "text", "boolean", "select", "slider"
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("title_ru")]
+    public string? TitleRu { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("description_ru")]
+    public string? DescriptionRu { get; set; }
+
+    [JsonPropertyName("default")]
+    public string? DefaultValue { get; set; }
+
+    [JsonPropertyName("min")]
+    public double? Min { get; set; }
+
+    [JsonPropertyName("max")]
+    public double? Max { get; set; }
+
+    [JsonPropertyName("step")]
+    public double? Step { get; set; }
+
+    [JsonPropertyName("options")]
+    public List<WidgetSettingOption> Options { get; set; } = new();
+
+    [JsonIgnore]
+    public string DisplayTitle =>
+        ChattyWidgets.Core.Services.LocalizationService.Instance.IsRussian && !string.IsNullOrWhiteSpace(TitleRu)
+            ? TitleRu
+            : (!string.IsNullOrWhiteSpace(Title) ? Title : Key);
+
+    [JsonIgnore]
+    public string? DisplayDescription =>
+        ChattyWidgets.Core.Services.LocalizationService.Instance.IsRussian && !string.IsNullOrWhiteSpace(DescriptionRu)
+            ? DescriptionRu
+            : Description;
+}
+
+public class WidgetSettingOption
+{
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = string.Empty;
+
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonPropertyName("label_ru")]
+    public string? LabelRu { get; set; }
+
+    [JsonIgnore]
+    public string DisplayLabel =>
+        ChattyWidgets.Core.Services.LocalizationService.Instance.IsRussian && !string.IsNullOrWhiteSpace(LabelRu)
+            ? LabelRu
+            : (!string.IsNullOrWhiteSpace(Label) ? Label : Value);
+}
+

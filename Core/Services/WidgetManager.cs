@@ -80,6 +80,9 @@ public class WidgetManager
     public int GetActiveInstancesCount(string baseWidgetId) =>
         _activeWindows.Values.Count(w => w.BaseWidgetId == baseWidgetId);
 
+    public WidgetWindow? GetWindow(string instanceId) =>
+        _activeWindows.TryGetValue(instanceId, out var win) ? win : null;
+
     public WidgetWindow? GetActiveWindow(string instanceOrBaseId)
     {
         if (_activeWindows.TryGetValue(instanceOrBaseId, out var win))

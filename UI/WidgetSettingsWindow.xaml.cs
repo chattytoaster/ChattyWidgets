@@ -23,6 +23,7 @@ public partial class WidgetSettingsWindow : Window
     private readonly string _instanceId;
     private readonly object? _viewModel;
     private readonly Action? _onSettingsChanged;
+    private readonly WidgetManifest? _manifest;
 
     public WidgetSettingsWindow(string baseWidgetId, string instanceId, object? viewModel, Action? onSettingsChanged = null)
     {
@@ -31,6 +32,9 @@ public partial class WidgetSettingsWindow : Window
         _instanceId = instanceId;
         _viewModel = viewModel;
         _onSettingsChanged = onSettingsChanged;
+
+        _manifest = WidgetManager.Instance?.GetActiveWindow(_instanceId)?.Manifest
+            ?? ChwPackageService.GetInstalledWidgets().FirstOrDefault(w => w.Manifest.Id == _baseWidgetId).Manifest;
 
         BuildSettingsUI();
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
@@ -3484,6 +3488,245 @@ public partial class WidgetSettingsWindow : Window
 
     private void BuildGenericSettings()
     {
-        AddSectionHeader("⚙️ Настройки виджета", "Параметры экземпляра на рабочем столе");
+        var loc = LocalizationService.Instance;
+        string title = _manifest?.DisplayName ?? _baseWidgetId;
+        TxtWindowTitle.Text = loc.IsRussian ? $"Настройки: {title}" : $"Settings: {title}";
+        AddSectionHeader(
+            loc.IsRussian ? $"⚙️ Параметры виджета «{title}»" : $"⚙️ Parameters for \"{title}\"",
+            _manifest?.DisplayDescription ?? (loc.IsRussian ? "Настройки экземпляра виджета на рабочем столе" : "Desktop widget instance settings"));
+
+        var customSettings = GetWidgetCustomSettings();
+
+        if (_manifest?.SettingsSchema != null && _manifest.SettingsSchema.Count > 0)
+        {
+            var card = CreateCard();
+            var sp = new StackPanel();
+
+            foreach (var field in _manifest.SettingsSchema)
+            {
+                if (string.IsNullOrEmpty(field.Key)) continue;
+
+                string fieldKey = field.Key;
+                string fieldTitle = field.DisplayTitle;
+                string? fieldDesc = field.DisplayDescription;
+                string currentVal = customSettings.TryGetValue(fieldKey, out var val) && val != null
+                    ? val
+                    : (field.DefaultValue ?? string.Empty);
+
+                var fieldPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+
+                switch (field.Type.ToLowerInvariant())
+                {
+                    case "boolean":
+                    case "bool":
+                        var chk = new CheckBox
+                        {
+                            Content = fieldTitle,
+                            Foreground = Brushes.White,
+                            FontSize = 12,
+                            IsChecked = currentVal.Equals("true", StringComparison.OrdinalIgnoreCase) || currentVal == "1"
+                        };
+                        if (!string.IsNullOrEmpty(fieldDesc))
+                        {
+                            chk.ToolTip = fieldDesc;
+                        }
+                        chk.Checked += (s, e) =>
+                        {
+                            SaveWidgetCustomSetting(fieldKey, "true");
+                            _onSettingsChanged?.Invoke();
+                        };
+                        chk.Unchecked += (s, e) =>
+                        {
+                            SaveWidgetCustomSetting(fieldKey, "false");
+                            _onSettingsChanged?.Invoke();
+                        };
+                        fieldPanel.Children.Add(chk);
+                        if (!string.IsNullOrEmpty(fieldDesc))
+                        {
+                            fieldPanel.Children.Add(new TextBlock
+                            {
+                                Text = fieldDesc,
+                                FontSize = 11,
+                                Foreground = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
+                                Margin = new Thickness(24, 2, 0, 0),
+                                TextWrapping = TextWrapping.Wrap
+                            });
+                        }
+                        break;
+
+                    case "select":
+                    case "options":
+                    case "combobox":
+                        fieldPanel.Children.Add(new TextBlock
+                        {
+                            Text = fieldTitle,
+                            FontSize = 12,
+                            FontWeight = FontWeights.SemiBold,
+                            Foreground = Brushes.White,
+                            Margin = new Thickness(0, 0, 0, 6)
+                        });
+                        var combo = new ComboBox
+                        {
+                            Height = 32,
+                            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                            Foreground = Brushes.White,
+                            Margin = new Thickness(0, 0, 0, 4)
+                        };
+                        int selectedIndex = 0;
+                        int idx = 0;
+                        foreach (var opt in field.Options)
+                        {
+                            combo.Items.Add(new ComboBoxItem
+                            {
+                                Content = opt.DisplayLabel,
+                                Tag = opt.Value
+                            });
+                            if (string.Equals(opt.Value, currentVal, StringComparison.OrdinalIgnoreCase))
+                            {
+                                selectedIndex = idx;
+                            }
+                            idx++;
+                        }
+                        if (combo.Items.Count > 0)
+                        {
+                            combo.SelectedIndex = selectedIndex;
+                        }
+                        combo.SelectionChanged += (s, e) =>
+                        {
+                            if (combo.SelectedItem is ComboBoxItem cbi && cbi.Tag is string optVal)
+                            {
+                                SaveWidgetCustomSetting(fieldKey, optVal);
+                                _onSettingsChanged?.Invoke();
+                            }
+                        };
+                        fieldPanel.Children.Add(combo);
+                        if (!string.IsNullOrEmpty(fieldDesc))
+                        {
+                            fieldPanel.Children.Add(new TextBlock
+                            {
+                                Text = fieldDesc,
+                                FontSize = 11,
+                                Foreground = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
+                                Margin = new Thickness(2, 2, 0, 0),
+                                TextWrapping = TextWrapping.Wrap
+                            });
+                        }
+                        break;
+
+                    case "slider":
+                    case "range":
+                        double min = field.Min ?? 0;
+                        double max = field.Max ?? 100;
+                        double step = field.Step ?? 1;
+                        double curNum = double.TryParse(currentVal, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : min;
+
+                        var valText = new TextBlock
+                        {
+                            Text = $"{curNum}",
+                            FontSize = 12,
+                            Foreground = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
+                            HorizontalAlignment = HorizontalAlignment.Right
+                        };
+
+                        var headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+                        headerGrid.Children.Add(new TextBlock
+                        {
+                            Text = fieldTitle,
+                            FontSize = 12,
+                            FontWeight = FontWeights.SemiBold,
+                            Foreground = Brushes.White
+                        });
+                        headerGrid.Children.Add(valText);
+                        fieldPanel.Children.Add(headerGrid);
+
+                        var slider = new Slider
+                        {
+                            Minimum = min,
+                            Maximum = max,
+                            SmallChange = step,
+                            LargeChange = step * 5,
+                            Value = curNum,
+                            Margin = new Thickness(0, 0, 0, 4)
+                        };
+                        slider.ValueChanged += (s, e) =>
+                        {
+                            double v = Math.Round(e.NewValue / step) * step;
+                            valText.Text = $"{v}";
+                            SaveWidgetCustomSetting(fieldKey, v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                            _onSettingsChanged?.Invoke();
+                        };
+                        fieldPanel.Children.Add(slider);
+                        if (!string.IsNullOrEmpty(fieldDesc))
+                        {
+                            fieldPanel.Children.Add(new TextBlock
+                            {
+                                Text = fieldDesc,
+                                FontSize = 11,
+                                Foreground = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
+                                Margin = new Thickness(2, 2, 0, 0),
+                                TextWrapping = TextWrapping.Wrap
+                            });
+                        }
+                        break;
+
+                    default: // "text", "string"
+                        fieldPanel.Children.Add(new TextBlock
+                        {
+                            Text = fieldTitle,
+                            FontSize = 12,
+                            FontWeight = FontWeights.SemiBold,
+                            Foreground = Brushes.White,
+                            Margin = new Thickness(0, 0, 0, 6)
+                        });
+                        var txtBox = new TextBox
+                        {
+                            Height = 32,
+                            Background = new SolidColorBrush(Color.FromRgb(22, 25, 40)),
+                            Foreground = Brushes.White,
+                            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+                            Text = currentVal,
+                            Margin = new Thickness(0, 0, 0, 4)
+                        };
+                        txtBox.TextChanged += (s, e) =>
+                        {
+                            SaveWidgetCustomSetting(fieldKey, txtBox.Text);
+                            _onSettingsChanged?.Invoke();
+                        };
+                        fieldPanel.Children.Add(txtBox);
+                        if (!string.IsNullOrEmpty(fieldDesc))
+                        {
+                            fieldPanel.Children.Add(new TextBlock
+                            {
+                                Text = fieldDesc,
+                                FontSize = 11,
+                                Foreground = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
+                                Margin = new Thickness(2, 2, 0, 0),
+                                TextWrapping = TextWrapping.Wrap
+                            });
+                        }
+                        break;
+                }
+
+                sp.Children.Add(fieldPanel);
+            }
+
+            card.Child = sp;
+            SettingsPanel.Children.Add(card);
+        }
+        else
+        {
+            var card = CreateCard();
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock
+            {
+                Text = loc.IsRussian ? "У этого виджета нет дополнительных параметров." : "This widget has no additional custom settings.",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
+                TextWrapping = TextWrapping.Wrap
+            });
+            card.Child = sp;
+            SettingsPanel.Children.Add(card);
+        }
     }
 }
+

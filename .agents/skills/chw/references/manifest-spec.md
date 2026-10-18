@@ -46,7 +46,8 @@ Every ChattyWidgets widget package (`.chw`) MUST contain a valid `manifest.json`
 | `description` | `string` | **Yes** | Brief English description of functionality and features. |
 | `description_ru` | `string` | **Recommended** | Brief Russian description. |
 | `category` | `string` | **Yes** | One of: `"system"`, `"utility"`, `"media"`, `"finance"`, `"weather"`, `"fun"`. |
-| `entryPoint` | `string` | **Yes** | Main XAML layout file. Must be `"Widget.xaml"`. |
+| `type` | `string` | Optional | `"native"` (default, WPF XAML) or `"web"` (HTML5 / WebView2). |
+| `entryPoint` / `entry` | `string` | **Yes** | Main entry file: `"Widget.xaml"` for native widgets, or `"index.html"` for web widgets. |
 | `width` | `number` | **Yes** | Default initial window width in virtual pixels (e.g. `280`, `320`). |
 | `height` | `number` | **Yes** | Default initial window height in virtual pixels (e.g. `140`, `220`). |
 | `minWidth` | `number` | Optional | Minimum resizable width (default `160`). |

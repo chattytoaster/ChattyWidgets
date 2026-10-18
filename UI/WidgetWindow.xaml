@@ -6,7 +6,7 @@
         AllowsTransparency="True"
         Background="Transparent"
         ShowInTaskbar="False"
-        ResizeMode="CanResize"
+        ResizeMode="NoResize"
         Topmost="False"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
@@ -34,7 +34,7 @@
             </MenuItem>
             <MenuItem x:Name="MenuLockPosition" Header="Зафиксировать позицию" IsCheckable="True" Click="OnLockPositionClick"/>
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>
-            <MenuItem x:Name="MenuAutoHideDot" Header="Спрятать точку управления" IsCheckable="True" Click="OnAutoHideDotClick"/>
+            <MenuItem x:Name="MenuAutoHideDot" Header="Спрятать точку управления" IsCheckable="True" Click="OnAutoHideDotClick" Visibility="Collapsed"/>
             <MenuItem x:Name="MenuGroupResize" Header="Изменить размер">
                 <MenuItem x:Name="MenuResize75" Header="75% (Компактный)" Click="OnResize75Click"/>
                 <MenuItem x:Name="MenuResize100" Header="100% (Обычный)" Click="OnResize100Click"/>

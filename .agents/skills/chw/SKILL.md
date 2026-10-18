@@ -56,29 +56,64 @@ If the widget has native logic, timers, system sensors, or custom settings:
 
 ---
 
-### Step 3: Design Glassmorphic XAML UI
+### Step 3: Design Widget UI (XAML or Web)
 
+#### Option A: Native Glassmorphic XAML UI
 Create `Widget.xaml` following [XAML Glass Patterns](file:///C:/Users/ChattyNB/.agents/skills/chw/references/xaml-glass-patterns.md):
-
 1. Root `<Border>` with `CornerRadius="20"`, `Background="#D8121622"`, `BorderBrush="#25FFFFFF"`, `ClipToBounds="True"`.
 2. **Dark & Light Theme Adaptability**: Ensure high contrast in both themes (no white text on white backgrounds).
-3. **Running Marquee Text**: For titles or dynamic labels that might overflow, wrap in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
-4. **Button Templates**: Never use default WPF gray buttons. Use flat rounded vector templates.
-5. **Photo / Image Opacity**: If images are displayed, bind `Opacity="{Binding PhotoOpacity}"` and apply an `OpacityMask` for rounded corners.
-6. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
+3. **Running Marquee Text**: Wrap overflow text in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
+4. **Button Templates**: Use flat rounded vector templates instead of default WPF gray buttons.
+5. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
+
+#### Option B: Web Widgets (`index.html`) & Eliminating Square Backgrounds and Shadows
+Create `index.html` following [Web Widget Patterns](file:///c:/Users/ChattyNB/Projects/chattywidgets/.agents/skills/chw/references/web-widget-patterns.md):
+
+**Golden Rules for Transparency & Eliminating Background / Shadow Artifacts:**
+1. **Root Transparency**:
+   - `html, body { background: transparent !important; background-color: transparent !important; margin: 0; padding: 0; overflow: hidden; }`.
+   - Never declare background color, border, or box-shadow on `html` or `body`.
+2. **Never Use `filter: drop-shadow` on Outer Containers**:
+   - In Chromium / WebView2, applying CSS `filter: drop-shadow(...)` to an outer HTML `<div>` (even with `border-radius: 50%`) forces the Skia compositor to allocate an intermediate rectangular blur tile. Residual alpha leaks into the bounding box corners, creating a visible faint square shadow/halo artifact on the desktop.
+   - For non-rectangular / circular containers: **always use `filter: none !important; box-shadow: none !important;`**. Vector shadows should be applied only to inner SVG child elements (e.g. clock hands, dial marks).
+3. **Do Not Apply `.widget-card` to Non-Rectangular Widgets**:
+   - The engine's theme engine targets `.widget-card` to dynamically adjust glass opacity. Non-rectangular widgets (clocks, meters, badges) must use their own specific class (e.g. `.clock-container`) and NOT `.widget-card`.
+4. **Engine-Level Guarantees**:
+   - `WidgetWindow` uses `ResizeMode="NoResize"` (eliminates `WS_THICKFRAME` and DWM rectangular sizing frames).
+   - `DWMWA_NCRENDERING_POLICY = DWMNCRP_DISABLED` (suppresses all DWM non-client window shadows).
+   - `DefaultBackgroundColor` and WPF composition target use `Color.FromArgb(0, 0, 0, 0)` (prevents RGB=255 GPU blending artifacts).
+5. **Native Control Dot**:
+   - Widget authors do **not** need to create HTML control dots. The engine automatically overlays `AnchorDotOverlayWindow` on hover, handling drag-and-drop and context menus natively.
+6. Save `index.html` in `ChattyWidgetsLibrary\widgets\<widget-id>\index.html`.
 
 ---
 
-### Step 4: Build Custom Settings Card
+### Step 4: Configure Settings Schema
 
-In `UI/WidgetSettingsWindow.xaml.cs`:
+For community and modular widgets, **do NOT hardcode switch cases in C#**. Configure the settings declaratively in `manifest.json`:
 
-1. Add a case to `BuildSettingsContent()` matching your `<widget-id>`.
-2. Implement `Build<WidgetName>Settings()`:
-   - Set window title and section header.
-   - Use `CreateCard()` with styled controls (Sliders, ComboBoxes, CheckBoxes, TextBoxes).
-   - Save changes to `win.Settings.CustomSettings["key"] = value` and call `WidgetManager.Instance.SaveSettings()`.
-   - Invoke `_onSettingsChanged?.Invoke()`.
+1. **Declare `settingsSchema` in `manifest.json`**:
+   Specify controls for your widget settings:
+   - `boolean` / `bool`: Toggle checkbox
+   - `select` / `options`: Dropdown combobox with options
+   - `slider` / `range`: Value slider with min, max, step
+   - `text` / `string`: Text input
+   
+   ```json
+   "settingsSchema": [
+     {
+       "key": "mySetting",
+       "type": "boolean",
+       "title": "Enable Feature",
+       "title_ru": "Включить функцию",
+       "default": true
+     }
+   ]
+   ```
+   `WidgetSettingsWindow.BuildGenericSettings()` will automatically generate beautiful glassmorphic settings cards for all declared fields and handle real-time saving to `win.Settings.CustomSettings`.
+
+2. **Official Core Widgets Only (`com.chatty.*`)**:
+   Only bundled official widgets with complex native logic (e.g. city search with HTTP suggestions) implement a dedicated `Build<Name>Settings()` in `UI/WidgetSettingsWindow.xaml.cs`.
 
 ---
 

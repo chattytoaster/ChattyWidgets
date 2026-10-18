@@ -31,6 +31,7 @@ public partial class WidgetWindow : Window
     private IntPtr _hwnd = IntPtr.Zero;
     public IntPtr Hwnd => _hwnd;
     private WebView2? _webView;
+    private AnchorDotOverlayWindow? _overlayDotWindow;
 
     private static Microsoft.Web.WebView2.Core.CoreWebView2Environment? _sharedWebViewEnvironment;
     private static readonly SemaphoreSlim _webViewEnvLock = new(1, 1);
@@ -167,6 +168,8 @@ public partial class WidgetWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
+        _overlayDotWindow?.Close();
+        _overlayDotWindow = null;
         LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
     }
 
@@ -193,7 +196,7 @@ public partial class WidgetWindow : Window
             source.AddHook(WndProc);
             if (source.CompositionTarget != null)
             {
-                source.CompositionTarget.BackgroundColor = System.Windows.Media.Colors.Transparent;
+                source.CompositionTarget.BackgroundColor = System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
             }
         }
         LogW($"OnSourceInitialized calling ApplyLayer for {InstanceId}");
@@ -215,6 +218,10 @@ public partial class WidgetWindow : Window
             // Suppress Windows 11 DWM frame border completely (DWMWA_COLOR_NONE = 0xFFFFFFFE)
             int noneColor = unchecked((int)0xFFFFFFFE);
             Win32Native.DwmSetWindowAttribute(_hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noneColor, sizeof(int));
+
+            // Disable DWM non-client rendering (completely eliminates rectangular DWM window shadows)
+            int ncrpDisabled = 1; // DWMNCRP_DISABLED
+            Win32Native.DwmSetWindowAttribute(_hwnd, 2 /* DWMWA_NCRENDERING_POLICY */, ref ncrpDisabled, sizeof(int));
 
             DesktopHostManager.DisableAeroSnap(_hwnd);
         }
@@ -388,6 +395,7 @@ public partial class WidgetWindow : Window
         }
         else if (msg == Win32Native.WM_WINDOWPOSCHANGING && _isDragMoving)
         {
+            _overlayDotWindow?.UpdatePositionDirect();
             try
             {
                 var wp = Marshal.PtrToStructure<Win32Native.WINDOWPOS>(lParam);
@@ -405,6 +413,10 @@ public partial class WidgetWindow : Window
                 }
             }
             catch { }
+        }
+        else if (msg == 0x0047 /* WM_WINDOWPOSCHANGED */)
+        {
+            _overlayDotWindow?.UpdatePositionDirect();
         }
         else if (msg == Win32Native.WM_GETMINMAXINFO)
         {
@@ -470,16 +482,32 @@ public partial class WidgetWindow : Window
     {
         try
         {
-            // Web widgets host an HWND, so hide the WPF AnchorContainer and inject an HTML control dot instead
+            // Web widgets host an HWND, so hide the WPF visual AnchorContainer and use native AnchorDotOverlayWindow
             AnchorContainer.Visibility = Visibility.Collapsed;
             AnchorDot.Visibility = Visibility.Collapsed;
+            ResizeGripHandle.Visibility = Visibility.Collapsed;
+
+            if (_overlayDotWindow == null)
+            {
+                _overlayDotWindow = new AnchorDotOverlayWindow(this);
+            }
 
             TxtLoadingTitle.Text = $"✦ Загрузка {Manifest.Name}...";
             LoadingIndicator.Visibility = Visibility.Visible;
 
+            System.Drawing.Color bgColor = System.Drawing.Color.FromArgb(0, 0, 0, 0);
+            if (!string.IsNullOrWhiteSpace(Manifest.BackgroundColor) && !Manifest.BackgroundColor.Equals("transparent", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    bgColor = System.Drawing.ColorTranslator.FromHtml(Manifest.BackgroundColor);
+                }
+                catch { }
+            }
+
             _webView = new WebView2
             {
-                DefaultBackgroundColor = System.Drawing.Color.Transparent
+                DefaultBackgroundColor = bgColor
             };
             // Put in visual tree so HWND is created for EnsureCoreWebView2Async
             WidgetContentHost.Content = _webView;
@@ -502,6 +530,17 @@ public partial class WidgetWindow : Window
             }
             await _webView.EnsureCoreWebView2Async(_sharedWebViewEnvironment);
 
+            if (!string.IsNullOrWhiteSpace(Manifest.UserAgent))
+            {
+                if (Manifest.UserAgent.Equals("mobile", StringComparison.OrdinalIgnoreCase))
+                {
+                    _webView.CoreWebView2.Settings.UserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+                }
+                else if (!Manifest.UserAgent.Equals("desktop", StringComparison.OrdinalIgnoreCase))
+                {
+                    _webView.CoreWebView2.Settings.UserAgent = Manifest.UserAgent;
+                }
+            }
 
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             _webView.CoreWebView2.Settings.AreDevToolsEnabled = WidgetManager.Instance.Settings.EnableDevMode;
@@ -525,6 +564,7 @@ public partial class WidgetWindow : Window
                 clickThroughAction: (ct) => SetClickThrough(ct),
                 lockAction: (locked) => SetLocked(locked),
                 opacityAction: (op) => SetWidgetOpacity(op),
+                getOpacityFunc: () => Settings.Opacity,
                 dragMoveAction: () => StartDragMove(),
                 contextMenuAction: () => ShowWidgetContextMenu(),
                 moveByAction: (dx, dy) => MoveBy(dx, dy),
@@ -536,13 +576,24 @@ public partial class WidgetWindow : Window
                 autoHideDotAction: (ah) => SetAutoHideAnchorDot(ah),
                 isAutoHideDotFunc: () => Settings.AutoHideAnchorDot,
                 openDevToolsAction: () => OpenDevTools(),
-                reloadAction: () => ReloadWidget()
+                reloadAction: () => ReloadWidget(),
+                hoverAction: (h) => _overlayDotWindow?.NotifyWidgetHover(h)
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
 
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
+
+                // Sync background opacity (never whole widget opacity)
+                try {
+                    var op = window.chatty.getOpacity();
+                    if (op && op > 0) {
+                        document.documentElement.style.removeProperty('opacity');
+                        document.documentElement.style.setProperty('--chatty-bg-opacity', op);
+                        document.documentElement.style.setProperty('--chatty-opacity', op);
+                    }
+                } catch(ex) {}
 
                 // Sync Windows Accent Color as CSS variables
                 try {
@@ -588,10 +639,14 @@ public partial class WidgetWindow : Window
                         var isInteractive = target && (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'A' || target.tagName === 'SELECT' || (target.closest && target.closest('button, input, textarea, a, select, [contenteditable=""true""]')));
                         if (isInteractive) return;
 
-                        // Allow drag on dot, top bar, header, or general widget card
-                        var isHeaderOrDot = target.closest && target.closest('.top-bar, .header, .chatty-anchor-dot, #chatty-control-dot, .widget-card, .crypto-card, .player-card, .note-card');
+                        // Allow drag on dot, top bar, header, clock container, svg, or general widget card
+                        var isHeaderOrDot = target.closest && target.closest('.top-bar, .header, .chatty-anchor-dot, #chatty-control-dot, .widget-card, .crypto-card, .player-card, .note-card, .clock-container, svg, [data-chatty-drag]');
                         if (isHeaderOrDot) {
-                            beginDrag(e);
+                            try {
+                                window.chatty.dragMove();
+                            } catch(ex) {
+                                beginDrag(e);
+                            }
                         }
                     }
                 });
@@ -621,129 +676,75 @@ public partial class WidgetWindow : Window
                     }
                 });
 
-                // Ensure the control dot is wired up
-                function setupChattyDot() {
-                    try {
-                        if (window.chatty && window.chatty.isAutoHideDot && window.chatty.isAutoHideDot()) {
-                            document.documentElement.classList.add('chatty-autohide-dot');
-                            if (document.body) document.body.classList.add('chatty-autohide-dot');
-                        }
-                    } catch(ex) {}
-
-                    var dot = document.querySelector('.chatty-anchor-dot') || document.getElementById('chatty-control-dot');
-                    if (!dot && document.body) {
-                        dot = document.createElement('div');
-                        dot.className = 'chatty-anchor-dot';
-                        dot.id = 'chatty-control-dot';
-                        dot.title = 'ChattyWidgets: ЛКМ — переместить, ПКМ — меню';
-                        dot.style.cssText = 'position:fixed!important;top:12px!important;right:12px!important;width:12px!important;height:12px!important;background:#3B82F6!important;border-radius:50%!important;box-shadow:0 0 8px #60A5FA!important;cursor:grab!important;z-index:999999!important;display:block!important;box-sizing:border-box!important;';
-                        var inner = document.createElement('div');
-                        inner.style.cssText = 'position:absolute!important;top:4px!important;left:4px!important;width:4px!important;height:4px!important;background:#FFFFFF!important;border-radius:50%!important;pointer-events:none!important;';
-                        dot.appendChild(inner);
-                        document.body.appendChild(dot);
+                // Mouse activity tracking to notify native engine overlay dot
+                window.addEventListener('mousemove', function() {
+                    try { window.chatty.notifyHover(true); } catch(ex) {}
+                });
+                window.addEventListener('mouseenter', function() {
+                    try { window.chatty.notifyHover(true); } catch(ex) {}
+                });
+                window.addEventListener('mouseleave', function(e) {
+                    if (!e.relatedTarget && !e.toElement) {
+                        try { window.chatty.notifyHover(false); } catch(ex) {}
                     }
-
-                    if (dot) {
-                        dot.addEventListener('mousedown', function(e) {
-                            if (e.button === 0) {
-                                beginDrag(e);
-                                dot.style.cursor = 'grabbing';
-                                e.stopPropagation();
-                            }
-                        });
-                        dot.addEventListener('contextmenu', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            try { window.chatty.showContextMenu(); } catch(ex) {}
-                        });
-                    }
-                }
-
-                // Click-through & Auto-hide CSS rules
-                var ctStyle = document.createElement('style');
-                ctStyle.textContent = `
-                    .chatty-anchor-dot,
-                    #chatty-control-dot {
-                        transition: opacity 0.22s ease-in-out, transform 0.15s ease !important;
-                    }
-                    /* Extended hover hitbox (top-right corner) so hover activates smoothly */
-                    .chatty-anchor-dot::before,
-                    #chatty-control-dot::before {
-                        content: '' !important;
-                        position: absolute !important;
-                        top: -12px !important;
-                        left: -12px !important;
-                        right: -12px !important;
-                        bottom: -12px !important;
-                    }
-                    body.chatty-click-through {
-                        pointer-events: none !important;
-                    }
-                    body.chatty-click-through .chatty-anchor-dot,
-                    body.chatty-click-through #chatty-control-dot {
-                        pointer-events: auto !important;
-                    }
-                    /* Auto-hide dot mode: hidden by default, visible on hover or when dragging / menu open */
-                    html.chatty-autohide-dot .chatty-anchor-dot,
-                    html.chatty-autohide-dot #chatty-control-dot,
-                    body.chatty-autohide-dot .chatty-anchor-dot,
-                    body.chatty-autohide-dot #chatty-control-dot {
-                        opacity: 0 !important;
-                    }
-                    html.chatty-autohide-dot:hover .chatty-anchor-dot,
-                    html.chatty-autohide-dot:hover #chatty-control-dot,
-                    body.chatty-autohide-dot:hover .chatty-anchor-dot,
-                    body.chatty-autohide-dot:hover #chatty-control-dot,
-                    .chatty-anchor-dot:hover,
-                    #chatty-control-dot:hover,
-                    html.chatty-menu-open .chatty-anchor-dot,
-                    html.chatty-menu-open #chatty-control-dot,
-                    body.chatty-menu-open .chatty-anchor-dot,
-                    body.chatty-menu-open #chatty-control-dot,
-                    html.chatty-is-dragging .chatty-anchor-dot,
-                    html.chatty-is-dragging #chatty-control-dot,
-                    body.chatty-is-dragging .chatty-anchor-dot,
-                    body.chatty-is-dragging #chatty-control-dot {
-                        opacity: 1 !important;
-                    }
-                `;
-                if (document.head) {
-                    document.head.appendChild(ctStyle);
-                } else {
-                    document.addEventListener('DOMContentLoaded', function() { document.head.appendChild(ctStyle); });
-                }
-
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', setupChattyDot);
-                } else {
-                    setupChattyDot();
-                }
+                });
             ";
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(initScript);
+
+            if (!string.IsNullOrWhiteSpace(Manifest.InjectedScript))
+            {
+                string scriptPath = Path.Combine(WidgetDirectory, Manifest.InjectedScript);
+                if (File.Exists(scriptPath))
+                {
+                    try
+                    {
+                        string scriptContent = await File.ReadAllTextAsync(scriptPath);
+                        await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(scriptContent);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[WW] Failed to load InjectedScript '{Manifest.InjectedScript}': {ex.Message}");
+                    }
+                }
+            }
 
             _webView.NavigationCompleted += (s, e) =>
             {
                 LoadingIndicator.Visibility = Visibility.Collapsed;
+                string opStr = Settings.Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                _ = _webView.CoreWebView2.ExecuteScriptAsync($@"
+                    try {{
+                        document.documentElement.style.removeProperty('opacity');
+                        document.documentElement.style.setProperty('--chatty-bg-opacity', '{opStr}');
+                        document.documentElement.style.setProperty('--chatty-opacity', '{opStr}');
+                    }} catch(ex) {{}}
+                ");
                 ApplyBackgroundOpacity(Settings.Opacity);
                 AttachClickThroughSubclass();
                 if (Settings.IsClickThrough)
                 {
                     ApplyClickThroughDomState(true);
                 }
-                if (Settings.AutoHideAnchorDot)
-                {
-                    ApplyAutoHideDomState(true);
-                }
+                ApplyAutoHideDomState(true);
             };
 
-            string entryPath = Path.Combine(WidgetDirectory, Manifest.Entry);
-            if (File.Exists(entryPath))
+            string targetUrl = Manifest.Entry;
+            if (targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                _webView.CoreWebView2.Navigate(new Uri(entryPath).AbsoluteUri);
+                _webView.CoreWebView2.Navigate(targetUrl);
             }
             else
             {
-                ShowErrorMessage($"Входной файл не найден: {Manifest.Entry}");
+                string entryPath = Path.Combine(WidgetDirectory, targetUrl);
+                if (File.Exists(entryPath))
+                {
+                    _webView.CoreWebView2.Navigate(new Uri(entryPath).AbsoluteUri);
+                }
+                else
+                {
+                    ShowErrorMessage($"Входной файл не найден: {targetUrl}");
+                }
             }
         }
         catch (Exception ex)
@@ -993,6 +994,11 @@ public partial class WidgetWindow : Window
         {
             DesktopHostManager.ApplyLayer(_hwnd, layer);
         }
+        if (_overlayDotWindow != null)
+        {
+            _overlayDotWindow.Topmost = this.Topmost;
+            _overlayDotWindow.UpdatePositionDirect();
+        }
         UpdateMenuChecks();
         SettingsChanged?.Invoke(this);
     }
@@ -1037,25 +1043,14 @@ public partial class WidgetWindow : Window
             shadow.Color = Color.FromRgb(96, 165, 250); // Glow #60A5FA
         }
 
-        if (Settings.AutoHideAnchorDot)
-        {
-            if (!IsMouseOver && !(AnchorContainer?.IsMouseOver ?? false) && !WidgetContextMenu.IsOpen)
-            {
-                AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
-                AnchorDot.Opacity = 0.0;
-            }
-        }
-        else
-        {
-            AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
-            AnchorDot.Opacity = 1.0;
-        }
+        bool isHovered = IsMouseOver || (AnchorContainer?.IsMouseOver ?? false) || WidgetContextMenu.IsOpen;
+        AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
+        AnchorDot.Opacity = isHovered ? 1.0 : 0.0;
 
         string status = "";
         if (Settings.IsLocked && Settings.IsClickThrough) status = " [Зафиксирован + Клик насквозь]";
         else if (Settings.IsLocked) status = " [Зафиксирован]";
         else if (Settings.IsClickThrough) status = " [Клик насквозь]";
-        if (Settings.AutoHideAnchorDot) status += " [Точка скрыта]";
 
         AnchorDot.ToolTip = $"ChattyWidgets{status}: ПКМ — меню настроек" + (Settings.IsLocked ? "" : ", ЛКМ — переместить");
     }
@@ -1064,6 +1059,33 @@ public partial class WidgetWindow : Window
     {
         Settings.Opacity = Math.Clamp(opacity, 0.15, 1.0);
         ApplyBackgroundOpacity(Settings.Opacity);
+        if (_webView?.CoreWebView2 != null)
+        {
+            string opStr = Settings.Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string script = $@"
+                try {{
+                    document.documentElement.style.removeProperty('opacity');
+                    document.documentElement.style.setProperty('--chatty-bg-opacity', '{opStr}');
+                    document.documentElement.style.setProperty('--chatty-opacity', '{opStr}');
+                    const isLight = document.documentElement.classList.contains('light-theme') || (document.body && document.body.classList.contains('light-theme'));
+                    const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, .card-bg');
+                    cards.forEach(c => {{
+                        if (c.classList.contains('clock-container')) return;
+                        c.style.backgroundColor = (isLight ? 'rgba(248, 250, 252, ' : 'rgba(18, 22, 34, ') + '{opStr}' + ')';
+                    }});
+                    const dialFaces = document.querySelectorAll('.dial-glass-face, .clock-dial, .dial-bg');
+                    dialFaces.forEach(df => {{
+                        df.style.fillOpacity = '{opStr}';
+                        df.setAttribute('fill-opacity', '{opStr}');
+                    }});
+                    const gradStops = document.querySelectorAll('#dial-gradient stop, radialGradient stop');
+                    gradStops.forEach(s => {{
+                        s.setAttribute('stop-opacity', '{opStr}');
+                    }});
+                }} catch(e) {{}}
+            ";
+            _ = _webView.CoreWebView2.ExecuteScriptAsync(script);
+        }
         if (WidgetContentHost.Content is FrameworkElement hostFe && hostFe.DataContext is NativeViewModelBase nativeVm)
         {
             nativeVm.ApplyOpacity(Settings.Opacity);
@@ -1087,31 +1109,51 @@ public partial class WidgetWindow : Window
 
         UpdateMenuChecks();
 
-        // 1. Locate root border
+        // 1. Locate root border (for native XAML widgets only)
         Border? rootBorder = null;
-        if (WidgetContentHost.Content is Border b) rootBorder = b;
-        else if (WidgetContentHost.Content is UserControl uc && uc.Content is Border ucb) rootBorder = ucb;
-        else if (WidgetContentHost.Content is FrameworkElement elemFe)
+        bool isWebWidget = Manifest.Type.Equals("web", StringComparison.OrdinalIgnoreCase) || _webView != null;
+        if (!isWebWidget)
         {
-            rootBorder = FindVisualChild<Border>(elemFe);
-        }
-
-        if (rootBorder != null)
-        {
-            // Strictly eliminate any DropShadowEffect on the root border to completely eliminate transparent straight corner artifacts
-            rootBorder.Effect = null;
-
-            if (isLight)
+            if (WidgetContentHost.Content is Border b) rootBorder = b;
+            else if (WidgetContentHost.Content is UserControl uc && uc.Content is Border ucb) rootBorder = ucb;
+            else if (WidgetContentHost.Content is FrameworkElement elemFe)
             {
-                byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 245), 30, 248);
-                rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 248, 250, 252));
-                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(45, 0, 0, 0));
+                rootBorder = FindVisualChild<Border>(elemFe);
             }
-            else
+
+            if (rootBorder != null)
             {
-                byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 225), 30, 225);
-                rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
-                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+                // Strictly eliminate any DropShadowEffect on the root border to completely eliminate transparent straight corner artifacts
+                rootBorder.Effect = null;
+
+                if (isLight)
+                {
+                    byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 245), 30, 248);
+                    rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 248, 250, 252));
+                    rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(45, 0, 0, 0));
+                }
+                else
+                {
+                    byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 225), 30, 225);
+                    rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
+                    rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+                }
+            }
+        }
+        else
+        {
+            // For Web widgets: the host container and WebView2 MUST remain 100% transparent.
+            // Any background or shape (e.g. circular dial, rounded card) is defined exclusively by HTML/CSS.
+            if (_webView != null)
+            {
+                var wvBorder = FindVisualChild<Border>(_webView);
+                if (wvBorder != null)
+                {
+                    wvBorder.Background = Brushes.Transparent;
+                    wvBorder.BorderBrush = Brushes.Transparent;
+                    wvBorder.BorderThickness = new Thickness(0);
+                    wvBorder.Effect = null;
+                }
             }
         }
 
@@ -1128,7 +1170,7 @@ public partial class WidgetWindow : Window
         }
 
         // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)
-        if (WidgetContentHost.Content is DependencyObject depObj)
+        if (!isWebWidget && WidgetContentHost.Content is DependencyObject depObj)
         {
             ApplyThemeToVisualTree(depObj, isLight, rootBorder);
         }
@@ -1139,15 +1181,28 @@ public partial class WidgetWindow : Window
             string alphaStr = Settings.Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
             string js = $@"
                 try {{
+                    document.documentElement.style.removeProperty('opacity');
+                    document.documentElement.style.setProperty('--chatty-bg-opacity', '{alphaStr}');
+                    document.documentElement.style.setProperty('--chatty-opacity', '{alphaStr}');
                     document.documentElement.classList.toggle('light-theme', {isLight.ToString().ToLower()});
                     document.documentElement.classList.toggle('dark-theme', {(!isLight).ToString().ToLower()});
                     if (document.body) {{
                         document.body.classList.toggle('light-theme', {isLight.ToString().ToLower()});
                         document.body.classList.toggle('dark-theme', {(!isLight).ToString().ToLower()});
                     }}
-                    const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, body > div');
+                    const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, .card-bg');
                     cards.forEach(c => {{
+                        if (c.classList.contains('clock-container')) return;
                         c.style.backgroundColor = '{(isLight ? "rgba(248, 250, 252, " : "rgba(18, 22, 34, ")}' + {alphaStr} + ')';
+                    }});
+                    const dialFaces = document.querySelectorAll('.dial-glass-face, .clock-dial, .dial-bg');
+                    dialFaces.forEach(df => {{
+                        df.style.fillOpacity = '{alphaStr}';
+                        df.setAttribute('fill-opacity', '{alphaStr}');
+                    }});
+                    const gradStops = document.querySelectorAll('#dial-gradient stop, radialGradient stop');
+                    gradStops.forEach(s => {{
+                        s.setAttribute('stop-opacity', '{alphaStr}');
                     }});
                 }} catch(e) {{}}
             ";
@@ -1469,7 +1524,7 @@ public partial class WidgetWindow : Window
         if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.IsChecked = Settings.IsFreeResize || _isFreeResizeEnabled;
         if (ResizeGripHandle != null)
         {
-            ResizeGripHandle.Visibility = freeResizeActive ? Visibility.Visible : Visibility.Collapsed;
+            ResizeGripHandle.Visibility = (_webView == null && freeResizeActive) ? Visibility.Visible : Visibility.Collapsed;
         }
         if (MenuDevTools != null)
         {
@@ -1530,7 +1585,7 @@ public partial class WidgetWindow : Window
 
     private void OnAnchorContainerMouseEnter(object sender, MouseEventArgs e)
     {
-        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
         {
             var anim = new System.Windows.Media.Animation.DoubleAnimation(1.0, TimeSpan.FromMilliseconds(180));
             AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
@@ -1539,7 +1594,7 @@ public partial class WidgetWindow : Window
 
     private void OnAnchorContainerMouseLeave(object sender, MouseEventArgs e)
     {
-        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !IsMouseOver)
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !IsMouseOver)
         {
             var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
             AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
@@ -1548,7 +1603,7 @@ public partial class WidgetWindow : Window
 
     private void OnWindowMouseEnter(object sender, MouseEventArgs e)
     {
-        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
         {
             var anim = new System.Windows.Media.Animation.DoubleAnimation(1.0, TimeSpan.FromMilliseconds(180));
             AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
@@ -1557,7 +1612,7 @@ public partial class WidgetWindow : Window
 
     private void OnWindowMouseLeave(object sender, MouseEventArgs e)
     {
-        if (Settings.AutoHideAnchorDot && AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !(AnchorContainer?.IsMouseOver ?? false))
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !WidgetContextMenu.IsOpen && !(AnchorContainer?.IsMouseOver ?? false))
         {
             var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
             AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
@@ -1593,15 +1648,12 @@ public partial class WidgetWindow : Window
             MenuCustomSeparator.Visibility = Visibility.Visible;
         }
 
-        if (Settings.AutoHideAnchorDot)
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
         {
-            if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible)
-            {
-                AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
-                AnchorDot.Opacity = 1.0;
-            }
-            ApplyMenuOpenDomState(true);
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, null);
+            AnchorDot.Opacity = 1.0;
         }
+        ApplyMenuOpenDomState(true);
     }
 
     private void OnOpenGaugesConstructorClick(object sender, RoutedEventArgs e)
@@ -1627,6 +1679,10 @@ public partial class WidgetWindow : Window
                 if (WidgetContentHost.Content is ChattyWidgets.UI.Views.SystemGaugesView gaugesView)
                 {
                     gaugesView.ReloadConfig();
+                }
+                if (_webView?.CoreWebView2 != null)
+                {
+                    _ = _webView.CoreWebView2.ExecuteScriptAsync("window.dispatchEvent(new CustomEvent('chatty:settingsChanged'));");
                 }
             });
             settingsWin.Show();
@@ -1703,15 +1759,12 @@ public partial class WidgetWindow : Window
 
     private void OnContextMenuClosed(object? sender, RoutedEventArgs e)
     {
-        if (Settings.AutoHideAnchorDot)
+        if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !IsMouseOver && !(AnchorContainer?.IsMouseOver ?? false))
         {
-            if (AnchorDot != null && AnchorContainer.Visibility == Visibility.Visible && !IsMouseOver && !(AnchorContainer?.IsMouseOver ?? false))
-            {
-                var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
-                AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
-            }
-            ApplyMenuOpenDomState(false);
+            var anim = new System.Windows.Media.Animation.DoubleAnimation(0.0, TimeSpan.FromMilliseconds(220));
+            AnchorDot.BeginAnimation(UIElement.OpacityProperty, anim);
         }
+        ApplyMenuOpenDomState(false);
     }
 
     private void OnResize75Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.75);

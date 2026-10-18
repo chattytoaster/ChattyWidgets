@@ -1798,10 +1798,11 @@ public class InstalledWidgetViewModel
     public bool IsVerifiedAuthor => Trust.Level == WidgetTrustLevel.Official || (DisplayAuthor != null && DisplayAuthor.StartsWith("ChattyWidgets", StringComparison.OrdinalIgnoreCase));
     public Visibility VerifiedBadgeVisibility => IsVerifiedAuthor ? Visibility.Visible : Visibility.Collapsed;
     public string AuthorLabel => $"{AuthorPrefix} {DisplayAuthor}";
-    public string AddInstanceButtonText => LocalizationService.Instance.IsRussian ? "➕ Добавить" : "➕ Add";
+    public string AddInstanceButtonText => "+";
     public string AddInstanceTooltip => LocalizationService.Instance.IsRussian ? "Добавить еще один экземпляр виджета на рабочий стол" : "Add another instance of this widget to the desktop";
     public string FolderButtonText => LocalizationService.Instance.IsRussian ? "Папка" : "Folder";
-    public string DeleteButtonText => LocalizationService.Instance.IsRussian ? "Удалить" : "Delete";
+    public string DeleteButtonText => "🗑";
+    public string DeleteTooltip => LocalizationService.Instance.IsRussian ? "Удалить этот виджет" : "Delete this widget";
     public string ConfigureTooltip => LocalizationService.Instance.IsRussian ? "Настройки виджета" : "Widget settings";
     public string UpdateButtonText => LocalizationService.Instance.IsRussian ? "Обновить" : "Update";
 

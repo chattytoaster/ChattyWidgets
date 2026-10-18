@@ -19,6 +19,7 @@ public class ChattyBridge
     private readonly Action<bool>? _clickThroughAction;
     private readonly Action<bool>? _lockAction;
     private readonly Action<double>? _opacityAction;
+    private readonly Func<double>? _getOpacityFunc;
     private readonly Action? _dragMoveAction;
     private readonly Action? _contextMenuAction;
     private readonly Action<double, double>? _moveByAction;
@@ -31,6 +32,7 @@ public class ChattyBridge
     private readonly Func<bool>? _isAutoHideDotFunc;
     private readonly Action? _openDevToolsAction;
     private readonly Action? _reloadAction;
+    private readonly Action<bool>? _hoverAction;
     private readonly string _storageFilePath;
     private readonly string _dataStorageFilePath;
 
@@ -44,6 +46,7 @@ public class ChattyBridge
         Action<bool>? clickThroughAction = null,
         Action<bool>? lockAction = null,
         Action<double>? opacityAction = null,
+        Func<double>? getOpacityFunc = null,
         Action? dragMoveAction = null,
         Action? contextMenuAction = null,
         Action<double, double>? moveByAction = null,
@@ -55,7 +58,8 @@ public class ChattyBridge
         Action<bool>? autoHideDotAction = null,
         Func<bool>? isAutoHideDotFunc = null,
         Action? openDevToolsAction = null,
-        Action? reloadAction = null)
+        Action? reloadAction = null,
+        Action<bool>? hoverAction = null)
     {
         _widgetId = widgetId;
         _instanceId = !string.IsNullOrEmpty(instanceId) ? instanceId : widgetId;
@@ -66,6 +70,7 @@ public class ChattyBridge
         _clickThroughAction = clickThroughAction;
         _lockAction = lockAction;
         _opacityAction = opacityAction;
+        _getOpacityFunc = getOpacityFunc;
         _dragMoveAction = dragMoveAction;
         _contextMenuAction = contextMenuAction;
         _moveByAction = moveByAction;
@@ -78,6 +83,7 @@ public class ChattyBridge
         _isAutoHideDotFunc = isAutoHideDotFunc;
         _openDevToolsAction = openDevToolsAction;
         _reloadAction = reloadAction;
+        _hoverAction = hoverAction;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -314,6 +320,8 @@ public class ChattyBridge
         Application.Current.Dispatcher.Invoke(() => _opacityAction?.Invoke(opacity));
     }
 
+    public double getOpacity() => _getOpacityFunc?.Invoke() ?? 1.0;
+
     public void dragMove()
     {
         Application.Current.Dispatcher.BeginInvoke(new Action(() => _dragMoveAction?.Invoke()));
@@ -332,6 +340,11 @@ public class ChattyBridge
     public void showContextMenu()
     {
         Application.Current.Dispatcher.BeginInvoke(new Action(() => _contextMenuAction?.Invoke()));
+    }
+
+    public void notifyHover(bool hovered)
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _hoverAction?.Invoke(hovered)));
     }
 
     public void setLocked(bool locked)
@@ -358,6 +371,26 @@ public class ChattyBridge
     public void resize(double width, double height)
     {
         Application.Current.Dispatcher.Invoke(() => _resizeAction?.Invoke(width, height));
+    }
+
+    public string getSetting(string key)
+    {
+        var win = WidgetManager.Instance?.GetWindow(_instanceId);
+        if (win != null && win.Settings.CustomSettings.TryGetValue(key, out var val) && val != null)
+        {
+            return val;
+        }
+        return string.Empty;
+    }
+
+    public void setSetting(string key, string value)
+    {
+        var win = WidgetManager.Instance?.GetWindow(_instanceId);
+        if (win != null)
+        {
+            win.Settings.CustomSettings[key] = value;
+            WidgetManager.Instance?.SaveSettings();
+        }
     }
 
     // --- EXTENDED APIS ---
@@ -460,6 +493,7 @@ public class ChattyBridge
 
     public void log(string message)
     {
+        App.Log($"[Bridge:{_widgetId}] {message}");
         System.Diagnostics.Debug.WriteLine($"[Widget:{_widgetId}] {message}");
     }
 }
