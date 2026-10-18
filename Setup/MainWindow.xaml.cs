@@ -11,11 +11,26 @@ public partial class MainWindow : Window
 {
     private readonly InstallService _installService = new();
     private InstallOptions? _options;
+    private UninstallOptions? _uninstallOptions;
     private string _currentLang = "ru";
+    private readonly bool _isUninstallMode = false;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        string[] args = Environment.GetCommandLineArgs();
+        _isUninstallMode = args.Any(a =>
+            a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("-u", StringComparison.OrdinalIgnoreCase)) ||
+            string.Equals(Path.GetFileName(Environment.ProcessPath ?? ""), "Uninstall.exe", StringComparison.OrdinalIgnoreCase);
+
+        bool isSilent = args.Any(a =>
+            a.Equals("--silent", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/silent", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("-s", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/s", StringComparison.OrdinalIgnoreCase));
 
         string defaultPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -38,6 +53,27 @@ public partial class MainWindow : Window
                 TxtCurrentAction.Text = action;
             });
         };
+
+        if (_isUninstallMode)
+        {
+            string installedDir = InstallService.GetInstalledDirectory();
+            TxtUninstallPath.Text = installedDir;
+
+            if (isSilent)
+            {
+                var silentOpts = new UninstallOptions { TargetDirectory = installedDir, RemoveUserData = false, RemoveAgentSkill = true };
+                Task.Run(async () =>
+                {
+                    await _installService.UninstallAsync(silentOpts);
+                    InstallService.ScheduleDelayedDirectoryCleanup(installedDir);
+                    Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
+                });
+                return;
+            }
+
+            ViewOptions.Visibility = Visibility.Collapsed;
+            ViewUninstallConfirm.Visibility = Visibility.Visible;
+        }
     }
 
     private void OnLangRuClick(object sender, RoutedEventArgs e)
@@ -108,6 +144,28 @@ public partial class MainWindow : Window
             {
                 TxtFinishPath.Text = $"Программа установлена в: {_options.TargetDirectory}";
             }
+
+            if (_isUninstallMode)
+            {
+                Title = "Удаление ChattyWidgets";
+                TxtAppTitle.Text = "ChattyWidgets Uninstall";
+                TxtUninstallTitle.Text = "Удаление ChattyWidgets";
+                TxtUninstallSubtitle.Text = "Вы действительно хотите удалить ChattyWidgets с вашего компьютера?";
+                TxtUninstallPathLabel.Text = "📁 Программа будет удалена из:";
+                TxtUninstallOptionsLabel.Text = "Параметры очистки:";
+                CheckUninstallRemoveSkill.Content = "Удалить скилл /chw для AI-ассистентов (~/.agents/skills/chw)";
+                CheckUninstallRemoveUserData.Content = "Удалить пользовательские виджеты и настройки (%LOCALAPPDATA%\\ChattyWidgets)";
+                TxtUninstallDataWarn.Text = "⚠️ Внимание: если вы отметите эту опцию, все ваши скачанные виджеты и персональные настройки будут удалены.";
+                BtnUninstallCancel.Content = "Отмена";
+                BtnStartUninstall.Content = "🗑️ Удалить";
+                TxtUninstallDoneTitle.Text = "ChattyWidgets успешно удален";
+                TxtUninstallDoneSubtitle.Text = "Все компоненты приложения, ярлыки и ассоциации были удалены с компьютера.";
+                TxtUninstallDoneSummary.Text = "Результаты удаления:";
+                TxtUninstallDoneItem1.Text = "✓ Исполняемые файлы программы удалены";
+                TxtUninstallDoneItem2.Text = "✓ Ярлыки на Рабочем столе и в Пуске удалены";
+                TxtUninstallDoneItem3.Text = "✓ Записи реестра и ассоциации файлов очищены";
+                BtnUninstallFinish.Content = "Закрыть";
+            }
         }
         else
         {
@@ -156,6 +214,28 @@ public partial class MainWindow : Window
             if (_options != null)
             {
                 TxtFinishPath.Text = $"Application installed to: {_options.TargetDirectory}";
+            }
+
+            if (_isUninstallMode)
+            {
+                Title = "Uninstall ChattyWidgets";
+                TxtAppTitle.Text = "ChattyWidgets Uninstall";
+                TxtUninstallTitle.Text = "Uninstall ChattyWidgets";
+                TxtUninstallSubtitle.Text = "Are you sure you want to uninstall ChattyWidgets from your computer?";
+                TxtUninstallPathLabel.Text = "📁 Application will be removed from:";
+                TxtUninstallOptionsLabel.Text = "Cleanup options:";
+                CheckUninstallRemoveSkill.Content = "Remove /chw skill for AI assistants (~/.agents/skills/chw)";
+                CheckUninstallRemoveUserData.Content = "Remove user widgets and settings (%LOCALAPPDATA%\\ChattyWidgets)";
+                TxtUninstallDataWarn.Text = "⚠️ Warning: if checked, all downloaded widgets and personal settings will be deleted.";
+                BtnUninstallCancel.Content = "Cancel";
+                BtnStartUninstall.Content = "🗑️ Uninstall";
+                TxtUninstallDoneTitle.Text = "ChattyWidgets Successfully Uninstalled";
+                TxtUninstallDoneSubtitle.Text = "All application binaries, shortcuts, and file associations have been removed.";
+                TxtUninstallDoneSummary.Text = "Uninstallation summary:";
+                TxtUninstallDoneItem1.Text = "✓ Application binaries removed";
+                TxtUninstallDoneItem2.Text = "✓ Desktop and Start Menu shortcuts removed";
+                TxtUninstallDoneItem3.Text = "✓ Registry entries and file associations cleaned";
+                BtnUninstallFinish.Content = "Close";
             }
         }
     }
@@ -241,6 +321,47 @@ public partial class MainWindow : Window
         if (_options != null)
         {
             _installService.FinalizeInstall(_options);
+        }
+        Close();
+    }
+
+    private async void OnStartUninstallClick(object sender, RoutedEventArgs e)
+    {
+        string targetDir = TxtUninstallPath.Text.Trim();
+        if (string.IsNullOrEmpty(targetDir))
+        {
+            targetDir = InstallService.GetInstalledDirectory();
+        }
+
+        _uninstallOptions = new UninstallOptions
+        {
+            TargetDirectory = targetDir,
+            RemoveUserData = CheckUninstallRemoveUserData.IsChecked == true,
+            RemoveAgentSkill = CheckUninstallRemoveSkill.IsChecked == true
+        };
+
+        ViewUninstallConfirm.Visibility = Visibility.Collapsed;
+        ViewProgress.Visibility = Visibility.Visible;
+
+        TxtProgressTitle.Text = _currentLang == "ru" ? "Удаление ChattyWidgets" : "Uninstalling ChattyWidgets";
+        TxtProgressSubtitle.Text = _currentLang == "ru"
+            ? "Пожалуйста, подождите, выполняется удаление компонентов и очистка реестра..."
+            : "Please wait while files and settings are being cleaned up...";
+        TxtProgressFooter.Text = _currentLang == "ru"
+            ? "Очистка ярлыков, реестра Windows и файлов приложения..."
+            : "Cleaning shortcuts, Windows registry, and application files...";
+
+        bool success = await _installService.UninstallAsync(_uninstallOptions);
+
+        ViewProgress.Visibility = Visibility.Collapsed;
+        ViewUninstallFinished.Visibility = Visibility.Visible;
+    }
+
+    private void OnUninstallFinishClick(object sender, RoutedEventArgs e)
+    {
+        if (_uninstallOptions != null)
+        {
+            InstallService.ScheduleDelayedDirectoryCleanup(_uninstallOptions.TargetDirectory);
         }
         Close();
     }

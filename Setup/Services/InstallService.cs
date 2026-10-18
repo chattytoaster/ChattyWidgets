@@ -19,6 +19,13 @@ public class InstallOptions
     public bool LaunchAppAfterInstall { get; set; } = true;
 }
 
+public class UninstallOptions
+{
+    public string TargetDirectory { get; set; } = string.Empty;
+    public bool RemoveUserData { get; set; } = false;
+    public bool RemoveAgentSkill { get; set; } = true;
+}
+
 public class InstallService
 {
     [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -96,6 +103,11 @@ public class InstallService
                     SetAutostart(targetExe, true);
                 }
 
+                // 6. Copy self as uninstaller & register in Windows Add/Remove Programs
+                ReportProgress(97, Msg("Регистрация деинсталлятора в Windows...", "Registering uninstaller in Windows..."));
+                CopyUninstaller(targetDir);
+                RegisterUninstall(targetDir, targetExe);
+
                 ReportProgress(100, Msg("Установка успешно завершена!", "Installation completed successfully!"));
                 return true;
             }
@@ -103,6 +115,54 @@ public class InstallService
             {
                 System.Diagnostics.Debug.WriteLine($"[InstallService] Error: {ex}");
                 ReportProgress(100, $"{Msg("Ошибка установки", "Installation error")}: {ex.Message}");
+                return false;
+            }
+        });
+    }
+
+    public async Task<bool> UninstallAsync(UninstallOptions options)
+    {
+        return await Task.Run(() =>
+        {
+            try
+            {
+                ReportProgress(10, Msg("Завершение процессов ChattyWidgets...", "Closing ChattyWidgets processes..."));
+                KillChattyProcesses();
+
+                ReportProgress(30, Msg("Удаление из автозагрузки Windows...", "Removing from Windows autostart..."));
+                SetAutostart(string.Empty, false);
+
+                ReportProgress(45, Msg("Удаление ассоциаций файлов .chw и .chwp...", "Removing file associations..."));
+                UnregisterFileAssociations();
+
+                ReportProgress(60, Msg("Удаление ярлыков программы...", "Removing shortcuts..."));
+                RemoveShortcuts();
+
+                ReportProgress(75, Msg("Удаление записи программы из Windows...", "Removing uninstall registration..."));
+                UnregisterUninstall();
+
+                if (options.RemoveAgentSkill)
+                {
+                    ReportProgress(85, Msg("Удаление скилла для AI-ассистентов...", "Removing AI assistant skill..."));
+                    RemoveAgentSkill();
+                }
+
+                if (options.RemoveUserData)
+                {
+                    ReportProgress(90, Msg("Удаление пользовательских данных и виджетов...", "Removing user data and widgets..."));
+                    RemoveUserData();
+                }
+
+                ReportProgress(95, Msg("Удаление файлов приложения...", "Deleting application files..."));
+                DeleteTargetDirectoryFiles(options.TargetDirectory);
+
+                ReportProgress(100, Msg("ChattyWidgets успешно удален!", "ChattyWidgets was successfully uninstalled!"));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[InstallService] Uninstall error: {ex}");
+                ReportProgress(100, $"{Msg("Ошибка при удалении", "Uninstall error")}: {ex.Message}");
                 return false;
             }
         });
@@ -375,5 +435,201 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         {
             System.Diagnostics.Debug.WriteLine($"[InstallService] Agent skill error: {ex.Message}");
         }
+    }
+
+    public static void CopyUninstaller(string targetDir)
+    {
+        try
+        {
+            string currentExe = Environment.ProcessPath
+                ?? Process.GetCurrentProcess().MainModule?.FileName
+                ?? string.Empty;
+
+            if (!string.IsNullOrEmpty(currentExe) && File.Exists(currentExe))
+            {
+                string dest = Path.Combine(targetDir, "Uninstall.exe");
+                File.Copy(currentExe, dest, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InstallService] CopyUninstaller error: {ex.Message}");
+        }
+    }
+
+    public static void RegisterUninstall(string targetDir, string targetExe)
+    {
+        try
+        {
+            string uninstallExe = Path.Combine(targetDir, "Uninstall.exe");
+            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\ChattyWidgets");
+            if (key != null)
+            {
+                key.SetValue("DisplayName", "ChattyWidgets");
+                key.SetValue("DisplayVersion", "1.0.0");
+                key.SetValue("Publisher", "ChattyApps");
+                key.SetValue("DisplayIcon", $"{targetExe},0");
+                key.SetValue("InstallLocation", targetDir);
+                key.SetValue("UninstallString", $"\"{uninstallExe}\" --uninstall");
+                key.SetValue("QuietUninstallString", $"\"{uninstallExe}\" --uninstall --silent");
+                key.SetValue("URLInfoAbout", "https://chattyapps.dev");
+                key.SetValue("HelpLink", "https://chattyapps.dev");
+                key.SetValue("NoModify", 1, RegistryValueKind.DWord);
+                key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+                key.SetValue("EstimatedSize", 40960, RegistryValueKind.DWord);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InstallService] RegisterUninstall error: {ex.Message}");
+        }
+    }
+
+    public static void UnregisterUninstall()
+    {
+        try
+        {
+            Registry.CurrentUser.DeleteSubKeyTree(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\ChattyWidgets", false);
+        }
+        catch { }
+    }
+
+    public static void KillChattyProcesses()
+    {
+        try
+        {
+            foreach (var proc in Process.GetProcessesByName("ChattyWidgets"))
+            {
+                try
+                {
+                    proc.Kill();
+                    proc.WaitForExit(3000);
+                }
+                catch { }
+            }
+        }
+        catch { }
+    }
+
+    public static void UnregisterFileAssociations()
+    {
+        try
+        {
+            Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\.chw", false);
+            Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\ChattyWidgets.Package", false);
+            Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\.chwp", false);
+            Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\ChattyWidgets.Preset", false);
+            SHChangeNotify(0x08000000 /*SHCNE_ASSOCCHANGED*/, 0x0000, IntPtr.Zero, IntPtr.Zero);
+        }
+        catch { }
+    }
+
+    public static void RemoveShortcuts()
+    {
+        try
+        {
+            string desktopShortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ChattyWidgets.lnk");
+            if (File.Exists(desktopShortcut)) File.Delete(desktopShortcut);
+
+            string startMenuPrograms = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+            string startMenuShortcut = Path.Combine(startMenuPrograms, "ChattyWidgets.lnk");
+            if (File.Exists(startMenuShortcut)) File.Delete(startMenuShortcut);
+        }
+        catch { }
+    }
+
+    public static void RemoveAgentSkill()
+    {
+        try
+        {
+            string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string targetSkillDir = Path.Combine(userHome, ".agents", "skills", "chw");
+            if (Directory.Exists(targetSkillDir))
+            {
+                Directory.Delete(targetSkillDir, true);
+            }
+        }
+        catch { }
+    }
+
+    public static void RemoveUserData()
+    {
+        try
+        {
+            string localAppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+            if (Directory.Exists(localAppData))
+            {
+                Directory.Delete(localAppData, true);
+            }
+        }
+        catch { }
+    }
+
+    public static void DeleteTargetDirectoryFiles(string targetDir)
+    {
+        try
+        {
+            if (Directory.Exists(targetDir))
+            {
+                string currentExe = Environment.ProcessPath ?? string.Empty;
+                foreach (var file in Directory.GetFiles(targetDir, "*.*", SearchOption.AllDirectories))
+                {
+                    if (!string.Equals(file, currentExe, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Delete(file); } catch { }
+                    }
+                }
+
+                foreach (var dir in Directory.GetDirectories(targetDir, "*", SearchOption.AllDirectories).OrderByDescending(d => d.Length))
+                {
+                    try { Directory.Delete(dir, false); } catch { }
+                }
+            }
+        }
+        catch { }
+    }
+
+    public static void ScheduleDelayedDirectoryCleanup(string targetDir)
+    {
+        try
+        {
+            if (Directory.Exists(targetDir))
+            {
+                string cmd = $"/c timeout /t 1 /nobreak > NUL & rmdir /s /q \"{targetDir}\"";
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = cmd,
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+            }
+        }
+        catch { }
+    }
+
+    public static string GetInstalledDirectory()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\ChattyWidgets");
+            if (key != null)
+            {
+                var loc = key.GetValue("InstallLocation") as string;
+                if (!string.IsNullOrEmpty(loc) && Directory.Exists(loc))
+                    return loc;
+            }
+        }
+        catch { }
+
+        string appDir = AppDomain.CurrentDomain.BaseDirectory;
+        if (File.Exists(Path.Combine(appDir, "ChattyWidgets.exe")))
+            return appDir;
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs",
+            "ChattyWidgets"
+        );
     }
 }

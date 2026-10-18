@@ -271,6 +271,94 @@
                     <Button x:Name="BtnFinish" Content="🚀 Завершить и запустить" Style="{StaticResource SetupPrimaryBtn}" Width="210" Height="44" Click="OnFinishClick"/>
                 </StackPanel>
             </Grid>
+
+            <!-- UNINSTALL STEP 1: CONFIRM -->
+            <Grid Grid.Row="1" x:Name="ViewUninstallConfirm" Visibility="Collapsed" Margin="28,20,28,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Header branding -->
+                    <RowDefinition Height="Auto"/> <!-- Target dir info -->
+                    <RowDefinition Height="*"/>    <!-- Options checkboxes -->
+                    <RowDefinition Height="Auto"/> <!-- Bottom Buttons -->
+                </Grid.RowDefinitions>
+
+                <!-- Header Branding -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Width="60" Height="60" CornerRadius="14" Background="#2A141A" BorderBrush="#EF4444" BorderThickness="1.5" Margin="0,0,16,0">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="20" Color="#EF4444" Opacity="0.4" ShadowDepth="4"/>
+                        </Border.Effect>
+                        <TextBlock Text="🗑️" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtUninstallTitle" Text="Удаление ChattyWidgets" FontSize="21" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        <TextBlock x:Name="TxtUninstallSubtitle" Text="Вы действительно хотите удалить ChattyWidgets с вашего компьютера?" FontSize="12.5" Foreground="#94A3B8" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Target Directory Info Card -->
+                <Border Grid.Row="1" Background="#101422" BorderBrush="#26314A" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtUninstallPathLabel" Text="📁 Программа будет удалена из:" FontSize="12" FontWeight="SemiBold" Foreground="#CBD5E1" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtUninstallPath" Text="C:\Users\...\Programs\ChattyWidgets" FontSize="12" Foreground="#818CF8" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Options Checkboxes Card -->
+                <Border Grid.Row="2" Background="#101422" BorderBrush="#26314A" BorderThickness="1" CornerRadius="12" Padding="16,14" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtUninstallOptionsLabel" Text="Параметры очистки:" FontSize="12" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="CheckUninstallRemoveSkill" IsChecked="True" Content="Удалить скилл /chw для AI-ассистентов (~/.agents/skills/chw)" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="CheckUninstallRemoveUserData" IsChecked="False" Content="Удалить пользовательские виджеты и настройки (%LOCALAPPDATA%\ChattyWidgets)"/>
+                        <TextBlock x:Name="TxtUninstallDataWarn" Text="⚠️ Внимание: если вы отметите эту опцию, все ваши скачанные виджеты и персональные настройки будут удалены." FontSize="11" Foreground="#F59E0B" Margin="30,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Bottom Buttons -->
+                <DockPanel Grid.Row="3" LastChildFill="False">
+                    <Button x:Name="BtnUninstallCancel" DockPanel.Dock="Left" Content="Отмена" Style="{StaticResource SetupSecondaryBtn}" Width="100" Click="OnCloseClick"/>
+                    <Button x:Name="BtnStartUninstall" DockPanel.Dock="Right" Content="🗑️ Удалить" Style="{StaticResource SetupDangerBtn}" Width="140" Click="OnStartUninstallClick"/>
+                </DockPanel>
+            </Grid>
+
+            <!-- UNINSTALL STEP 2: FINISHED -->
+            <Grid Grid.Row="1" x:Name="ViewUninstallFinished" Visibility="Collapsed" Margin="36,40,36,36">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,20,0,24">
+                    <Border Width="68" Height="68" CornerRadius="34" Background="#1E2338" BorderBrush="#818CF8" BorderThickness="2" Margin="0,0,0,16">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="25" Color="#6366F1" Opacity="0.5"/>
+                        </Border.Effect>
+                        <TextBlock Text="✓" FontSize="36" FontWeight="Bold" Foreground="#818CF8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-4,0,0"/>
+                    </Border>
+                    <TextBlock x:Name="TxtUninstallDoneTitle" Text="ChattyWidgets успешно удален" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtUninstallDoneSubtitle" Text="Все компоненты приложения, ярлыки и ассоциации были удалены с компьютера." FontSize="13" Foreground="#94A3B8" Margin="0,6,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                </StackPanel>
+
+                <Border Grid.Row="1" Background="#101422" BorderBrush="#26314A" BorderThickness="1" CornerRadius="12" Padding="20,16" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtUninstallDoneSummary" Text="Результаты удаления:" FontSize="12.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="TxtUninstallDoneItem1" Text="✓ Исполняемые файлы программы удалены" FontSize="12" Foreground="#CBD5E1" Margin="0,2"/>
+                        <TextBlock x:Name="TxtUninstallDoneItem2" Text="✓ Ярлыки на Рабочем столе и в Пуске удалены" FontSize="12" Foreground="#CBD5E1" Margin="0,2"/>
+                        <TextBlock x:Name="TxtUninstallDoneItem3" Text="✓ Записи реестра и ассоциации файлов очищены" FontSize="12" Foreground="#CBD5E1" Margin="0,2"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Bottom Button -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button x:Name="BtnUninstallFinish" Content="Закрыть" Style="{StaticResource SetupPrimaryBtn}" Width="140" Height="42" Click="OnUninstallFinishClick"/>
+                </StackPanel>
+            </Grid>
         </Grid>
     </Border>
 </Window>
