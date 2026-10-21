@@ -33,8 +33,15 @@ Follow this 6-step sequential pipeline:
 2. Create `manifest.json` following [Manifest Specification](file:///C:/Users/ChattyNB/.agents/skills/chw/references/manifest-spec.md):
    - Provide English `name` and Russian `name_ru`.
    - Provide English `description` and Russian `description_ru`.
-   - Specify `category`, default `width`, `height`, `minWidth`, `minHeight`.
-   - Set `"isTransparent": true`, `"entryPoint": "Widget.xaml"`.
+   - **Unified 4:3 Proportional Dimensions**: To ensure all desktop widgets align beautifully in a clean row, standard default dimensions are **320×240**, with a minimum of **240×180**:
+     ```json
+     "defaultWidth": 320,
+     "defaultHeight": 240,
+     "minWidth": 240,
+     "minHeight": 180,
+     "resizable": true
+     ```
+   - Set `"type": "native"` (or `"web"`), `"entry": "Widget.xaml"` (or `"index.html"`), `"defaultLayer": "desktop"`.
    - Declare default `customSettings` keys.
 3. Save to:
    - `C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary\widgets\<widget-id>\manifest.json`
@@ -61,10 +68,29 @@ If the widget has native logic, timers, system sensors, or custom settings:
 #### Option A: Native Glassmorphic XAML UI
 Create `Widget.xaml` following [XAML Glass Patterns](file:///C:/Users/ChattyNB/.agents/skills/chw/references/xaml-glass-patterns.md):
 1. Root `<Border>` with `CornerRadius="20"`, `Background="#D8121622"`, `BorderBrush="#25FFFFFF"`, `ClipToBounds="True"`.
-2. **Dark & Light Theme Adaptability**: Ensure high contrast in both themes (no white text on white backgrounds).
-3. **Running Marquee Text**: Wrap overflow text in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
-4. **Button Templates**: Use flat rounded vector templates instead of default WPF gray buttons.
-5. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
+2. **Proportional 4:3 Responsive Layout (320×240 Standard)**:
+   - All desktop widgets share unified **320×240** default dimensions and **240×180** minimum dimensions. This guarantees that all widgets align seamlessly in a single row on any monitor without jagged offsets.
+   - Use dynamic grid rows/columns (`*`, `Auto`) and `DockPanel` instead of hardcoded inner pixel heights.
+   - Wrap circular gauges, clock dials, or vector meters in `<Viewbox>` so they shrink gracefully at 75% scale (`240×180`).
+3. **Dynamic OpacityMask for Bitmaps & Preserving Rounded Corners on Resize**:
+   - WPF `Border.ClipToBounds="True"` only clips rectangularly. When masking child bitmaps, use `VisualBrush` with `Stretch="None"` and bind `Width`/`Height` directly via `ElementName` with inner radius (`CornerRadius="19"`):
+     ```xaml
+     <Grid x:Name="MediaGrid">
+         <Grid.OpacityMask>
+             <VisualBrush Stretch="None" AlignmentX="Left" AlignmentY="Top">
+                 <VisualBrush.Visual>
+                     <Border Background="Black" CornerRadius="19"
+                             Width="{Binding ActualWidth, ElementName=MediaGrid}"
+                             Height="{Binding ActualHeight, ElementName=MediaGrid}"/>
+                 </VisualBrush.Visual>
+             </VisualBrush>
+         </Grid.OpacityMask>
+     ```
+   - Any docked bottom controls must specify bottom radii (e.g. `CornerRadius="0,0,19,19"`) to prevent sharp corners on resize.
+4. **Dark & Light Theme Adaptability**: Ensure high contrast in both themes (no white text on white backgrounds).
+5. **Running Marquee Text**: Wrap overflow text in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
+6. **Button Templates**: Use flat rounded vector templates instead of default WPF gray buttons.
+7. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
 
 #### Option B: Web Widgets (`index.html`) & Eliminating Square Backgrounds and Shadows
 Create `index.html` following [Web Widget Patterns](file:///c:/Users/ChattyNB/Projects/chattywidgets/.agents/skills/chw/references/web-widget-patterns.md):

@@ -17,10 +17,10 @@ Every ChattyWidgets widget package (`.chw`) MUST contain a valid `manifest.json`
   "description_ru": "Стильный стеклянный виджет для рабочего стола с обновлениями в реальном времени.",
   "category": "utility",
   "entryPoint": "Widget.xaml",
-  "width": 300,
-  "height": 200,
-  "minWidth": 200,
-  "minHeight": 120,
+  "defaultWidth": 320,
+  "defaultHeight": 240,
+  "minWidth": 240,
+  "minHeight": 180,
   "maxWidth": 800,
   "maxHeight": 600,
   "isResizable": true,
@@ -48,15 +48,29 @@ Every ChattyWidgets widget package (`.chw`) MUST contain a valid `manifest.json`
 | `category` | `string` | **Yes** | One of: `"system"`, `"utility"`, `"media"`, `"finance"`, `"weather"`, `"fun"`. |
 | `type` | `string` | Optional | `"native"` (default, WPF XAML) or `"web"` (HTML5 / WebView2). |
 | `entryPoint` / `entry` | `string` | **Yes** | Main entry file: `"Widget.xaml"` for native widgets, or `"index.html"` for web widgets. |
-| `width` | `number` | **Yes** | Default initial window width in virtual pixels (e.g. `280`, `320`). |
-| `height` | `number` | **Yes** | Default initial window height in virtual pixels (e.g. `140`, `220`). |
-| `minWidth` | `number` | Optional | Minimum resizable width (default `160`). |
-| `minHeight` | `number` | Optional | Minimum resizable height (default `100`). |
-| `isResizable` | `boolean` | Optional | Whether user can drag edges to resize the widget (default `true`). |
+| `defaultWidth` / `width` | `number` | **Yes** | Default initial window width in virtual pixels (**320** recommended for standard 4:3 ratio). |
+| `defaultHeight` / `height` | `number` | **Yes** | Default initial window height in virtual pixels (**240** recommended for standard 4:3 ratio). |
+| `minWidth` | `number` | Optional | Minimum resizable width (**240** recommended for standard 4:3 ratio). |
+| `minHeight` | `number` | Optional | Minimum resizable height (**180** recommended for standard 4:3 ratio). |
+| `isResizable` / `resizable` | `boolean` | Optional | Whether user can drag edges to resize the widget (default `true`). |
 | `isTransparent` | `boolean` | Optional | Must be `true` for glassmorphic borderless widgets (default `true`). |
 | `defaultOpacity` | `number` | Optional | Default opacity from `0.15` to `1.0` (default `1.0`). |
 | `defaultLayer` | `string` | Optional | Default desktop layer: `"Normal"`, `"Desktop"` (pinned to wallpaper), or `"TopMost"` (always on top). |
 | `customSettings` | `object` | Optional | Default key-value pairs stored in widget settings dictionary. |
+
+## Standard Proportions (4:3 Aspect Ratio)
+
+To ensure that widgets placed on the desktop stand in a unified, beautiful row without jagged edges or uneven heights, ChattyWidgets adopts a standardized 4:3 aspect ratio:
+
+- **Default Size**: `defaultWidth: 320`, `defaultHeight: 240` (100% scale).
+- **Minimum Size**: `minWidth: 240`, `minHeight: 180` (75% scale).
+- **Built-in Resize Presets**:
+  - **75% (Компактный)**: `240×180`
+  - **100% (Обычный)**: `320×240`
+  - **125% (Увеличенный)**: `400×300`
+  - **150% (Большой)**: `480×360`
+
+All widgets should structure their internal layout (XAML or CSS) to comfortably render all essential content at the minimum `240×180` viewport and gracefully expand up to `480×360` and beyond.
 
 ## Official vs Community Rules
 
