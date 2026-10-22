@@ -410,6 +410,22 @@ public partial class App : System.Windows.Application
                 throw new Exception($"Resized width mismatch! Expected 320, got Width={dupWin.Width}, Settings.Width={dupWin.Settings.Width}");
             }
 
+            // Test size presets: 25%, 50%, 75%, 100%, 125%
+            double baseW = dupWin.Manifest.DefaultWidth > 0 ? dupWin.Manifest.DefaultWidth : 300;
+            double baseH = dupWin.Manifest.DefaultHeight > 0 ? dupWin.Manifest.DefaultHeight : 200;
+            double[] presetFactors = { 0.25, 0.50, 0.75, 1.00, 1.25 };
+            foreach (var f in presetFactors)
+            {
+                double expectedW = Math.Round(baseW * f);
+                double expectedH = Math.Round(baseH * f);
+                dupWin.ResizeWidget(expectedW, expectedH);
+                Log($" - Preset {(int)(f * 100)}%: Expected {expectedW}x{expectedH}, Got {dupWin.Width}x{dupWin.Height}");
+                if (Math.Abs(dupWin.Width - expectedW) > 2 || Math.Abs(dupWin.Height - expectedH) > 2)
+                {
+                    throw new Exception($"Preset {(int)(f * 100)}% size mismatch! Expected {expectedW}x{expectedH}, got {dupWin.Width}x{dupWin.Height}");
+                }
+            }
+
             // Test shape clipping update
             dupWin.UpdateWindowShape();
             Log(" - UpdateWindowShape executed successfully without errors.");

@@ -48,8 +48,10 @@ public partial class WidgetWindow : Window
         Settings = settings;
 
         Title = !string.IsNullOrWhiteSpace(settings.Title) ? settings.Title : manifest.Name;
-        Width = settings.Width > 0 ? settings.Width : manifest.DefaultWidth;
-        Height = settings.Height > 0 ? settings.Height : manifest.DefaultHeight;
+        double targetW = settings.Width > 0 ? settings.Width : manifest.DefaultWidth;
+        double targetH = settings.Height > 0 ? settings.Height : manifest.DefaultHeight;
+        Width = targetW;
+        Height = targetH;
 
         double virtLeft = SystemParameters.VirtualScreenLeft;
         double virtTop = SystemParameters.VirtualScreenTop;
@@ -81,8 +83,10 @@ public partial class WidgetWindow : Window
         // Window itself stays fully opaque; opacity affects the background surfaces only
         Opacity = 1.0;
 
-        MinWidth = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
-        MinHeight = manifest.MinHeight > 0 ? manifest.MinHeight : 50;
+        double baseMinW = manifest.MinWidth > 0 ? manifest.MinWidth : 50;
+        double baseMinH = manifest.MinHeight > 0 ? manifest.MinHeight : 50;
+        MinWidth = Math.Min(baseMinW, targetW);
+        MinHeight = Math.Min(baseMinH, targetH);
 
         string displayName = !string.IsNullOrWhiteSpace(settings.Title) && settings.Title != manifest.Name && settings.Title != manifest.DisplayName
             ? $"{settings.Title} (v{manifest.Version})"
@@ -138,10 +142,11 @@ public partial class WidgetWindow : Window
         if (MenuClickThrough != null) MenuClickThrough.Header = loc.T("Menu.ClickThrough", "Клик насквозь (Click-through)");
         if (MenuAutoHideDot != null) MenuAutoHideDot.Header = loc.T("Menu.AutoHideDot", "Спрятать точку управления");
         if (MenuGroupResize != null) MenuGroupResize.Header = loc.T("Menu.ResizeGroup", "Изменить размер");
-        if (MenuResize75 != null) MenuResize75.Header = loc.T("Menu.Resize75", "75% (Компактный)");
+        if (MenuResize25 != null) MenuResize25.Header = loc.T("Menu.Resize25", "25% (Мини)");
+        if (MenuResize50 != null) MenuResize50.Header = loc.T("Menu.Resize50", "50% (Компактный)");
+        if (MenuResize75 != null) MenuResize75.Header = loc.T("Menu.Resize75", "75% (Уменьшенный)");
         if (MenuResize100 != null) MenuResize100.Header = loc.T("Menu.Resize100", "100% (Обычный)");
         if (MenuResize125 != null) MenuResize125.Header = loc.T("Menu.Resize125", "125% (Увеличенный)");
-        if (MenuResize150 != null) MenuResize150.Header = loc.T("Menu.Resize150", "150% (Большой)");
         if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.Header = loc.T("Menu.FreeResize", "Тянуть за края (Свободный размер)");
         if (MenuGroupOpacity != null) MenuGroupOpacity.Header = loc.T("Menu.OpacityGroup", "Прозрачность фона");
         if (MenuOpacity100 != null) MenuOpacity100.Header = loc.T("Menu.Opacity100", "100% (Непрозрачный фон)");
@@ -726,6 +731,10 @@ public partial class WidgetWindow : Window
                     ApplyClickThroughDomState(true);
                 }
                 ApplyAutoHideDomState(true);
+                if (Settings.Scale > 0 && Math.Abs(Settings.Scale - 1.0) > 0.001)
+                {
+                    try { _webView.ZoomFactor = Settings.Scale; } catch { }
+                }
             };
 
             string targetUrl = Manifest.Entry;
@@ -763,6 +772,10 @@ public partial class WidgetWindow : Window
             {
                 var gaugesView = new ChattyWidgets.UI.Views.SystemGaugesView(InstanceId);
                 WidgetContentHost.Content = gaugesView;
+                if (Settings.Scale > 0 && Math.Abs(Settings.Scale - 1.0) > 0.001)
+                {
+                    WidgetContentHost.LayoutTransform = new System.Windows.Media.ScaleTransform(Settings.Scale, Settings.Scale);
+                }
                 ApplyBackgroundOpacity(Settings.Opacity);
                 return;
             }
@@ -784,6 +797,11 @@ public partial class WidgetWindow : Window
                     // Ensure root border has no DropShadowEffect to prevent straight corner artifacts
                     if (element is Border rootB) rootB.Effect = null;
                     else if (element is FrameworkElement feB) FindVisualChild<Border>(feB)?.SetValue(UIElement.EffectProperty, null);
+
+                    if (Settings.Scale > 0 && Math.Abs(Settings.Scale - 1.0) > 0.001)
+                    {
+                        WidgetContentHost.LayoutTransform = new System.Windows.Media.ScaleTransform(Settings.Scale, Settings.Scale);
+                    }
 
                     ApplyBackgroundOpacity(Settings.Opacity);
                 }
@@ -1041,6 +1059,23 @@ public partial class WidgetWindow : Window
         if (AnchorDot.Effect is System.Windows.Media.Effects.DropShadowEffect shadow)
         {
             shadow.Color = Color.FromRgb(96, 165, 250); // Glow #60A5FA
+        }
+
+        if (Width < 140 || Height < 100)
+        {
+            if (AnchorContainer != null) { AnchorContainer.Width = 24; AnchorContainer.Height = 24; }
+            AnchorDot.Width = 8;
+            AnchorDot.Height = 8;
+            AnchorDot.CornerRadius = new CornerRadius(4);
+            AnchorDot.Margin = new Thickness(0, 6, 6, 0);
+        }
+        else
+        {
+            if (AnchorContainer != null) { AnchorContainer.Width = 36; AnchorContainer.Height = 36; }
+            AnchorDot.Width = 12;
+            AnchorDot.Height = 12;
+            AnchorDot.CornerRadius = new CornerRadius(6);
+            AnchorDot.Margin = new Thickness(0, 12, 12, 0);
         }
 
         bool isHovered = IsMouseOver || (AnchorContainer?.IsMouseOver ?? false) || WidgetContextMenu.IsOpen;
@@ -1526,6 +1561,14 @@ public partial class WidgetWindow : Window
         if (MenuOpacity70 != null) MenuOpacity70.IsChecked = Math.Abs(Settings.Opacity - 0.50) < 0.05;
         if (MenuOpacity50 != null) MenuOpacity50.IsChecked = Math.Abs(Settings.Opacity - 0.25) < 0.05;
 
+        double baseW = Manifest.DefaultWidth > 0 ? Manifest.DefaultWidth : 300;
+        double currentFactor = baseW > 0 ? Width / baseW : 1.0;
+        if (MenuResize25 != null) MenuResize25.IsChecked = Math.Abs(currentFactor - 0.25) < 0.08 || Math.Abs(Settings.Scale - 0.25) < 0.02;
+        if (MenuResize50 != null) MenuResize50.IsChecked = Math.Abs(currentFactor - 0.50) < 0.08 || Math.Abs(Settings.Scale - 0.50) < 0.02;
+        if (MenuResize75 != null) MenuResize75.IsChecked = Math.Abs(currentFactor - 0.75) < 0.08 || Math.Abs(Settings.Scale - 0.75) < 0.02;
+        if (MenuResize100 != null) MenuResize100.IsChecked = Math.Abs(currentFactor - 1.00) < 0.08 || Math.Abs(Settings.Scale - 1.00) < 0.02;
+        if (MenuResize125 != null) MenuResize125.IsChecked = Math.Abs(currentFactor - 1.25) < 0.08 || Math.Abs(Settings.Scale - 1.25) < 0.02;
+
         bool freeResizeActive = !Settings.IsLocked && (Settings.IsFreeResize || _isFreeResizeEnabled || (WidgetManager.Instance?.Settings?.AlwaysResizable ?? true));
         if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.IsChecked = Settings.IsFreeResize || _isFreeResizeEnabled;
         if (ResizeGripHandle != null)
@@ -1773,6 +1816,8 @@ public partial class WidgetWindow : Window
         ApplyMenuOpenDomState(false);
     }
 
+    private void OnResize25Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.25);
+    private void OnResize50Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.50);
     private void OnResize75Click(object sender, RoutedEventArgs e) => ApplyResizePreset(0.75);
     private void OnResize100Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.0);
     private void OnResize125Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.25);
@@ -1782,15 +1827,28 @@ public partial class WidgetWindow : Window
     {
         double baseW = Manifest.DefaultWidth > 0 ? Manifest.DefaultWidth : 300;
         double baseH = Manifest.DefaultHeight > 0 ? Manifest.DefaultHeight : 200;
+        Settings.Scale = factor;
         ResizeWidget(Math.Round(baseW * factor), Math.Round(baseH * factor));
+        ApplyContentScale(factor);
     }
 
     public void ResizeWidget(double newWidth, double newHeight)
     {
         Dispatcher.Invoke(() =>
         {
-            Width = Math.Max(MinWidth, Math.Round(newWidth));
-            Height = Math.Max(MinHeight, Math.Round(newHeight));
+            double targetW = Math.Max(30, Math.Round(newWidth));
+            double targetH = Math.Max(30, Math.Round(newHeight));
+
+            if (targetW < MinWidth) MinWidth = targetW;
+            if (targetH < MinHeight) MinHeight = targetH;
+
+            double manifestMinW = Manifest.MinWidth > 0 ? Manifest.MinWidth : 50;
+            double manifestMinH = Manifest.MinHeight > 0 ? Manifest.MinHeight : 50;
+            if (targetW >= manifestMinW && MinWidth < manifestMinW) MinWidth = manifestMinW;
+            if (targetH >= manifestMinH && MinHeight < manifestMinH) MinHeight = manifestMinH;
+
+            Width = targetW;
+            Height = targetH;
             var clamped = DesktopHostManager.ClampToScreen(Left, Top, Width, Height);
             Left = Math.Round(clamped.X);
             Top = Math.Round(clamped.Y);
@@ -1800,6 +1858,34 @@ public partial class WidgetWindow : Window
             Settings.Height = Height;
             SettingsChanged?.Invoke(this);
             UpdateWindowShape();
+            UpdateAnchorDotStyle();
+            UpdateMenuChecks();
+        });
+    }
+
+    private void ApplyContentScale(double factor)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_webView?.CoreWebView2 != null)
+            {
+                try
+                {
+                    _webView.ZoomFactor = factor;
+                }
+                catch { }
+            }
+            else if (WidgetContentHost?.Content != null && WidgetContentHost.Content is not WebView2)
+            {
+                if (Math.Abs(factor - 1.0) > 0.001)
+                {
+                    WidgetContentHost.LayoutTransform = new System.Windows.Media.ScaleTransform(factor, factor);
+                }
+                else
+                {
+                    WidgetContentHost.LayoutTransform = null;
+                }
+            }
         });
     }
 

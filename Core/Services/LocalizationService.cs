@@ -135,7 +135,9 @@ public class LocalizationService
         Add("Menu.ClickThrough", "Клик насквозь (Click-through)", "Click-through");
         Add("Menu.AutoHideDot", "Спрятать точку управления", "Auto-hide Anchor Dot");
         Add("Menu.ResizeGroup", "Изменить размер", "Resize");
-        Add("Menu.Resize75", "75% (Компактный)", "75% (Compact)");
+        Add("Menu.Resize25", "25% (Мини)", "25% (Mini)");
+        Add("Menu.Resize50", "50% (Компактный)", "50% (Compact)");
+        Add("Menu.Resize75", "75% (Уменьшенный)", "75% (Small)");
         Add("Menu.Resize100", "100% (Обычный)", "100% (Normal)");
         Add("Menu.Resize125", "125% (Увеличенный)", "125% (Large)");
         Add("Menu.Resize150", "150% (Большой)", "150% (Extra Large)");

@@ -65,10 +65,11 @@ To ensure that widgets placed on the desktop stand in a unified, beautiful row w
 - **Default Size**: `defaultWidth: 320`, `defaultHeight: 240` (100% scale).
 - **Minimum Size**: `minWidth: 240`, `minHeight: 180` (75% scale).
 - **Built-in Resize Presets**:
-  - **75% (Компактный)**: `240×180`
+  - **25% (Мини)**: `80×60`
+  - **50% (Компактный)**: `160×120`
+  - **75% (Уменьшенный)**: `240×180`
   - **100% (Обычный)**: `320×240`
   - **125% (Увеличенный)**: `400×300`
-  - **150% (Большой)**: `480×360`
 
 All widgets should structure their internal layout (XAML or CSS) to comfortably render all essential content at the minimum `240×180` viewport and gracefully expand up to `480×360` and beyond.
 

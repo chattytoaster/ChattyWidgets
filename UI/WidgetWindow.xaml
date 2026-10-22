@@ -36,10 +36,11 @@
             <MenuItem x:Name="MenuClickThrough" Header="Клик насквозь (Click-through)" IsCheckable="True" Click="OnClickThroughClick"/>
             <MenuItem x:Name="MenuAutoHideDot" Header="Спрятать точку управления" IsCheckable="True" Click="OnAutoHideDotClick" Visibility="Collapsed"/>
             <MenuItem x:Name="MenuGroupResize" Header="Изменить размер">
-                <MenuItem x:Name="MenuResize75" Header="75% (Компактный)" Click="OnResize75Click"/>
-                <MenuItem x:Name="MenuResize100" Header="100% (Обычный)" Click="OnResize100Click"/>
-                <MenuItem x:Name="MenuResize125" Header="125% (Увеличенный)" Click="OnResize125Click"/>
-                <MenuItem x:Name="MenuResize150" Header="150% (Большой)" Click="OnResize150Click"/>
+                <MenuItem x:Name="MenuResize25" Header="25% (Мини)" IsCheckable="True" Click="OnResize25Click"/>
+                <MenuItem x:Name="MenuResize50" Header="50% (Компактный)" IsCheckable="True" Click="OnResize50Click"/>
+                <MenuItem x:Name="MenuResize75" Header="75% (Уменьшенный)" IsCheckable="True" Click="OnResize75Click"/>
+                <MenuItem x:Name="MenuResize100" Header="100% (Обычный)" IsCheckable="True" Click="OnResize100Click"/>
+                <MenuItem x:Name="MenuResize125" Header="125% (Увеличенный)" IsCheckable="True" Click="OnResize125Click"/>
                 <Separator/>
                 <MenuItem x:Name="MenuFreeResizeToggle" Header="Тянуть за края (Свободный размер)" IsCheckable="True" Click="OnToggleFreeResizeClick"/>
             </MenuItem>

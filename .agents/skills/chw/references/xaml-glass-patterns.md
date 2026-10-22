@@ -131,8 +131,7 @@ WPF `Border.ClipToBounds="True"` only clips child elements to rectangular boundi
 All ChattyWidgets must adhere to the unified **4:3 aspect ratio** to maintain a cohesive row layout on the desktop:
 
 - **Default Viewport**: `320×240` (100% scale).
-- **Minimum Viewport**: `240×180` (75% scale).
-- **Enlarged Presets**: `400×300` (125%), `480×360` (150%).
+- **Size Presets**: `80×60` (25%), `160×120` (50%), `240×180` (75%), `320×240` (100%), `400×300` (125%).
 
 ### Best Practices for Responsive Layouts:
 1. **Dynamic Grid Sizing**:
