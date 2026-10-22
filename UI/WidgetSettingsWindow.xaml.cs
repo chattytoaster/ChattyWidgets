@@ -246,9 +246,10 @@ public partial class WidgetSettingsWindow : Window
             Value = Math.Round(currentOpacity * 100),
             TickFrequency = 5,
             IsSnapToTickEnabled = true,
-            Height = 24,
-            Margin = new Thickness(0, 0, 0, 10),
-            Style = (Style)FindResource("ModernSlider")
+            SmallChange = 5,
+            LargeChange = 10,
+            Margin = new Thickness(0, 0, 0, 8),
+            Cursor = Cursors.Hand
         };
         sliderOpacity.ValueChanged += (s, e) =>
         {
