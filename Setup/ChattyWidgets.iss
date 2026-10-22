@@ -1,6 +1,6 @@
 ; Script generated for ChattyWidgets Inno Setup Installer
 #define MyAppName "ChattyWidgets"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "ChattyApps"
 #define MyAppURL "https://chattyapps.dev"
 #define MyAppExeName "ChattyWidgets.exe"

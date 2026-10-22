@@ -262,7 +262,7 @@ public class LocalizationService
         Add("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)", "➕ Import Widget (.chw)");
         Add("Hub.OpenAppDataBtn", "Открыть папку данных (%LocalAppData%)", "Open Data Folder (%LocalAppData%)");
         Add("Hub.AboutTitle", "О движке ChattyWidgets", "About ChattyWidgets Engine");
-        Add("Hub.AboutVersion", "Версия: 1.0.0 (.NET 8.0 Windows x64)", "Version: 1.0.0 (.NET 8.0 Windows x64)");
+        Add("Hub.AboutVersion", "Версия: 1.0.1 (.NET 8.0 Windows x64)", "Version: 1.0.1 (.NET 8.0 Windows x64)");
         Add("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.", "Engine optimized for 24/7 background operation: native widgets produce 0% CPU overhead and consume minimal memory.");
         Add("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!", "A new version of ChattyWidgets is available!");
         Add("Hub.DownloadUpdate", "🚀 Скачать обновление", "🚀 Download Update");

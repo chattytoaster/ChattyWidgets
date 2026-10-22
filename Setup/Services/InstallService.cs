@@ -466,7 +466,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             if (key != null)
             {
                 key.SetValue("DisplayName", "ChattyWidgets");
-                key.SetValue("DisplayVersion", "1.0.0");
+                key.SetValue("DisplayVersion", "1.0.1");
                 key.SetValue("Publisher", "ChattyApps");
                 key.SetValue("DisplayIcon", $"{targetExe},0");
                 key.SetValue("InstallLocation", targetDir);

@@ -1532,7 +1532,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (BtnImportChw != null) BtnImportChw.Content = LocalizationService.Instance.T("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)");
         if (BtnOpenAppData != null) BtnOpenAppData.Content = LocalizationService.Instance.T("Hub.OpenAppDataBtn", "Открыть папку данных виджетов (%LocalAppData%)");
         if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
-        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 1.0.0 (.NET 8.0 Windows x64)" : "Version: 1.0.0 (.NET 8.0 Windows x64)";
+        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 1.0.1 (.NET 8.0 Windows x64)" : "Version: 1.0.1 (.NET 8.0 Windows x64)";
         if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
         if (BtnDownloadUpdate != null) BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadUpdate", "🚀 Скачать обновление");
         if (BtnCheckUpdates != null) BtnCheckUpdates.Content = LocalizationService.Instance.T("Hub.CheckUpdates", "🔄 Проверить обновления");
@@ -1552,7 +1552,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             InputNewWidgetDesc.Text = isRu ? "Полезный виджет для рабочего стола Windows" : "A useful desktop widget for Windows";
 
         // Bottom status bar
-        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v1.0.0" : "ChattyWidgets Engine v1.0.0";
+        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v1.0.1" : "ChattyWidgets Engine v1.0.1";
 
         RenderPresetChips();
         RefreshInstalledWidgets();
