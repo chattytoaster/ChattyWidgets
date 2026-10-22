@@ -135,6 +135,10 @@ public partial class WidgetSettingsWindow : Window
         }
 
         AddThemeSelectorCard();
+        if (_baseWidgetId != "com.chatty.media-frame")
+        {
+            AddOpacitySelectorCard();
+        }
     }
 
     private void AddThemeSelectorCard()
@@ -193,6 +197,119 @@ public partial class WidgetSettingsWindow : Window
         };
 
         sp.Children.Add(cb);
+        card.Child = sp;
+        SettingsPanel.Children.Add(card);
+    }
+
+    private void AddOpacitySelectorCard()
+    {
+        var loc = LocalizationService.Instance;
+        var card = CreateCard();
+        var sp = new StackPanel();
+
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        double currentOpacity = win?.Settings.Opacity ?? 1.0;
+        if (currentOpacity < 0.15) currentOpacity = 1.0;
+
+        sp.Children.Add(new TextBlock
+        {
+            Text = "🪟 " + loc.T("Common.Opacity", "Прозрачность фона"),
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+
+        var spOpacityHeader = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        spOpacityHeader.Children.Add(new TextBlock
+        {
+            Text = loc.T("Settings.OpacityLevel", "Уровень прозрачности (от 15% до 100%):"),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            HorizontalAlignment = HorizontalAlignment.Left
+        });
+        var txtOpacityValue = new TextBlock
+        {
+            Text = $"{Math.Round(currentOpacity * 100)}%",
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        spOpacityHeader.Children.Add(txtOpacityValue);
+        sp.Children.Add(spOpacityHeader);
+
+        var sliderOpacity = new Slider
+        {
+            Minimum = 15,
+            Maximum = 100,
+            Value = Math.Round(currentOpacity * 100),
+            TickFrequency = 5,
+            IsSnapToTickEnabled = true,
+            Height = 24,
+            Margin = new Thickness(0, 0, 0, 10),
+            Style = (Style)FindResource("ModernSlider")
+        };
+        sliderOpacity.ValueChanged += (s, e) =>
+        {
+            int val = (int)Math.Round(sliderOpacity.Value);
+            txtOpacityValue.Text = $"{val}%";
+            double opFraction = val / 100.0;
+            if (win != null)
+            {
+                win.SetWidgetOpacity(opFraction);
+                WidgetManager.Instance.SaveSettings();
+            }
+            else
+            {
+                if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var ws))
+                {
+                    ws.Opacity = opFraction;
+                    WidgetManager.Instance.SaveSettings();
+                }
+            }
+        };
+        sp.Children.Add(sliderOpacity);
+
+        // Quick presets (25%, 50%, 75%, 100%)
+        var presetsGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+        for (int i = 0; i < 4; i++)
+        {
+            presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (i < 3) presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6, GridUnitType.Pixel) });
+        }
+
+        var opacityPresets = new (int Percent, string Label)[]
+        {
+            (25, "25%"),
+            (50, "50%"),
+            (75, "75%"),
+            (100, "100%")
+        };
+
+        for (int i = 0; i < opacityPresets.Length; i++)
+        {
+            var p = opacityPresets[i];
+            var btnPreset = new Button
+            {
+                Content = p.Label,
+                Height = 26,
+                Background = new SolidColorBrush(Color.FromArgb(25, 255, 255, 255)),
+                Foreground = Brushes.White,
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand
+            };
+            btnPreset.Click += (s, e) =>
+            {
+                sliderOpacity.Value = p.Percent;
+            };
+            Grid.SetColumn(btnPreset, i * 2);
+            presetsGrid.Children.Add(btnPreset);
+        }
+        sp.Children.Add(presetsGrid);
+
         card.Child = sp;
         SettingsPanel.Children.Add(card);
     }

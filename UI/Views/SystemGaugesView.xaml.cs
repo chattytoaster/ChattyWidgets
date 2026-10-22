@@ -29,21 +29,6 @@ public partial class SystemGaugesView : UserControl
     public void ApplyTheme(bool isLight)
     {
         _isLight = isLight;
-        if (Content is Border rootBorder)
-        {
-            if (isLight)
-            {
-                rootBorder.Background = new SolidColorBrush(Color.FromArgb(242, 248, 250, 252));
-                rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0));
-                rootBorder.BorderThickness = new Thickness(1);
-            }
-            else
-            {
-                rootBorder.Background = new SolidColorBrush(Color.FromArgb(208, 18, 22, 34));
-                rootBorder.BorderBrush = null;
-                rootBorder.BorderThickness = new Thickness(0);
-            }
-        }
         if (TxtHeaderTitle != null)
         {
             TxtHeaderTitle.Foreground = _isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184));

@@ -1138,6 +1138,7 @@ public partial class WidgetWindow : Window
                     rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
                     rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
                 }
+                rootBorder.BorderThickness = new Thickness(1);
             }
         }
         else
@@ -1519,6 +1520,11 @@ public partial class WidgetWindow : Window
         if (MenuThemeAuto != null) MenuThemeAuto.IsChecked = Settings.Theme == "auto";
         if (MenuThemeDark != null) MenuThemeDark.IsChecked = Settings.Theme == "dark";
         if (MenuThemeLight != null) MenuThemeLight.IsChecked = Settings.Theme == "light";
+
+        if (MenuOpacity100 != null) MenuOpacity100.IsChecked = Math.Abs(Settings.Opacity - 1.0) < 0.05;
+        if (MenuOpacity85 != null) MenuOpacity85.IsChecked = Math.Abs(Settings.Opacity - 0.75) < 0.05;
+        if (MenuOpacity70 != null) MenuOpacity70.IsChecked = Math.Abs(Settings.Opacity - 0.50) < 0.05;
+        if (MenuOpacity50 != null) MenuOpacity50.IsChecked = Math.Abs(Settings.Opacity - 0.25) < 0.05;
 
         bool freeResizeActive = !Settings.IsLocked && (Settings.IsFreeResize || _isFreeResizeEnabled || (WidgetManager.Instance?.Settings?.AlwaysResizable ?? true));
         if (MenuFreeResizeToggle != null) MenuFreeResizeToggle.IsChecked = Settings.IsFreeResize || _isFreeResizeEnabled;

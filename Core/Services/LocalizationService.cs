@@ -184,6 +184,7 @@ public class LocalizationService
         Add("Settings.ThemeAuto", "✦ Как в Хабе (Автоматически)", "✦ Match Hub (Auto)");
         Add("Settings.ThemeDark", "🌙 Тёмная тема (Dark)", "🌙 Dark Theme");
         Add("Settings.ThemeLight", "☀️ Светлая тема (Light)", "☀️ Light Theme");
+        Add("Settings.OpacityLevel", "Уровень прозрачности (от 15% до 100%):", "Opacity level (from 15% to 100%):");
 
         // System Gauges View & Widget
         Add("Gauges.HeaderTitle", "СИСТЕМА", "SYSTEM");

@@ -44,10 +44,10 @@
                 <MenuItem x:Name="MenuFreeResizeToggle" Header="Тянуть за края (Свободный размер)" IsCheckable="True" Click="OnToggleFreeResizeClick"/>
             </MenuItem>
             <MenuItem x:Name="MenuGroupOpacity" Header="Прозрачность фона">
-                <MenuItem x:Name="MenuOpacity100" Header="100% (Непрозрачный фон)" Click="OnOpacity100Click"/>
-                <MenuItem x:Name="MenuOpacity85" Header="75% фона" Click="OnOpacity85Click"/>
-                <MenuItem x:Name="MenuOpacity70" Header="50% фона" Click="OnOpacity70Click"/>
-                <MenuItem x:Name="MenuOpacity50" Header="25% фона (Стекло)" Click="OnOpacity50Click"/>
+                <MenuItem x:Name="MenuOpacity100" Header="100% (Непрозрачный фон)" IsCheckable="True" Click="OnOpacity100Click"/>
+                <MenuItem x:Name="MenuOpacity85" Header="75% фона" IsCheckable="True" Click="OnOpacity85Click"/>
+                <MenuItem x:Name="MenuOpacity70" Header="50% фона" IsCheckable="True" Click="OnOpacity70Click"/>
+                <MenuItem x:Name="MenuOpacity50" Header="25% фона (Стекло)" IsCheckable="True" Click="OnOpacity50Click"/>
             </MenuItem>
             <MenuItem x:Name="MenuMonitors" Header="Переместить на монитор..."/>
             <MenuItem x:Name="MenuGaugesConstructor" Header="🎨 Изменить формат (Конструктор)..." Visibility="Collapsed" Click="OnOpenGaugesConstructorClick"/>
