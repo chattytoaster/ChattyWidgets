@@ -76,7 +76,7 @@ public class DesktopHostManager
     {
         if (hwnd == IntPtr.Zero) return;
 
-        MakeToolWindow(hwnd);
+        MakeToolWindow(hwnd, noActivate: layer == WidgetLayer.Desktop);
         DisableAeroSnap(hwnd);
 
         // Always ensure top-level window without owner interference
@@ -89,7 +89,7 @@ public class DesktopHostManager
         {
             case WidgetLayer.Desktop:
                 // Sits on desktop behind active applications, but stays in front of desktop wallpaper/icons and is 100% clickable
-                Win32Native.SetWindowPos(hwnd, Win32Native.HWND_NOTOPMOST, 0, 0, 0, 0,
+                Win32Native.SetWindowPos(hwnd, Win32Native.HWND_BOTTOM, 0, 0, 0, 0,
                     Win32Native.SWP_NOMOVE | Win32Native.SWP_NOSIZE | Win32Native.SWP_NOACTIVATE | Win32Native.SWP_SHOWWINDOW);
                 break;
 
@@ -108,10 +108,18 @@ public class DesktopHostManager
     /// <summary>
     /// Makes window a tool window (hides from Alt+Tab and taskbar).
     /// </summary>
-    public static void MakeToolWindow(IntPtr hwnd)
+    public static void MakeToolWindow(IntPtr hwnd, bool noActivate = false)
     {
         long exStyle = (long)Win32Native.GetWindowLongPtr(hwnd, Win32Native.GWL_EXSTYLE);
         exStyle |= Win32Native.WS_EX_TOOLWINDOW;
+        if (noActivate)
+        {
+            exStyle |= Win32Native.WS_EX_NOACTIVATE;
+        }
+        else
+        {
+            exStyle &= ~Win32Native.WS_EX_NOACTIVATE;
+        }
         Win32Native.SetWindowLongPtr(hwnd, Win32Native.GWL_EXSTYLE, (IntPtr)exStyle);
     }
 

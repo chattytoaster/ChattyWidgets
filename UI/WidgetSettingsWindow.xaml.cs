@@ -46,18 +46,22 @@ public partial class WidgetSettingsWindow : Window
     {
         base.OnClosed(e);
         LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+        try
+        {
+            WidgetManager.Instance.SaveSettings();
+        }
+        catch { }
     }
 
     private void SaveWidgetCustomSetting(string key, string value)
     {
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId, _baseWidgetId);
+        s.CustomSettings[key] = value;
+
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
         if (win != null)
         {
             win.Settings.CustomSettings[key] = value;
-        }
-        else if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s))
-        {
-            s.CustomSettings[key] = value;
         }
         WidgetManager.Instance.SaveSettings();
     }
@@ -66,8 +70,8 @@ public partial class WidgetSettingsWindow : Window
     {
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
         if (win != null) return win.Settings.CustomSettings;
-        if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return s.CustomSettings;
-        return new Dictionary<string, string>();
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId, _baseWidgetId);
+        return s.CustomSettings;
     }
 
     private void OnTitleBarMouseDown(object sender, MouseButtonEventArgs e)
@@ -139,6 +143,7 @@ public partial class WidgetSettingsWindow : Window
         {
             AddOpacitySelectorCard();
         }
+        AddScaleSelectorCard();
     }
 
     private void AddThemeSelectorCard()
@@ -187,12 +192,14 @@ public partial class WidgetSettingsWindow : Window
         {
             if (cb.SelectedItem is ComboBoxItem item && item.Tag is string t)
             {
+                var ws = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId, _baseWidgetId);
+                ws.Theme = t;
                 if (win != null)
                 {
                     win.Settings.Theme = t;
                     win.ApplyTheme();
-                    WidgetManager.Instance.SaveSettings();
                 }
+                WidgetManager.Instance.SaveSettings();
             }
         };
 
@@ -256,19 +263,13 @@ public partial class WidgetSettingsWindow : Window
             int val = (int)Math.Round(sliderOpacity.Value);
             txtOpacityValue.Text = $"{val}%";
             double opFraction = val / 100.0;
+            var ws = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId, _baseWidgetId);
+            ws.Opacity = opFraction;
             if (win != null)
             {
                 win.SetWidgetOpacity(opFraction);
-                WidgetManager.Instance.SaveSettings();
             }
-            else
-            {
-                if (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var ws))
-                {
-                    ws.Opacity = opFraction;
-                    WidgetManager.Instance.SaveSettings();
-                }
-            }
+            WidgetManager.Instance.SaveSettings();
         };
         sp.Children.Add(sliderOpacity);
 
@@ -310,6 +311,126 @@ public partial class WidgetSettingsWindow : Window
             presetsGrid.Children.Add(btnPreset);
         }
         sp.Children.Add(presetsGrid);
+
+        card.Child = sp;
+        SettingsPanel.Children.Add(card);
+    }
+
+    private void AddScaleSelectorCard()
+    {
+        var loc = LocalizationService.Instance;
+        var card = CreateCard();
+        var sp = new StackPanel();
+
+        var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
+        double baseW = win?.Manifest.DefaultWidth > 0 ? win.Manifest.DefaultWidth : 300;
+        double baseH = win?.Manifest.DefaultHeight > 0 ? win.Manifest.DefaultHeight : 200;
+        double curW = win != null ? win.Width : (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var ws1) && ws1.Width > 0 ? ws1.Width : baseW);
+        double curH = win != null ? win.Height : (WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var ws2) && ws2.Height > 0 ? ws2.Height : baseH);
+        double currentFactor = baseW > 0 ? curW / baseW : 1.0;
+        if (win?.Settings?.Scale > 0) currentFactor = win.Settings.Scale;
+
+        sp.Children.Add(new TextBlock
+        {
+            Text = "📐 " + loc.T("Settings.ScaleTitle", "Размер и масштаб виджета"),
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+
+        var spHeader = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        spHeader.Children.Add(new TextBlock
+        {
+            Text = loc.T("Settings.ScaleSubtitle", "Быстрые пресеты размера (25%, 50%, 75%, 100%, 125%):"),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+            HorizontalAlignment = HorizontalAlignment.Left
+        });
+        var txtScaleValue = new TextBlock
+        {
+            Text = $"{Math.Round(currentFactor * 100)}% ({Math.Round(curW)}×{Math.Round(curH)} px)",
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        spHeader.Children.Add(txtScaleValue);
+        sp.Children.Add(spHeader);
+
+        // 5 preset buttons: 25%, 50%, 75%, 100%, 125%
+        var presetsGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+        for (int i = 0; i < 5; i++)
+        {
+            presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (i < 4) presetsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6, GridUnitType.Pixel) });
+        }
+
+        var scalePresets = new (double Factor, string Label)[]
+        {
+            (0.25, "25%"),
+            (0.50, "50%"),
+            (0.75, "75%"),
+            (1.00, "100%"),
+            (1.25, "125%")
+        };
+
+        var presetButtons = new List<(Button Btn, double Factor)>();
+
+        void UpdateButtonHighlights(double activeFactor)
+        {
+            foreach (var (b, factor) in presetButtons)
+            {
+                bool isActive = Math.Abs(activeFactor - factor) < 0.06;
+                b.Background = isActive
+                    ? new SolidColorBrush(Color.FromRgb(14, 165, 233))
+                    : new SolidColorBrush(Color.FromArgb(25, 255, 255, 255));
+                b.Foreground = isActive
+                    ? new SolidColorBrush(Color.FromRgb(15, 23, 42))
+                    : Brushes.White;
+                b.FontWeight = isActive ? FontWeights.Bold : FontWeights.Medium;
+            }
+        }
+
+        for (int i = 0; i < scalePresets.Length; i++)
+        {
+            var p = scalePresets[i];
+            var btnPreset = new Button
+            {
+                Content = p.Label,
+                Height = 28,
+                Background = new SolidColorBrush(Color.FromArgb(25, 255, 255, 255)),
+                Foreground = Brushes.White,
+                FontSize = 11.5,
+                FontWeight = FontWeights.Medium,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand
+            };
+            btnPreset.Click += (s, e) =>
+            {
+                var ws = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId, _baseWidgetId);
+                ws.Scale = p.Factor;
+                ws.Width = Math.Round(baseW * p.Factor);
+                ws.Height = Math.Round(baseH * p.Factor);
+                if (win != null)
+                {
+                    win.ApplyResizePreset(p.Factor);
+                    txtScaleValue.Text = $"{Math.Round(p.Factor * 100)}% ({Math.Round(win.Width)}×{Math.Round(win.Height)} px)";
+                }
+                else
+                {
+                    txtScaleValue.Text = $"{Math.Round(p.Factor * 100)}% ({Math.Round(ws.Width)}×{Math.Round(ws.Height)} px)";
+                }
+                WidgetManager.Instance.SaveSettings();
+                UpdateButtonHighlights(p.Factor);
+            };
+            Grid.SetColumn(btnPreset, i * 2);
+            presetsGrid.Children.Add(btnPreset);
+            presetButtons.Add((btnPreset, p.Factor));
+        }
+        sp.Children.Add(presetsGrid);
+
+        UpdateButtonHighlights(currentFactor);
 
         card.Child = sp;
         SettingsPanel.Children.Add(card);
@@ -905,11 +1026,7 @@ public partial class WidgetSettingsWindow : Window
                 {
                     cryptoVm.BaseCurrency = curCode;
                 }
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoBaseCurrency"] = curCode;
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoBaseCurrency", curCode);
                 TxtStatus.Text = loc.T("Crypto.Refreshed", "Котировки успешно обновлены!");
                 _onSettingsChanged?.Invoke();
             }
@@ -977,12 +1094,8 @@ public partial class WidgetSettingsWindow : Window
             if (cryptoVm != null)
             {
                 cryptoVm.AddCustomToken(raw);
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    win.Settings.CustomSettings["cryptoCustomTokens"] = string.Join(",", cryptoVm.CustomTokens);
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
+                SaveWidgetCustomSetting("cryptoCustomTokens", string.Join(",", cryptoVm.CustomTokens));
                 TxtStatus.Text = string.Format(loc.T("Crypto.AddedSuccess", "Тикер/пара '{0}' успешно добавлен(а)!"), norm);
                 txtCustomInput.Text = "";
                 refreshCatalogUI?.Invoke();
@@ -1160,12 +1273,8 @@ public partial class WidgetSettingsWindow : Window
                     btnDelete.Click += (s, e) =>
                     {
                         cryptoVm.RemoveCustomToken(delKey);
-                        if (win != null)
-                        {
-                            win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                            win.Settings.CustomSettings["cryptoCustomTokens"] = string.Join(",", cryptoVm.CustomTokens);
-                            WidgetManager.Instance.SaveSettings();
-                        }
+                        SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
+                        SaveWidgetCustomSetting("cryptoCustomTokens", string.Join(",", cryptoVm.CustomTokens));
                         refreshCatalogUI?.Invoke();
                         _onSettingsChanged?.Invoke();
                     };
@@ -1189,22 +1298,14 @@ public partial class WidgetSettingsWindow : Window
                 cb.Checked += (s, e) =>
                 {
                     cryptoVm.SetTokenEnabled(def.Key, true);
-                    if (win != null)
-                    {
-                        win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                        WidgetManager.Instance.SaveSettings();
-                    }
+                    SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
                     _onSettingsChanged?.Invoke();
                 };
 
                 cb.Unchecked += (s, e) =>
                 {
                     cryptoVm.SetTokenEnabled(def.Key, false);
-                    if (win != null)
-                    {
-                        win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                        WidgetManager.Instance.SaveSettings();
-                    }
+                    SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
                     _onSettingsChanged?.Invoke();
                 };
 
@@ -1239,11 +1340,7 @@ public partial class WidgetSettingsWindow : Window
             if (cryptoVm != null)
             {
                 cryptoVm.SelectAllTokens(cryptoVm.GetCatalog().Select(d => d.Key));
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
                 refreshCatalogUI();
                 _onSettingsChanged?.Invoke();
             }
@@ -1266,11 +1363,7 @@ public partial class WidgetSettingsWindow : Window
             if (cryptoVm != null)
             {
                 cryptoVm.DeselectAllTokens();
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
                 refreshCatalogUI();
                 _onSettingsChanged?.Invoke();
             }
@@ -1292,13 +1385,9 @@ public partial class WidgetSettingsWindow : Window
             if (cryptoVm != null)
             {
                 cryptoVm.ResetToDefaults();
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoBaseCurrency"] = cryptoVm.BaseCurrency;
-                    win.Settings.CustomSettings["cryptoRefreshInterval"] = cryptoVm.RefreshInterval;
-                    win.Settings.CustomSettings["cryptoEnabledTokens"] = string.Join(",", cryptoVm.EnabledTokens);
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoBaseCurrency", cryptoVm.BaseCurrency);
+                SaveWidgetCustomSetting("cryptoRefreshInterval", cryptoVm.RefreshInterval);
+                SaveWidgetCustomSetting("cryptoEnabledTokens", string.Join(",", cryptoVm.EnabledTokens));
                 int defaultBaseIdx = Array.FindIndex(currencies, c => string.Equals(c.Item1, cryptoVm.BaseCurrency, StringComparison.OrdinalIgnoreCase));
                 if (defaultBaseIdx >= 0) comboBase.SelectedIndex = defaultBaseIdx;
                 refreshCatalogUI();
@@ -1362,11 +1451,7 @@ public partial class WidgetSettingsWindow : Window
                 {
                     cryptoVm.RefreshInterval = code;
                 }
-                if (win != null)
-                {
-                    win.Settings.CustomSettings["cryptoRefreshInterval"] = code;
-                    WidgetManager.Instance.SaveSettings();
-                }
+                SaveWidgetCustomSetting("cryptoRefreshInterval", code);
                 _onSettingsChanged?.Invoke();
             }
         };
@@ -1460,16 +1545,12 @@ public partial class WidgetSettingsWindow : Window
             currentAutoStart = auto;
             currentSound = sound;
 
-            if (win != null)
-            {
-                win.Settings.CustomSettings["pomoFocusMins"] = focus.ToString();
-                win.Settings.CustomSettings["pomoBreakMins"] = sBreak.ToString();
-                win.Settings.CustomSettings["pomoLongBreakMins"] = lBreak.ToString();
-                win.Settings.CustomSettings["pomoTimerMins"] = timer.ToString();
-                win.Settings.CustomSettings["pomoAutoStart"] = auto ? "true" : "false";
-                win.Settings.CustomSettings["pomoSound"] = sound ? "true" : "false";
-                WidgetManager.Instance.SaveSettings();
-            }
+            SaveWidgetCustomSetting("pomoFocusMins", focus.ToString());
+            SaveWidgetCustomSetting("pomoBreakMins", sBreak.ToString());
+            SaveWidgetCustomSetting("pomoLongBreakMins", lBreak.ToString());
+            SaveWidgetCustomSetting("pomoTimerMins", timer.ToString());
+            SaveWidgetCustomSetting("pomoAutoStart", auto ? "true" : "false");
+            SaveWidgetCustomSetting("pomoSound", sound ? "true" : "false");
 
             pomodoroVm?.ApplyCustomSettings(focus, sBreak, lBreak, timer, auto, sound);
             _onSettingsChanged?.Invoke();

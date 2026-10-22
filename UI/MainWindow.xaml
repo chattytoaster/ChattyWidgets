@@ -314,7 +314,7 @@
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Manifest.Type}" FontSize="10" FontWeight="Bold" Foreground="#818CF8"/>
                                                 </Border>
-                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{Binding BadgeVisibility}">
                                                     <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="Bold" Foreground="{Binding BadgeFg}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Manifest.Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
@@ -418,7 +418,7 @@
                                                 <Border Background="#252B42" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
                                                 </Border>
-                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                <Border Background="{Binding BadgeBg}" CornerRadius="6" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{Binding BadgeVisibility}">
                                                     <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="Bold" Foreground="{Binding BadgeFg}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding DisplayVersion}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>

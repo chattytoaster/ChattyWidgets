@@ -14,6 +14,7 @@ public class WidgetManager
 
     private readonly Dictionary<string, WidgetWindow> _activeWindows = new();
     public AppSettings Settings { get; private set; } = new();
+    public bool IsInitialized { get; private set; }
 
     public event Action? WidgetsChanged;
 
@@ -35,12 +36,36 @@ public class WidgetManager
     {
         Log("Initialize start");
         LoadSettings();
+        IsInitialized = true;
         Log("LoadSettings done");
         ChwPackageService.RegisterFileAssociation();
 
         var installed = ChwPackageService.GetInstalledWidgets();
         var installedSet = new HashSet<string>(installed.Select(x => x.Manifest.Id));
         Log($"Installed count: {installed.Count}");
+
+        // If Settings.Widgets is empty but widgets are installed, restore default active widgets
+        // so user never experiences an empty desktop after an update or cleared settings file
+        if (Settings.Widgets.Count == 0 && installed.Count > 0)
+        {
+            Log("Settings.Widgets was empty; restoring default widgets for installed packages");
+            var defaultStartIds = new[]
+            {
+                "com.github.hlebsmaslomcht.analog-clock",
+                "com.chatty.weather-card",
+                "com.chatty.system-gauges",
+                "com.chatty.music-player"
+            };
+
+            foreach (var defaultId in defaultStartIds)
+            {
+                if (installedSet.Contains(defaultId))
+                {
+                    GetOrCreateWidgetSettings(defaultId);
+                }
+            }
+            SaveSettings();
+        }
 
         // Launch all widget instances that were saved as enabled
         foreach (var kvp in Settings.Widgets.ToList())
@@ -131,9 +156,12 @@ public class WidgetManager
         if (_activeWindows.TryGetValue(instId, out var existing))
         {
             existing.Show();
-            existing.Activate();
-            existing.Topmost = true;
-            existing.Topmost = false;
+            if (existing.Settings.Layer != WidgetLayer.Desktop)
+            {
+                existing.Activate();
+                existing.Topmost = true;
+                existing.Topmost = false;
+            }
             return true;
         }
 
@@ -184,8 +212,11 @@ public class WidgetManager
         _activeWindows[instId] = window;
         Log($"StartWidget: calling window.Show() for {instId}");
         window.Show();
-        Log($"StartWidget: calling window.Activate() for {instId}");
-        window.Activate();
+        if (window.Settings.Layer != WidgetLayer.Desktop)
+        {
+            Log($"StartWidget: calling window.Activate() for {instId}");
+            window.Activate();
+        }
         Log($"StartWidget: finished for {instId}");
 
         SaveSettings();
@@ -395,6 +426,45 @@ public class WidgetManager
         SaveSettings();
     }
 
+    public WidgetInstanceSettings GetOrCreateWidgetSettings(string instanceId, string? baseWidgetId = null)
+    {
+        if (Settings.Widgets.TryGetValue(instanceId, out var existing))
+        {
+            return existing;
+        }
+
+        string baseId = baseWidgetId ?? (instanceId.Contains('#') ? instanceId.Split('#')[0] : instanceId);
+        var installed = ChwPackageService.GetInstalledWidgets();
+        var item = installed.FirstOrDefault(x => x.Manifest.Id == baseId);
+
+        double screenWidth = SystemParameters.PrimaryScreenWidth;
+        double defaultW = item.Manifest?.DefaultWidth > 0 ? item.Manifest.DefaultWidth : 300;
+        double defaultH = item.Manifest?.DefaultHeight > 0 ? item.Manifest.DefaultHeight : 200;
+        double defaultLeft = Math.Max(50, screenWidth - defaultW - 40);
+        double defaultTop = 60 + (_activeWindows.Count * 60);
+
+        var widgetSetting = new WidgetInstanceSettings
+        {
+            Id = instanceId,
+            WidgetId = baseId,
+            Title = item.Manifest?.Name ?? baseId,
+            IsEnabled = true,
+            Width = defaultW,
+            Height = defaultH,
+            Left = defaultLeft,
+            Top = defaultTop,
+            Layer = WidgetLayer.Desktop,
+            IsClickThrough = false,
+            AutoHideAnchorDot = true,
+            Opacity = 1.0,
+            Scale = 1.0
+        };
+
+        Settings.Widgets[instanceId] = widgetSetting;
+        SaveSettings();
+        return widgetSetting;
+    }
+
     public void LoadSettings()
     {
         try
@@ -402,27 +472,89 @@ public class WidgetManager
             if (File.Exists(ChwPackageService.SettingsFile))
             {
                 string json = File.ReadAllText(ChwPackageService.SettingsFile);
-                Settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    var loaded = JsonSerializer.Deserialize<AppSettings>(json);
+                    if (loaded != null)
+                    {
+                        Settings = loaded;
+                        Log($"Settings loaded successfully. Widgets count: {Settings.Widgets.Count}");
+                        return;
+                    }
+                }
             }
-            else
+
+            // Fallback to backup if main file is missing or empty
+            string bakFile = ChwPackageService.SettingsFile + ".bak";
+            if (File.Exists(bakFile))
             {
-                Settings = new AppSettings();
+                string bakJson = File.ReadAllText(bakFile);
+                if (!string.IsNullOrWhiteSpace(bakJson))
+                {
+                    var loadedBak = JsonSerializer.Deserialize<AppSettings>(bakJson);
+                    if (loadedBak != null)
+                    {
+                        Settings = loadedBak;
+                        Log($"Settings recovered from backup. Widgets count: {Settings.Widgets.Count}");
+                        SaveSettings();
+                        return;
+                    }
+                }
             }
+
+            Settings = new AppSettings();
         }
-        catch
+        catch (Exception ex)
         {
+            Log($"LoadSettings error: {ex.Message}");
+            try
+            {
+                string bakFile = ChwPackageService.SettingsFile + ".bak";
+                if (File.Exists(bakFile))
+                {
+                    string bakJson = File.ReadAllText(bakFile);
+                    var loadedBak = JsonSerializer.Deserialize<AppSettings>(bakJson);
+                    if (loadedBak != null)
+                    {
+                        Settings = loadedBak;
+                        Log($"Settings recovered from backup after parse error. Widgets count: {Settings.Widgets.Count}");
+                        return;
+                    }
+                }
+            }
+            catch { }
             Settings = new AppSettings();
         }
     }
 
     public void SaveSettings()
     {
+        if (!IsInitialized)
+        {
+            Log("SaveSettings skipped: WidgetManager is not initialized");
+            return;
+        }
+
         try
         {
             string json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(ChwPackageService.SettingsFile, json);
+            string settingsFile = ChwPackageService.SettingsFile;
+            string tempFile = settingsFile + ".tmp";
+            string bakFile = settingsFile + ".bak";
+
+            File.WriteAllText(tempFile, json);
+
+            if (File.Exists(settingsFile))
+            {
+                try { File.Copy(settingsFile, bakFile, true); } catch { }
+            }
+
+            File.Move(tempFile, settingsFile, true);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log($"SaveSettings error: {ex.Message}");
+        }
     }
 
     public void SetAutostart(bool enable)

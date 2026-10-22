@@ -260,7 +260,7 @@ public class ClockWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["clockTimezone"] = _timezoneId;
         s.CustomSettings["clockCityName"] = _cityName;
@@ -427,7 +427,7 @@ public class CalendarWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["calFirstDayOfWeek"] = _firstDayOfWeek;
         s.CustomSettings["calShowWeekNumbers"] = _showWeekNumbers ? "true" : "false";
@@ -1000,7 +1000,7 @@ public class CryptoWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["cryptoBaseCurrency"] = _baseCurrency;
         s.CustomSettings["cryptoRefreshInterval"] = _refreshInterval;
@@ -2875,7 +2875,7 @@ public class MusicPlayerWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["musicVinylSpeed"] = _vinylSpeed;
         s.CustomSettings["musicSpinOnlyPlaying"] = _spinOnlyPlaying ? "true" : "false";
@@ -3542,7 +3542,7 @@ public class QuickDockWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["dockIconSize"] = _iconSize.ToString();
         WidgetManager.Instance.SaveSettings();
@@ -4000,7 +4000,7 @@ public class RssWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["rssFeedPreset"] = _preset;
         s.CustomSettings["rssCustomUrl"] = _customUrl;
@@ -4432,7 +4432,7 @@ public class StickyNotesWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["notesAccentColor"] = _accentColor;
         WidgetManager.Instance.SaveSettings();
@@ -4750,7 +4750,7 @@ public class WeatherWidgetViewModel : NativeViewModelBase
     public void SaveCustomSettings()
     {
         if (string.IsNullOrEmpty(_instanceId)) return;
-        if (!WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
 
         s.CustomSettings["weatherCity"] = _city;
         s.CustomSettings["weatherLat"] = _lat.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);

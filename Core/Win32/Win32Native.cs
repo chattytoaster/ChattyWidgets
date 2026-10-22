@@ -21,6 +21,12 @@ public static class Win32Native
     public const int HTBOTTOMLEFT = 16;
     public const int HTBOTTOMRIGHT = 17;
 
+    public const int WM_MOUSEACTIVATE = 0x0021;
+    public const int MA_ACTIVATE = 1;
+    public const int MA_ACTIVATEANDEAT = 2;
+    public const int MA_NOACTIVATE = 3;
+    public const int MA_NOACTIVATEANDEAT = 4;
+
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     public const int DWMWCP_DONOTROUND = 1;
     public const int DWMWCP_ROUND = 2;

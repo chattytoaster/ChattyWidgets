@@ -749,7 +749,7 @@ public partial class MainWindow : Window
             bool isOfficial = item.IsOfficial || item.Id.StartsWith(SecurityService.OfficialPrefix, StringComparison.OrdinalIgnoreCase);
             string badgeText = isOfficial 
                 ? (isRu ? "✦ Официальный" : "✦ Official") 
-                : $"{item.Author} (GitHub)";
+                : string.Empty;
             var badgeBg = isOfficial
                 ? new SolidColorBrush(Color.FromRgb(30, 42, 74))
                 : new SolidColorBrush(Color.FromRgb(6, 78, 59));
@@ -1810,6 +1810,7 @@ public class InstalledWidgetViewModel
     public Visibility DescriptionVisibility => string.IsNullOrWhiteSpace(DisplayDescription) ? Visibility.Collapsed : Visibility.Visible;
 
     public string BadgeText => Trust.BadgeText;
+    public Visibility BadgeVisibility => string.IsNullOrWhiteSpace(BadgeText) ? Visibility.Collapsed : Visibility.Visible;
     public bool HasWarning => !string.IsNullOrEmpty(Trust.WarningMessage);
     public string WarningMessage => Trust.WarningMessage;
     public Visibility WarningVisibility => HasWarning ? Visibility.Visible : Visibility.Collapsed;
@@ -1836,6 +1837,7 @@ public class StoreItemViewModel
     public string ActionButtonText { get; set; } = "Установить ⬇";
     public Brush ActionButtonBg { get; set; } = Brushes.Indigo;
     public string BadgeText { get; set; } = string.Empty;
+    public Visibility BadgeVisibility => string.IsNullOrWhiteSpace(BadgeText) ? Visibility.Collapsed : Visibility.Visible;
     public Brush BadgeBg { get; set; } = Brushes.DarkSlateBlue;
     public Brush BadgeFg { get; set; } = Brushes.LightSkyBlue;
 

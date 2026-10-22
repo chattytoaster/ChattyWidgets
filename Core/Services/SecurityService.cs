@@ -139,7 +139,7 @@ eERxo3Zh0OJyr+kP1Dn4FmSeLc/OBskAX/S1xR7P0jSaAVhoOAryJ1GYFwAEF9bN
         {
             info.Level = WidgetTrustLevel.VerifiedCommunity;
             info.DisplayAuthor = $"@{githubUser}";
-            info.BadgeText = $"✓ @{githubUser} (GitHub)";
+            info.BadgeText = string.Empty;
             info.BadgeBg = "#064E3B";
             info.BadgeFg = "#34D399";
             info.IsVerified = true;

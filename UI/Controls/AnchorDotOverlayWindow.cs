@@ -127,6 +127,9 @@ public class AnchorDotOverlayWindow : Window
         Loaded += (s, e) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
+            DesktopHostManager.MakeToolWindow(_hwnd, noActivate: true);
+            var source = HwndSource.FromHwnd(_hwnd);
+            source?.AddHook(WndProc);
             UpdatePositionDirect();
         };
 
@@ -189,5 +192,15 @@ public class AnchorDotOverlayWindow : Window
     {
         Left = _owner.Left + _owner.Width - Width;
         Top = _owner.Top;
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == Win32Native.WM_MOUSEACTIVATE)
+        {
+            handled = true;
+            return (IntPtr)Win32Native.MA_NOACTIVATE;
+        }
+        return IntPtr.Zero;
     }
 }

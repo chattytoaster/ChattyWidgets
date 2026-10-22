@@ -6,6 +6,8 @@ namespace ChattyWidgets;
 
 public partial class App : System.Windows.Application
 {
+    private static bool _isFirstInstance = false;
+
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int dwProcessId);
 
@@ -72,6 +74,7 @@ public partial class App : System.Windows.Application
             SingleInstanceService.ForceResetMutex(OnSecondInstanceArgsReceived);
         }
 
+        _isFirstInstance = true;
         Log("First instance confirmed, proceeding");
 
         // Register .chw file association in Windows Registry so double-clicking installs widgets
@@ -183,12 +186,18 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         Log($"OnExit called with code: {e.ApplicationExitCode}\nStack: {Environment.StackTrace}");
-        try
+        if (_isFirstInstance && WidgetManager.Instance.IsInitialized)
         {
-            WidgetManager.Instance.SaveSettings();
+            try
+            {
+                WidgetManager.Instance.SaveSettings();
+            }
+            catch (Exception ex)
+            {
+                Log($"SaveSettings on exit error: {ex}");
+            }
+            SingleInstanceService.Cleanup();
         }
-        catch { }
-        SingleInstanceService.Cleanup();
         base.OnExit(e);
     }
 

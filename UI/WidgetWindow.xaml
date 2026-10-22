@@ -8,6 +8,8 @@
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         Topmost="False"
+        ShowActivated="False"
+        Focusable="False"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
         AllowDrop="True"

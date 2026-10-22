@@ -344,6 +344,13 @@ public partial class WidgetWindow : Window
                 return (IntPtr)Win32Native.HTTRANSPARENT;
             }
         }
+        else if (uMsg == (uint)Win32Native.WM_MOUSEACTIVATE)
+        {
+            if (Settings.Layer == WidgetLayer.Desktop)
+            {
+                return (IntPtr)Win32Native.MA_NOACTIVATE;
+            }
+        }
         else if (uMsg == (uint)Win32Native.WM_RBUTTONUP)
         {
             if (Settings.IsClickThrough)
@@ -392,6 +399,14 @@ public partial class WidgetWindow : Window
             }
         }
 
+        else if (msg == Win32Native.WM_MOUSEACTIVATE)
+        {
+            if (Settings.Layer == WidgetLayer.Desktop)
+            {
+                handled = true;
+                return (IntPtr)Win32Native.MA_NOACTIVATE;
+            }
+        }
         else if (msg == Win32Native.WM_RBUTTONUP)
         {
             ShowWidgetContextMenu();
@@ -879,6 +894,10 @@ public partial class WidgetWindow : Window
                 _isDragMoving = false;
                 EnsureWidgetSize();
                 SnapToScreen();
+                if (Settings.Layer == WidgetLayer.Desktop && _hwnd != IntPtr.Zero)
+                {
+                    DesktopHostManager.ApplyLayer(_hwnd, WidgetLayer.Desktop);
+                }
             }
         }
     }
@@ -898,6 +917,10 @@ public partial class WidgetWindow : Window
                 _isDragMoving = false;
                 EnsureWidgetSize();
                 SnapToScreen();
+                if (Settings.Layer == WidgetLayer.Desktop && _hwnd != IntPtr.Zero)
+                {
+                    DesktopHostManager.ApplyLayer(_hwnd, WidgetLayer.Desktop);
+                }
                 e.Handled = true;
             }
         }
@@ -970,6 +993,10 @@ public partial class WidgetWindow : Window
                 _isDragMoving = false;
                 EnsureWidgetSize();
                 SnapToScreen();
+                if (Settings.Layer == WidgetLayer.Desktop && _hwnd != IntPtr.Zero)
+                {
+                    DesktopHostManager.ApplyLayer(_hwnd, WidgetLayer.Desktop);
+                }
             }
         });
     }
@@ -1823,7 +1850,7 @@ public partial class WidgetWindow : Window
     private void OnResize125Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.25);
     private void OnResize150Click(object sender, RoutedEventArgs e) => ApplyResizePreset(1.50);
 
-    private void ApplyResizePreset(double factor)
+    public void ApplyResizePreset(double factor)
     {
         double baseW = Manifest.DefaultWidth > 0 ? Manifest.DefaultWidth : 300;
         double baseH = Manifest.DefaultHeight > 0 ? Manifest.DefaultHeight : 200;
