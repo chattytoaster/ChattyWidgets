@@ -24,6 +24,7 @@ public partial class MainWindow : Window
 {
     private TrayIconManager? _trayIcon;
     private bool _isExplicitExit = false;
+    public bool IsExplicitExit { get => _isExplicitExit; set => _isExplicitExit = value; }
     private bool _isSuppressingSettingsEvents = false;
     private System.Drawing.Icon? _hIconBigHolder;
     private System.Drawing.Icon? _hIconSmallHolder;

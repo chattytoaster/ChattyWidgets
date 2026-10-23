@@ -336,7 +336,7 @@ if not errorlevel 1 (
 taskkill /f /im ChattyWidgets.exe >nul 2>&1
 timeout /t 1 /nobreak >nul
 
-start /wait """" ""%SETUP_EXE%"" --silent --update
+start /wait """" ""%SETUP_EXE%"" --silent --update --dir ""%TARGET_DIR%""
 
 start """" ""%EXE_PATH%""
 ";

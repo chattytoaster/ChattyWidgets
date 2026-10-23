@@ -7,6 +7,20 @@ using Microsoft.Win32;
 
 namespace ChattyWidgets.Setup.Services;
 
+public static class SetupLog
+{
+    public static void Write(string msg)
+    {
+        try
+        {
+            string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ChattyWidgets");
+            Directory.CreateDirectory(logDir);
+            File.AppendAllText(Path.Combine(logDir, "setup.log"), $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {msg}\r\n");
+        }
+        catch { }
+    }
+}
+
 public class InstallOptions
 {
     public string TargetDirectory { get; set; } = string.Empty;
@@ -32,6 +46,7 @@ public class InstallService
     private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
     public string Language { get; set; } = "ru";
+    public string? LastErrorMessage { get; private set; }
 
     private string Msg(string ru, string en) => Language == "ru" ? ru : en;
 
@@ -39,6 +54,7 @@ public class InstallService
 
     public async Task<bool> InstallAsync(InstallOptions options)
     {
+        LastErrorMessage = null;
         return await Task.Run(() =>
         {
             try
@@ -52,21 +68,66 @@ public class InstallService
                 string targetDir = options.TargetDirectory;
                 Directory.CreateDirectory(targetDir);
 
-                // 1. Locate source files or embedded payload
-                string? sourceDir = FindSourceDirectory();
+                // 1. Locate and deploy payload
                 ReportProgress(15, Msg("Копирование исполняемых файлов и библиотек...", "Copying application binaries and libraries..."));
 
-                if (sourceDir != null && Directory.Exists(sourceDir))
+                SetupLog.Write($"InstallAsync deploy started into: {targetDir}");
+                bool hasEmbedded = HasEmbeddedPayload();
+                var asm = Assembly.GetExecutingAssembly();
+                SetupLog.Write($"HasEmbeddedPayload: {hasEmbedded}, Assembly: {asm.FullName}, ManifestResources: {string.Join(", ", asm.GetManifestResourceNames())}");
+
+                bool deployed = false;
+
+                // Priority 1: Embedded payload in Setup assembly (the standard single-file installer)
+                if (HasEmbeddedPayload())
                 {
-                    CopyDirectoryWithProgress(sourceDir, targetDir, 15, 65);
+                    deployed = ExtractEmbeddedPayload(targetDir, 15, 65);
                 }
-                else
+
+                // Priority 2: External zip payload in installer directory (app.zip or ChattyWidgets-Update.zip)
+                if (!deployed)
                 {
-                    // Check if an embedded zip resource exists
-                    ExtractEmbeddedPayload(targetDir, 15, 65);
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string[] zipCandidates = new[]
+                    {
+                        Path.Combine(baseDir, "app.zip"),
+                        Path.Combine(baseDir, "ChattyWidgets-Update.zip"),
+                        Path.Combine(baseDir, "update.zip")
+                    };
+                    string? zipFile = zipCandidates.FirstOrDefault(File.Exists);
+                    if (zipFile != null)
+                    {
+                        deployed = ExtractZipFile(zipFile, targetDir, 15, 65);
+                    }
+                }
+
+                // Priority 3: Loose binaries from local project build directories (dev mode only)
+                if (!deployed)
+                {
+                    string? sourceDir = FindSourceDirectory(targetDir);
+                    if (sourceDir != null && Directory.Exists(sourceDir))
+                    {
+                        CopyDirectoryWithProgress(sourceDir, targetDir, 15, 65);
+                        deployed = true;
+                    }
+                }
+
+                if (!deployed)
+                {
+                    throw new FileNotFoundException(Msg(
+                        "Не удалось найти компоненты приложения для установки (архив app.zip или исполняемые файлы не найдены).",
+                        "Failed to locate application files for installation (app.zip archive or binaries not found)."
+                    ));
                 }
 
                 string targetExe = Path.Combine(targetDir, "ChattyWidgets.exe");
+                if (!File.Exists(targetExe))
+                {
+                    throw new FileNotFoundException(Msg(
+                        $"Исполняемый файл программы ChattyWidgets.exe не обнаружен в целевой папке: {targetDir}",
+                        $"Application executable ChattyWidgets.exe was not found in target folder: {targetDir}"
+                    ));
+                }
 
                 // 2. Register file associations (.chw and .chwp)
                 if (options.RegisterFileAssociations && File.Exists(targetExe))
@@ -79,7 +140,7 @@ public class InstallService
                 if (options.InstallAgentSkill)
                 {
                     ReportProgress(80, Msg("Установка скилла /chw для AI-ассистентов...", "Installing /chw skill for AI assistants..."));
-                    InstallAgentSkillFiles(sourceDir ?? targetDir);
+                    InstallAgentSkillFiles(targetDir);
                 }
 
                 // 4. Create Shortcuts (Desktop & Start Menu)
@@ -118,6 +179,7 @@ public class InstallService
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[InstallService] Error: {ex}");
+                LastErrorMessage = ex.Message;
                 ReportProgress(100, $"{Msg("Ошибка установки", "Installation error")}: {ex.Message}");
                 return false;
             }
@@ -206,20 +268,25 @@ public class InstallService
         ProgressChanged?.Invoke(percent, message);
     }
 
-    private string? FindSourceDirectory()
+    public static bool HasEmbeddedPayload()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        return assembly.GetManifestResourceNames()
+            .Any(r => r.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? FindSourceDirectory(string targetDir)
     {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string[] candidates = new[]
         {
             Path.Combine(baseDir, "app"),
-            Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Publish", "app"),
             Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Release", "net8.0-windows10.0.19041.0"),
-            Path.Combine(baseDir, "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0"),
+            Path.Combine(baseDir, "..", "..", "..", "bin", "Publish", "app"),
             Path.Combine(baseDir, "..", "..", "..", "bin", "Release", "net8.0-windows10.0.19041.0"),
-            Path.Combine(userHome, "Projects", "chattywidgets", "bin", "Debug", "net8.0-windows10.0.19041.0"),
-            Path.Combine(userHome, "Projects", "chattywidgets", "bin", "Release", "net8.0-windows10.0.19041.0"),
-            baseDir
+            Path.Combine(baseDir, "..", "..", "..", "bin", "Debug", "net8.0-windows10.0.19041.0")
         };
 
         foreach (var candidate in candidates)
@@ -227,6 +294,9 @@ public class InstallService
             try
             {
                 string full = Path.GetFullPath(candidate);
+                if (string.Equals(full.TrimEnd('\\', '/'), targetDir.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 if (File.Exists(Path.Combine(full, "ChattyWidgets.dll")) && File.Exists(Path.Combine(full, "ChattyWidgets.exe")))
                 {
                     return full;
@@ -241,7 +311,8 @@ public class InstallService
     private void CopyDirectoryWithProgress(string sourceDir, string targetDir, double startPercent, double endPercent)
     {
         var allFiles = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories)
-            .Where(f => !Path.GetFileName(f).Equals("ChattyWidgetsSetup.exe", StringComparison.OrdinalIgnoreCase))
+            .Where(f => !Path.GetFileName(f).Equals("ChattyWidgetsSetup.exe", StringComparison.OrdinalIgnoreCase) &&
+                        !Path.GetFileName(f).Equals("Uninstall.exe", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         int total = allFiles.Count;
@@ -254,47 +325,162 @@ public class InstallService
             string? parent = Path.GetDirectoryName(dest);
             if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
 
-            File.Copy(file, dest, true);
+            CopyFileWithRetry(file, dest);
 
             double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
             ReportProgress(pct, $"{Msg("Копирование", "Copying")}: {Path.GetFileName(file)}");
         }
     }
 
-    private void ExtractEmbeddedPayload(string targetDir, double startPercent, double endPercent)
+    private static void CopyFileWithRetry(string sourceFile, string destFile, int maxRetries = 10)
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        string resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(r => r.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
-
-        if (string.IsNullOrEmpty(resourceName))
-            return;
-
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null) return;
-
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
-        int total = archive.Entries.Count;
-
-        for (int i = 0; i < total; i++)
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var entry = archive.Entries[i];
-            string destPath = Path.Combine(targetDir, entry.FullName);
-
-            if (string.IsNullOrEmpty(entry.Name))
+            try
             {
-                Directory.CreateDirectory(destPath);
-                continue;
+                if (File.Exists(destFile))
+                {
+                    var attrs = File.GetAttributes(destFile);
+                    if (attrs.HasFlag(FileAttributes.ReadOnly))
+                    {
+                        File.SetAttributes(destFile, attrs & ~FileAttributes.ReadOnly);
+                    }
+                }
+
+                File.Copy(sourceFile, destFile, true);
+                return;
+            }
+            catch (IOException) when (attempt < maxRetries)
+            {
+                Thread.Sleep(200);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries)
+            {
+                Thread.Sleep(200);
+            }
+        }
+
+        File.Copy(sourceFile, destFile, true);
+    }
+
+    private bool ExtractEmbeddedPayload(string targetDir, double startPercent, double endPercent)
+    {
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            string resourceName = assembly.GetManifestResourceNames()
+                .FirstOrDefault(r => r.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+
+            if (string.IsNullOrEmpty(resourceName))
+                return false;
+
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null) return false;
+
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            int total = archive.Entries.Count;
+            if (total == 0) return false;
+
+            for (int i = 0; i < total; i++)
+            {
+                var entry = archive.Entries[i];
+                string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                string destPath = Path.Combine(targetDir, rel);
+
+                if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                {
+                    Directory.CreateDirectory(destPath);
+                    continue;
+                }
+
+                string? dir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+                ExtractEntryWithRetry(entry, destPath);
+
+                double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
+                ReportProgress(pct, $"{Msg("Извлечение", "Extracting")}: {entry.Name}");
             }
 
-            string? dir = Path.GetDirectoryName(destPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-            entry.ExtractToFile(destPath, true);
-
-            double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
-            ReportProgress(pct, $"{Msg("Извлечение", "Extracting")}: {entry.Name}");
+            return true;
         }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InstallService] ExtractEmbeddedPayload error: {ex}");
+            throw;
+        }
+    }
+
+    private bool ExtractZipFile(string zipPath, string targetDir, double startPercent, double endPercent)
+    {
+        try
+        {
+            if (!File.Exists(zipPath)) return false;
+
+            using var stream = File.OpenRead(zipPath);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            int total = archive.Entries.Count;
+            if (total == 0) return false;
+
+            for (int i = 0; i < total; i++)
+            {
+                var entry = archive.Entries[i];
+                string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                string destPath = Path.Combine(targetDir, rel);
+
+                if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                {
+                    Directory.CreateDirectory(destPath);
+                    continue;
+                }
+
+                string? dir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+                ExtractEntryWithRetry(entry, destPath);
+
+                double pct = startPercent + ((double)(i + 1) / total) * (endPercent - startPercent);
+                ReportProgress(pct, $"{Msg("Извлечение", "Extracting")}: {entry.Name}");
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InstallService] ExtractZipFile error: {ex}");
+            throw;
+        }
+    }
+
+    private static void ExtractEntryWithRetry(ZipArchiveEntry entry, string destPath, int maxRetries = 10)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                if (File.Exists(destPath))
+                {
+                    var attrs = File.GetAttributes(destPath);
+                    if (attrs.HasFlag(FileAttributes.ReadOnly))
+                    {
+                        File.SetAttributes(destPath, attrs & ~FileAttributes.ReadOnly);
+                    }
+                }
+
+                entry.ExtractToFile(destPath, true);
+                return;
+            }
+            catch (IOException) when (attempt < maxRetries)
+            {
+                Thread.Sleep(200);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries)
+            {
+                Thread.Sleep(200);
+            }
+        }
+
+        entry.ExtractToFile(destPath, true);
     }
 
     public static void CreateShortcut(string shortcutPath, string targetPath, string workingDir, string description)
@@ -469,8 +655,22 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\ChattyWidgets");
             if (key != null)
             {
+                string version = "1.0.2";
+                if (File.Exists(targetExe))
+                {
+                    try
+                    {
+                        var vi = FileVersionInfo.GetVersionInfo(targetExe);
+                        if (!string.IsNullOrWhiteSpace(vi.FileVersion))
+                            version = vi.FileVersion;
+                        else if (!string.IsNullOrWhiteSpace(vi.ProductVersion))
+                            version = vi.ProductVersion;
+                    }
+                    catch { }
+                }
+
                 key.SetValue("DisplayName", "ChattyWidgets");
-                key.SetValue("DisplayVersion", "1.0.2");
+                key.SetValue("DisplayVersion", version);
                 key.SetValue("Publisher", "ChattyApps");
                 key.SetValue("DisplayIcon", $"{targetExe},0");
                 key.SetValue("InstallLocation", targetDir);
@@ -509,7 +709,17 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
             if (running.Count == 0) return;
 
-            // 1. Send graceful close first so running instances can save settings and state
+            // 0. Send graceful shutdown command via SingleInstance named pipe
+            try
+            {
+                using var client = new System.IO.Pipes.NamedPipeClientStream(".", "ChattyWidgets_SingleInstance_Pipe", System.IO.Pipes.PipeDirection.Out);
+                client.Connect(350);
+                using var writer = new StreamWriter(client) { AutoFlush = true };
+                writer.WriteLine("--shutdown");
+            }
+            catch { }
+
+            // 1. Send graceful close to main windows
             foreach (var proc in running)
             {
                 try
@@ -519,8 +729,8 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                 catch { }
             }
 
-            // Wait up to 2 seconds for graceful exit
-            for (int i = 0; i < 20; i++)
+            // Wait up to 1.5 seconds for graceful exit
+            for (int i = 0; i < 15; i++)
             {
                 Thread.Sleep(100);
                 if (!Process.GetProcessesByName("ChattyWidgets").Any(p => p.Id != currentPid))
@@ -538,6 +748,8 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                 }
                 catch { }
             }
+
+            Thread.Sleep(250);
         }
         catch { }
     }

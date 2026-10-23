@@ -167,7 +167,14 @@ public class TrayIconManager : IDisposable
         exitItem.Click += (s, e) =>
         {
             _notifyIcon.Visible = false;
-            System.Windows.Application.Current.Shutdown();
+            System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                if (System.Windows.Application.Current.MainWindow is MainWindow mw)
+                {
+                    mw.IsExplicitExit = true;
+                }
+                System.Windows.Application.Current.Shutdown();
+            });
         };
         menu.Items.Add(exitItem);
 

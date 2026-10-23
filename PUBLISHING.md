@@ -44,20 +44,27 @@ dotnet test
 dotnet run -- --test
 ```
 
-### 2. Сборка установщика ChattyWidgetsSetup.exe
-Для подготовки полноценного инсталлятора с графическим интерфейсом и встроенным дистрибутивом:
+### 2. Сборка установщика ChattyWidgetsSetup.exe и пакета обновления
+Для автоматической сборки инсталлятора со встроенным дистрибутивом и OTA-пакета `ChattyWidgets-Update.zip`:
+```powershell
+./scripts/build-setup.ps1
+```
+
+Либо вручную по шагам:
 ```powershell
 # 1. Публикация основного приложения
 dotnet publish ChattyWidgets.csproj -c Release -o bin/Publish/app
 
 # 2. Создание архива полезной нагрузки
 Compress-Archive -Path bin/Publish/app/* -DestinationPath Setup/app.zip -Force
+Copy-Item Setup/app.zip bin/Publish/setup/ChattyWidgets-Update.zip -Force
 
 # 3. Сборка исполняемого файла инсталлятора
 dotnet publish Setup/ChattyWidgets.Setup.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o bin/Publish/setup
 ```
-Итоговый автономный файл установщика:
-`bin/Publish/setup/ChattyWidgetsSetup.exe`
+Итоговые файлы для релиза:
+- `bin/Publish/setup/ChattyWidgetsSetup.exe` (автономный установщик)
+- `bin/Publish/setup/ChattyWidgets-Update.zip` (пакет быстрого обновления внутри приложения)
 
 ### 3. Создание релиза на GitHub
 1. Перейдите в репозиторий: `https://github.com/chattytoaster/ChattyWidgets/releases`.

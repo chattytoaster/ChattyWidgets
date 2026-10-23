@@ -131,6 +131,35 @@ public partial class App : System.Windows.Application
             try
             {
                 var lines = rawArgs.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                if (lines.Any(l => l.Trim().Equals("--shutdown", StringComparison.OrdinalIgnoreCase) ||
+                                  l.Trim().Equals("--exit", StringComparison.OrdinalIgnoreCase)))
+                {
+                    Log("Received --shutdown signal from installer/updater. Saving state and exiting gracefully.");
+                    try
+                    {
+                        foreach (var w in WidgetManager.Instance.GetActiveWindows())
+                        {
+                            if (w.WindowState == WindowState.Normal)
+                            {
+                                w.Settings.Left = w.Left;
+                                w.Settings.Top = w.Top;
+                                w.Settings.Width = w.Width;
+                                w.Settings.Height = w.Height;
+                            }
+                        }
+                        WidgetManager.Instance.SaveSettings();
+                    }
+                    catch { }
+
+                    if (MainWindow is MainWindow mw)
+                    {
+                        mw.IsExplicitExit = true;
+                    }
+                    Shutdown(0);
+                    return;
+                }
+
                 foreach (var line in lines)
                 {
                     string path = line.Trim().Trim('"');

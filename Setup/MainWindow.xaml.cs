@@ -14,12 +14,14 @@ public partial class MainWindow : Window
     private UninstallOptions? _uninstallOptions;
     private string _currentLang = "ru";
     private readonly bool _isUninstallMode = false;
+    private readonly bool _isUpdateMode = false;
 
     public MainWindow()
     {
         InitializeComponent();
 
         string[] args = Environment.GetCommandLineArgs();
+        SetupLog.Write($"Setup started. args: {string.Join(" ", args)}");
         _isUninstallMode = args.Any(a =>
             a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase) ||
@@ -34,12 +36,27 @@ public partial class MainWindow : Window
             a.Equals("--update", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("/update", StringComparison.OrdinalIgnoreCase));
 
-        string defaultPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programs",
-            "ChattyWidgets"
-        );
-        InputTargetDir.Text = defaultPath;
+        string? customTargetDir = null;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i].Equals("--dir", StringComparison.OrdinalIgnoreCase) ||
+                args[i].Equals("-d", StringComparison.OrdinalIgnoreCase) ||
+                args[i].Equals("/dir", StringComparison.OrdinalIgnoreCase))
+            {
+                customTargetDir = args[i + 1].Trim('"');
+                break;
+            }
+        }
+
+        string installedDir = InstallService.GetInstalledDirectory();
+        string targetDir = !string.IsNullOrEmpty(customTargetDir)
+            ? customTargetDir
+            : (File.Exists(Path.Combine(installedDir, "ChattyWidgets.exe"))
+                ? installedDir
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "ChattyWidgets"));
+
+        _isUpdateMode = File.Exists(Path.Combine(targetDir, "ChattyWidgets.exe")) && !_isUninstallMode;
+        InputTargetDir.Text = targetDir;
 
         // Auto-detect system language
         string sysLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
@@ -58,7 +75,9 @@ public partial class MainWindow : Window
 
         if (!_isUninstallMode && isSilent)
         {
-            string targetDir = InstallService.GetInstalledDirectory();
+            SetupLog.Write($"Entering silent install mode for target: {targetDir}");
+            Visibility = Visibility.Hidden;
+            ShowInTaskbar = false;
             var silentOpts = new InstallOptions
             {
                 TargetDirectory = targetDir,
@@ -68,20 +87,33 @@ public partial class MainWindow : Window
                 RegisterFileAssociations = true,
                 InstallAgentSkill = true,
                 OpenWebsite = false,
-                LaunchAppAfterInstall = true
+                LaunchAppAfterInstall = false
             };
             Task.Run(async () =>
             {
-                await _installService.InstallAsync(silentOpts);
-                _installService.FinalizeInstall(silentOpts);
-                Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
+                try
+                {
+                    bool ok = await _installService.InstallAsync(silentOpts);
+                    SetupLog.Write($"Silent install completed. Success: {ok}");
+                    if (ok)
+                    {
+                        _installService.FinalizeInstall(silentOpts);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SetupLog.Write($"Silent install exception: {ex}");
+                }
+                finally
+                {
+                    Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
+                }
             });
             return;
         }
 
         if (_isUninstallMode)
         {
-            string installedDir = InstallService.GetInstalledDirectory();
             TxtUninstallPath.Text = installedDir;
 
             if (isSilent)
@@ -128,12 +160,44 @@ public partial class MainWindow : Window
             BtnLangEn.Background = inactiveBg;
             BtnLangEn.Foreground = inactiveFg;
 
-            Title = "Установка ChattyWidgets";
-            TxtAppTitle.Text = "ChattyWidgets Setup";
-            TxtHeaderTitle.Text = "Установка ChattyWidgets";
-            TxtHeaderSubtitle.Text = "Платформа ультра-легковесных нативных виджетов для рабочего стола Windows";
+            if (_isUpdateMode)
+            {
+                Title = "Обновление ChattyWidgets";
+                TxtAppTitle.Text = "ChattyWidgets Update";
+                TxtHeaderTitle.Text = "Обновление ChattyWidgets";
+                TxtHeaderSubtitle.Text = "Обновление исполняемых файлов и библиотек приложения до новой версии";
+                TxtFolderLabel.Text = "📁 Папка установленной программы:";
+                BtnStartInstall.Content = "✨ Обновить";
+                CheckOpenWebsite.IsChecked = false;
+                TxtProgressTitle.Text = "Обновление компонентов ChattyWidgets";
+                TxtProgressSubtitle.Text = "Пожалуйста, подождите, выполняется распаковка и обновление компонентов...";
+                TxtProgressFooter.Text = "Обновление исполняемых файлов, библиотек и AI-скилла...";
+                TxtFinishedTitle.Text = "Обновление успешно завершено!";
+                TxtFinishedSubtitle.Text = "ChattyWidgets успешно обновлен и готов к работе.";
+                TxtFinishResultsHeader.Text = "Результаты обновления:";
+                TxtFinishAssoc.Text = "Ассоциации пакетов .chw и .chwp обновлены";
+                TxtFinishSkillText.Text = "Скилл /chw обновлен в ~/.agents/skills/chw для всех AI-ассистентов";
+                BtnFinish.Content = "🚀 Запустить обновленный ChattyWidgets";
+            }
+            else
+            {
+                Title = "Установка ChattyWidgets";
+                TxtAppTitle.Text = "ChattyWidgets Setup";
+                TxtHeaderTitle.Text = "Установка ChattyWidgets";
+                TxtHeaderSubtitle.Text = "Платформа ультра-легковесных нативных виджетов для рабочего стола Windows";
+                TxtFolderLabel.Text = "📁 Папка для установки:";
+                BtnStartInstall.Content = "✨ Установить";
+                TxtProgressTitle.Text = "Установка компонентов ChattyWidgets";
+                TxtProgressSubtitle.Text = "Пожалуйста, подождите, выполняется распаковка и настройка системы...";
+                TxtProgressFooter.Text = "Интеграция с оболочкой Windows, регистрация протоколов и настройка скилла...";
+                TxtFinishedTitle.Text = "Установка успешно завершена!";
+                TxtFinishedSubtitle.Text = "ChattyWidgets и все выбранные компоненты настроены и готовы к работе.";
+                TxtFinishResultsHeader.Text = "Результаты установки:";
+                TxtFinishAssoc.Text = "Ассоциации пакетов .chw и .chwp зарегистрированы в реестре";
+                TxtFinishSkillText.Text = "Скилл /chw активирован в ~/.agents/skills/chw для всех AI-ассистентов";
+                BtnFinish.Content = "🚀 Завершить и запустить";
+            }
 
-            TxtFolderLabel.Text = "📁 Папка для установки:";
             BtnBrowseFolder.Content = "Обзор...";
 
             TxtOptionsLabel.Text = "⚙️ Параметры и интеграции:";
@@ -151,19 +215,6 @@ public partial class MainWindow : Window
             CheckLaunchApp.Content = "Запустить ChattyWidgets сразу после установки";
 
             BtnCancel.Content = "Отмена";
-            BtnStartInstall.Content = "✨ Установить";
-
-            TxtProgressTitle.Text = "Установка компонентов ChattyWidgets";
-            TxtProgressSubtitle.Text = "Пожалуйста, подождите, выполняется распаковка и настройка системы...";
-            TxtProgressFooter.Text = "Интеграция с оболочкой Windows, регистрация протоколов и настройка скилла...";
-
-            TxtFinishedTitle.Text = "Установка успешно завершена!";
-            TxtFinishedSubtitle.Text = "ChattyWidgets и все выбранные компоненты настроены и готовы к работе.";
-            TxtFinishResultsHeader.Text = "Результаты установки:";
-            TxtFinishAssoc.Text = "Ассоциации пакетов .chw и .chwp зарегистрированы в реестре";
-            TxtFinishSkillText.Text = "Скилл /chw активирован в ~/.agents/skills/chw для всех AI-ассистентов";
-            TxtFinishWebsiteText.Text = "Будет открыт официальный сайт https://chattyapps.dev";
-            BtnFinish.Content = "🚀 Завершить и запустить";
 
             if (_options != null)
             {
@@ -199,12 +250,44 @@ public partial class MainWindow : Window
             BtnLangEn.Background = activeBg;
             BtnLangEn.Foreground = activeFg;
 
-            Title = "ChattyWidgets Setup";
-            TxtAppTitle.Text = "ChattyWidgets Setup";
-            TxtHeaderTitle.Text = "ChattyWidgets Setup";
-            TxtHeaderSubtitle.Text = "Ultra-lightweight native glassmorphic desktop widget engine for Windows";
+            if (_isUpdateMode)
+            {
+                Title = "ChattyWidgets Update";
+                TxtAppTitle.Text = "ChattyWidgets Update";
+                TxtHeaderTitle.Text = "Update ChattyWidgets";
+                TxtHeaderSubtitle.Text = "Updating application binaries and libraries to the latest version";
+                TxtFolderLabel.Text = "📁 Installed application directory:";
+                BtnStartInstall.Content = "✨ Update";
+                CheckOpenWebsite.IsChecked = false;
+                TxtProgressTitle.Text = "Updating ChattyWidgets Components";
+                TxtProgressSubtitle.Text = "Please wait while files and components are being updated...";
+                TxtProgressFooter.Text = "Updating binaries, libraries, and AI assistant skill...";
+                TxtFinishedTitle.Text = "Update Completed Successfully!";
+                TxtFinishedSubtitle.Text = "ChattyWidgets has been successfully updated and is ready to use.";
+                TxtFinishResultsHeader.Text = "Update summary:";
+                TxtFinishAssoc.Text = ".chw and .chwp file associations updated";
+                TxtFinishSkillText.Text = "/chw skill updated in ~/.agents/skills/chw for all AI agents";
+                BtnFinish.Content = "🚀 Launch Updated ChattyWidgets";
+            }
+            else
+            {
+                Title = "ChattyWidgets Setup";
+                TxtAppTitle.Text = "ChattyWidgets Setup";
+                TxtHeaderTitle.Text = "ChattyWidgets Setup";
+                TxtHeaderSubtitle.Text = "Ultra-lightweight native glassmorphic desktop widget engine for Windows";
+                TxtFolderLabel.Text = "📁 Installation directory:";
+                BtnStartInstall.Content = "✨ Install";
+                TxtProgressTitle.Text = "Installing ChattyWidgets Components";
+                TxtProgressSubtitle.Text = "Please wait while files are being unpacked and configured...";
+                TxtProgressFooter.Text = "Windows shell integration, file associations, and agent skill setup...";
+                TxtFinishedTitle.Text = "Installation Completed Successfully!";
+                TxtFinishedSubtitle.Text = "ChattyWidgets and all selected components are ready to use.";
+                TxtFinishResultsHeader.Text = "Installation summary:";
+                TxtFinishAssoc.Text = ".chw and .chwp file associations registered in Windows";
+                TxtFinishSkillText.Text = "/chw skill activated in ~/.agents/skills/chw for all AI agents";
+                BtnFinish.Content = "🚀 Finish & Launch";
+            }
 
-            TxtFolderLabel.Text = "📁 Installation directory:";
             BtnBrowseFolder.Content = "Browse...";
 
             TxtOptionsLabel.Text = "⚙️ Setup options and integrations:";
@@ -222,19 +305,6 @@ public partial class MainWindow : Window
             CheckLaunchApp.Content = "Launch ChattyWidgets immediately after installation";
 
             BtnCancel.Content = "Cancel";
-            BtnStartInstall.Content = "✨ Install";
-
-            TxtProgressTitle.Text = "Installing ChattyWidgets Components";
-            TxtProgressSubtitle.Text = "Please wait while files are being unpacked and configured...";
-            TxtProgressFooter.Text = "Windows shell integration, file associations, and agent skill setup...";
-
-            TxtFinishedTitle.Text = "Installation Completed Successfully!";
-            TxtFinishedSubtitle.Text = "ChattyWidgets and all selected components are ready to use.";
-            TxtFinishResultsHeader.Text = "Installation summary:";
-            TxtFinishAssoc.Text = ".chw and .chwp file associations registered in Windows";
-            TxtFinishSkillText.Text = "/chw skill activated in ~/.agents/skills/chw for all AI agents";
-            TxtFinishWebsiteText.Text = "Opening official website https://chattyapps.dev";
-            BtnFinish.Content = "🚀 Finish & Launch";
 
             if (_options != null)
             {
@@ -329,16 +399,62 @@ public partial class MainWindow : Window
 
         bool success = await _installService.InstallAsync(_options);
 
-        // Switch to finished view
+        // Switch to finished or error view
         ViewProgress.Visibility = Visibility.Collapsed;
         ViewFinished.Visibility = Visibility.Visible;
 
-        TxtFinishPath.Text = _currentLang == "ru"
-            ? $"Программа установлена в: {_options.TargetDirectory}"
-            : $"Application installed to: {_options.TargetDirectory}";
+        if (success)
+        {
+            BorderFinishedIcon.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#064E3B"));
+            BorderFinishedIcon.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#10B981"));
+            ShadowFinishedIcon.Color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#10B981");
+            TxtFinishedIcon.Text = "✓";
+            TxtFinishedIcon.Foreground = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#34D399"));
 
-        ItemFinishSkill.Visibility = _options.InstallAgentSkill ? Visibility.Visible : Visibility.Collapsed;
-        ItemFinishWebsite.Visibility = _options.OpenWebsite ? Visibility.Visible : Visibility.Collapsed;
+            TxtFinishedTitle.Text = _isUpdateMode
+                ? (_currentLang == "ru" ? "Обновление успешно завершено!" : "Update Completed Successfully!")
+                : (_currentLang == "ru" ? "Установка успешно завершена!" : "Installation Completed Successfully!");
+
+            TxtFinishedSubtitle.Text = _isUpdateMode
+                ? (_currentLang == "ru" ? "ChattyWidgets успешно обновлен и готов к работе." : "ChattyWidgets has been updated and is ready to use.")
+                : (_currentLang == "ru" ? "ChattyWidgets и все выбранные компоненты настроены и готовы к работе." : "ChattyWidgets and all selected components are ready to use.");
+
+            TxtFinishResultsHeader.Text = _currentLang == "ru" ? "Результаты:" : "Results:";
+            TxtFinishPath.Text = _currentLang == "ru"
+                ? $"Папка программы: {_options.TargetDirectory}"
+                : $"Application folder: {_options.TargetDirectory}";
+
+            TxtFinishAssoc.Visibility = Visibility.Visible;
+            ItemFinishSkill.Visibility = _options.InstallAgentSkill ? Visibility.Visible : Visibility.Collapsed;
+            ItemFinishWebsite.Visibility = _options.OpenWebsite ? Visibility.Visible : Visibility.Collapsed;
+
+            BtnFinish.Content = _isUpdateMode
+                ? (_currentLang == "ru" ? "🚀 Запустить ChattyWidgets" : "🚀 Launch ChattyWidgets")
+                : (_currentLang == "ru" ? "🚀 Завершить и запустить" : "🚀 Finish & Launch");
+        }
+        else
+        {
+            BorderFinishedIcon.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#450A0A"));
+            BorderFinishedIcon.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#EF4444"));
+            ShadowFinishedIcon.Color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#EF4444");
+            TxtFinishedIcon.Text = "✕";
+            TxtFinishedIcon.Foreground = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F87171"));
+
+            TxtFinishedTitle.Text = _currentLang == "ru" ? "Ошибка установки / обновления" : "Installation / Update Error";
+            TxtFinishedSubtitle.Text = _installService.LastErrorMessage ?? (_currentLang == "ru"
+                ? "Произошла ошибка при распаковке файлов программы."
+                : "An error occurred while deploying application files.");
+
+            TxtFinishResultsHeader.Text = _currentLang == "ru" ? "Сведения об ошибке:" : "Error details:";
+            TxtFinishPath.Text = _installService.LastErrorMessage ?? (_currentLang == "ru" ? "Не удалось завершить установку." : "Failed to finish installation.");
+            TxtFinishAssoc.Visibility = Visibility.Collapsed;
+            ItemFinishSkill.Visibility = Visibility.Collapsed;
+            ItemFinishWebsite.Visibility = Visibility.Collapsed;
+
+            BtnFinish.Content = _currentLang == "ru" ? "Закрыть" : "Close";
+            _options.LaunchAppAfterInstall = false;
+            _options.OpenWebsite = false;
+        }
     }
 
     private void OnFinishClick(object sender, RoutedEventArgs e)
