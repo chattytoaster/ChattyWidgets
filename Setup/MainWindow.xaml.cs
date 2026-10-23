@@ -30,7 +30,9 @@ public partial class MainWindow : Window
             a.Equals("--silent", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("/silent", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("-s", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("/s", StringComparison.OrdinalIgnoreCase));
+            a.Equals("/s", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--update", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/update", StringComparison.OrdinalIgnoreCase));
 
         string defaultPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -53,6 +55,29 @@ public partial class MainWindow : Window
                 TxtCurrentAction.Text = action;
             });
         };
+
+        if (!_isUninstallMode && isSilent)
+        {
+            string targetDir = InstallService.GetInstalledDirectory();
+            var silentOpts = new InstallOptions
+            {
+                TargetDirectory = targetDir,
+                CreateDesktopShortcut = true,
+                CreateStartMenuShortcut = true,
+                StartWithWindows = true,
+                RegisterFileAssociations = true,
+                InstallAgentSkill = true,
+                OpenWebsite = false,
+                LaunchAppAfterInstall = true
+            };
+            Task.Run(async () =>
+            {
+                await _installService.InstallAsync(silentOpts);
+                _installService.FinalizeInstall(silentOpts);
+                Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
+            });
+            return;
+        }
 
         if (_isUninstallMode)
         {

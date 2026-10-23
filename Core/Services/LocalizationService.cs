@@ -262,16 +262,21 @@ public class LocalizationService
         Add("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)", "➕ Import Widget (.chw)");
         Add("Hub.OpenAppDataBtn", "Открыть папку данных (%LocalAppData%)", "Open Data Folder (%LocalAppData%)");
         Add("Hub.AboutTitle", "О движке ChattyWidgets", "About ChattyWidgets Engine");
-        Add("Hub.AboutVersion", "Версия: 1.0.1 (.NET 8.0 Windows x64)", "Version: 1.0.1 (.NET 8.0 Windows x64)");
+        Add("Hub.AboutVersion", "Версия: 1.0.2 (.NET 8.0 Windows x64)", "Version: 1.0.2 (.NET 8.0 Windows x64)");
         Add("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.", "Engine optimized for 24/7 background operation: native widgets produce 0% CPU overhead and consume minimal memory.");
         Add("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!", "A new version of ChattyWidgets is available!");
+        Add("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху", "⚡ Update In-App (OTA)");
+        Add("Hub.RestartApplyBtn", "🔄 Перезапустить и применить", "🔄 Restart & Apply");
+        Add("Hub.DownloadSetupBtn", "💾 Скачать .exe", "💾 Download .exe");
+        Add("Hub.DownloadingUpdate", "Загрузка обновления...", "Downloading update...");
+        Add("Hub.UpdateReadyToApply", "Обновление готово к установке!", "Update ready to install!");
         Add("Hub.DownloadUpdate", "🚀 Скачать обновление", "🚀 Download Update");
         Add("Hub.ViewReleaseNotes", "📋 Что нового?", "📋 What's new?");
-        Add("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.", "Click 'Download Update' to download the installer.");
+        Add("Hub.UpdateFoundSub", "Обновление по воздуху скачивается и применяется автоматически без запуска стороннего сетапа.", "In-app update downloads and applies automatically without running setup wizards.");
         Add("Hub.CheckUpdates", "🔄 Проверить обновления", "🔄 Check for Updates");
         Add("Hub.CheckingUpdates", "Проверка обновлений...", "Checking for updates...");
         Add("Hub.LatestVersion", "У вас установлена последняя актуальная версия ✓", "You have the latest version installed ✓");
-        Add("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку «Скачать обновление».", "New version {0} is available! Click 'Download Update'.");
+        Add("Hub.UpdateFound", "Доступна новая версия {0}!", "New version {0} is available!");
 
         // Settings Dialog generic
         Add("Settings.WindowTitle", "Настройки виджета", "Widget Settings");

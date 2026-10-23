@@ -145,6 +145,72 @@ public partial class MainWindow : Window
 
         _ = CheckForUpdatesSilentlyAsync();
 
+        UpdateService.Instance.OtaProgressChanged += (pct, status) => Dispatcher.Invoke(() =>
+        {
+            if (ProgressOtaBanner != null)
+            {
+                ProgressOtaBanner.Visibility = Visibility.Visible;
+                ProgressOtaBanner.Value = pct;
+            }
+            if (TxtOtaStatusBanner != null)
+            {
+                TxtOtaStatusBanner.Visibility = Visibility.Visible;
+                TxtOtaStatusBanner.Foreground = (Brush)new BrushConverter().ConvertFrom("#94A3B8")!;
+                TxtOtaStatusBanner.Text = status;
+            }
+            if (PanelOtaProgressSettings != null)
+            {
+                PanelOtaProgressSettings.Visibility = Visibility.Visible;
+                ProgressOtaSettings.Value = pct;
+                TxtOtaStatusSettings.Foreground = (Brush)new BrushConverter().ConvertFrom("#38BDF8")!;
+                TxtOtaStatusSettings.Text = status;
+            }
+        });
+
+        UpdateService.Instance.OtaUpdateReady += () => Dispatcher.Invoke(() =>
+        {
+            if (BtnOtaUpdateBanner != null) BtnOtaUpdateBanner.Visibility = Visibility.Collapsed;
+            if (BtnRestartBanner != null) BtnRestartBanner.Visibility = Visibility.Visible;
+            if (BtnOtaUpdateSettingsCard != null) BtnOtaUpdateSettingsCard.Visibility = Visibility.Collapsed;
+            if (BtnRestartSettingsCard != null) BtnRestartSettingsCard.Visibility = Visibility.Visible;
+            if (BtnDownloadUpdateSettings != null)
+            {
+                BtnDownloadUpdateSettings.Content = LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить");
+                BtnDownloadUpdateSettings.Background = (Brush)new BrushConverter().ConvertFrom("#10B981")!;
+            }
+
+            string readyMsg = LocalizationService.Instance.T("Hub.UpdateReadyToApply", "Обновление готово к установке!");
+            if (TxtOtaStatusBanner != null)
+            {
+                TxtOtaStatusBanner.Text = readyMsg;
+                TxtOtaStatusBanner.Foreground = (Brush)new BrushConverter().ConvertFrom("#34D399")!;
+            }
+            if (TxtOtaStatusSettings != null)
+            {
+                TxtOtaStatusSettings.Text = readyMsg;
+                TxtOtaStatusSettings.Foreground = (Brush)new BrushConverter().ConvertFrom("#34D399")!;
+            }
+        });
+
+        UpdateService.Instance.OtaUpdateFailed += (errMsg) => Dispatcher.Invoke(() =>
+        {
+            if (BtnOtaUpdateBanner != null) BtnOtaUpdateBanner.IsEnabled = true;
+            if (BtnOtaUpdateSettingsCard != null) BtnOtaUpdateSettingsCard.IsEnabled = true;
+            if (BtnDownloadUpdateSettings != null) BtnDownloadUpdateSettings.IsEnabled = true;
+
+            if (TxtOtaStatusBanner != null)
+            {
+                TxtOtaStatusBanner.Visibility = Visibility.Visible;
+                TxtOtaStatusBanner.Text = errMsg;
+                TxtOtaStatusBanner.Foreground = (Brush)new BrushConverter().ConvertFrom("#EF4444")!;
+            }
+            if (TxtOtaStatusSettings != null)
+            {
+                TxtOtaStatusSettings.Text = errMsg;
+                TxtOtaStatusSettings.Foreground = (Brush)new BrushConverter().ConvertFrom("#EF4444")!;
+            }
+        });
+
         ApplyTheme(WidgetManager.Instance.Settings.Theme);
         LocalizationService.Instance.Initialize(WidgetManager.Instance.Settings.Language);
         LocalizationService.Instance.LanguageChanged += () => Dispatcher.Invoke(() => ApplyLanguage(LocalizationService.Instance.CurrentLanguage));
@@ -1356,7 +1422,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
     private void ShowUpdateBanner(GitHubReleaseInfo release)
     {
         bool isRu = LocalizationService.Instance.IsRussian;
-        string tag = !string.IsNullOrWhiteSpace(release.TagName) ? release.TagName : "v1.0.1";
+        string tag = !string.IsNullOrWhiteSpace(release.TagName) ? release.TagName : "v1.0.2";
 
         if (TxtUpdateTag != null) TxtUpdateTag.Text = tag;
         if (TxtUpdateNotice != null)
@@ -1366,16 +1432,34 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                 : "A new version of ChattyWidgets is available!";
         }
         if (BannerNewUpdate != null) BannerNewUpdate.Visibility = Visibility.Visible;
+
+        // Banner OTA buttons
+        if (BtnOtaUpdateBanner != null)
+        {
+            BtnOtaUpdateBanner.Content = $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
+            BtnOtaUpdateBanner.Visibility = UpdateService.Instance.IsUpdateReadyToApply ? Visibility.Collapsed : Visibility.Visible;
+        }
+        if (BtnRestartBanner != null)
+        {
+            BtnRestartBanner.Content = LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить");
+            BtnRestartBanner.Visibility = UpdateService.Instance.IsUpdateReadyToApply ? Visibility.Visible : Visibility.Collapsed;
+        }
         if (BtnDownloadUpdate != null)
         {
-            BtnDownloadUpdate.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+            BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadSetupBtn", "💾 Скачать .exe");
         }
 
         // Settings tab controls
         if (BtnDownloadUpdateSettings != null)
         {
             BtnDownloadUpdateSettings.Visibility = Visibility.Visible;
-            BtnDownloadUpdateSettings.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+            BtnDownloadUpdateSettings.Content = UpdateService.Instance.IsUpdateReadyToApply
+                ? LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить")
+                : $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
+            if (UpdateService.Instance.IsUpdateReadyToApply)
+            {
+                BtnDownloadUpdateSettings.Background = (Brush)new BrushConverter().ConvertFrom("#10B981")!;
+            }
         }
         if (PanelUpdateFoundSettings != null)
         {
@@ -1387,11 +1471,21 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         }
         if (TxtUpdateFoundSub != null)
         {
-            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.");
+            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Обновление по воздуху скачивается и применяется автоматически без запуска стороннего сетапа.");
+        }
+        if (BtnOtaUpdateSettingsCard != null)
+        {
+            BtnOtaUpdateSettingsCard.Content = $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
+            BtnOtaUpdateSettingsCard.Visibility = UpdateService.Instance.IsUpdateReadyToApply ? Visibility.Collapsed : Visibility.Visible;
+        }
+        if (BtnRestartSettingsCard != null)
+        {
+            BtnRestartSettingsCard.Content = LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить");
+            BtnRestartSettingsCard.Visibility = UpdateService.Instance.IsUpdateReadyToApply ? Visibility.Visible : Visibility.Collapsed;
         }
         if (BtnDownloadUpdateCard != null)
         {
-            BtnDownloadUpdateCard.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+            BtnDownloadUpdateCard.Content = LocalizationService.Instance.T("Hub.DownloadSetupBtn", "💾 Скачать .exe");
         }
         if (BtnViewReleaseNotes != null)
         {
@@ -1404,6 +1498,58 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                 ? $"Доступна новая версия: {tag}"
                 : $"New version available: {tag}";
         }
+    }
+
+    private async void OnOtaUpdateClick(object sender, RoutedEventArgs e)
+    {
+        if (UpdateService.Instance.IsUpdateReadyToApply)
+        {
+            UpdateService.Instance.RestartAndApplyUpdate();
+            return;
+        }
+
+        var release = UpdateService.Instance.LatestRelease;
+        if (release == null)
+        {
+            release = await UpdateService.Instance.CheckForUpdatesAsync();
+        }
+        if (release == null) return;
+
+        if (BtnOtaUpdateBanner != null) BtnOtaUpdateBanner.IsEnabled = false;
+        if (BtnOtaUpdateSettingsCard != null) BtnOtaUpdateSettingsCard.IsEnabled = false;
+        if (BtnDownloadUpdateSettings != null) BtnDownloadUpdateSettings.IsEnabled = false;
+
+        if (ProgressOtaBanner != null)
+        {
+            ProgressOtaBanner.Visibility = Visibility.Visible;
+            ProgressOtaBanner.Value = 0;
+        }
+        if (TxtOtaStatusBanner != null)
+        {
+            TxtOtaStatusBanner.Visibility = Visibility.Visible;
+            TxtOtaStatusBanner.Foreground = (Brush)new BrushConverter().ConvertFrom("#94A3B8")!;
+            TxtOtaStatusBanner.Text = LocalizationService.Instance.T("Hub.DownloadingUpdate", "Загрузка обновления...");
+        }
+        if (PanelOtaProgressSettings != null)
+        {
+            PanelOtaProgressSettings.Visibility = Visibility.Visible;
+            ProgressOtaSettings.Value = 0;
+            TxtOtaStatusSettings.Foreground = (Brush)new BrushConverter().ConvertFrom("#38BDF8")!;
+            TxtOtaStatusSettings.Text = LocalizationService.Instance.T("Hub.DownloadingUpdate", "Загрузка обновления...");
+        }
+
+        bool success = await UpdateService.Instance.DownloadAndStageUpdateAsync(release);
+        if (!success)
+        {
+            if (BtnOtaUpdateBanner != null) BtnOtaUpdateBanner.IsEnabled = true;
+            if (BtnOtaUpdateSettingsCard != null) BtnOtaUpdateSettingsCard.IsEnabled = true;
+            if (BtnDownloadUpdateSettings != null) BtnDownloadUpdateSettings.IsEnabled = true;
+        }
+    }
+
+    private void OnRestartApplyUpdateClick(object sender, RoutedEventArgs e)
+    {
+        UpdateService.Instance.RestartAndApplyUpdate();
     }
 
     private void OnDownloadUpdateClick(object sender, RoutedEventArgs e)
@@ -1436,7 +1582,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (release != null && release.IsNewer)
         {
             ShowUpdateBanner(release);
-            string msg = string.Format(LocalizationService.Instance.T("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку «Скачать обновление»."), release.TagName);
+            string msg = string.Format(LocalizationService.Instance.T("Hub.UpdateFound", "Доступна новая версия {0}!"), release.TagName);
             TxtUpdateStatus.Text = msg;
             TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#38BDF8")!;
         }
@@ -1583,21 +1729,31 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
         if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? $"Версия: {curVer} (.NET 8.0 Windows x64)" : $"Version: {curVer} (.NET 8.0 Windows x64)";
         if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
-        if (BtnDownloadUpdate != null) BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadUpdate", "🚀 Скачать обновление");
+        string tag = UpdateService.Instance.LatestRelease?.TagName ?? "v1.0.2";
+        if (BtnOtaUpdateBanner != null)
+            BtnOtaUpdateBanner.Content = $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
+        if (BtnRestartBanner != null)
+            BtnRestartBanner.Content = LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить");
+        if (BtnDownloadUpdate != null)
+            BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadSetupBtn", "💾 Скачать .exe");
+
+        if (BtnOtaUpdateSettingsCard != null)
+            BtnOtaUpdateSettingsCard.Content = $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
+        if (BtnRestartSettingsCard != null)
+            BtnRestartSettingsCard.Content = LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить");
+        if (BtnDownloadUpdateCard != null)
+            BtnDownloadUpdateCard.Content = LocalizationService.Instance.T("Hub.DownloadSetupBtn", "💾 Скачать .exe");
+
         if (BtnDownloadUpdateSettings != null)
         {
-            string tag = UpdateService.Instance.LatestRelease?.TagName ?? "v1.0.1";
-            BtnDownloadUpdateSettings.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
-        }
-        if (BtnDownloadUpdateCard != null)
-        {
-            string tag = UpdateService.Instance.LatestRelease?.TagName ?? "v1.0.1";
-            BtnDownloadUpdateCard.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+            BtnDownloadUpdateSettings.Content = UpdateService.Instance.IsUpdateReadyToApply
+                ? LocalizationService.Instance.T("Hub.RestartApplyBtn", "🔄 Перезапустить и применить")
+                : $"{LocalizationService.Instance.T("Hub.OtaUpdateBtn", "⚡ Обновить по воздуху")} {tag}";
         }
         if (BtnViewReleaseNotes != null)
             BtnViewReleaseNotes.Content = LocalizationService.Instance.T("Hub.ViewReleaseNotes", "📋 Что нового?");
         if (TxtUpdateFoundSub != null)
-            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.");
+            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Обновление по воздуху скачивается и применяется автоматически без запуска стороннего сетапа.");
         if (BtnCheckUpdates != null) BtnCheckUpdates.Content = LocalizationService.Instance.T("Hub.CheckUpdates", "🔄 Проверить обновления");
         if (TxtUpdateNotice != null && BannerNewUpdate?.Visibility == Visibility.Visible)
             TxtUpdateNotice.Text = LocalizationService.Instance.T("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!");

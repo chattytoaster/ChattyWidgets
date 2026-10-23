@@ -1,4 +1,4 @@
-# ✦ ChattyWidgets 1.0.1 — Native Desktop Widget Engine for Windows (.NET 8)
+# ✦ ChattyWidgets 1.0.2 — Native Desktop Widget Engine for Windows (.NET 8)
 
 > **Language / Язык:** **[🇬🇧 English](README.md)** • **[🇷🇺 Русский](README.ru.md)**
 
@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Widgets](https://img.shields.io/badge/official%20widgets-12%20native-orange.svg)](https://github.com/chattytoaster/ChattyWidgetsLibrary)
 
-**ChattyWidgets 1.0.1** is an ultra-lightweight, high-performance, and visually stunning desktop widget engine for Windows 10 & 11 built on .NET 8, WPF, and DirectX. It natively supports glassmorphic XAML widgets, web widgets (HTML5/CSS3/JS via Microsoft Edge WebView2), desktop layer management (`WorkerW`/`Progman` desktop pinning, normal window, and always-on-top), `.chw` packages cryptographically signed with RSA-4096, desktop layout presets (`.chwp`), and an autonomous AI agent development skill (`/chw`).
+**ChattyWidgets 1.0.2** is an ultra-lightweight, high-performance, and visually stunning desktop widget engine for Windows 10 & 11 built on .NET 8, WPF, and DirectX. It natively supports glassmorphic XAML widgets, web widgets (HTML5/CSS3/JS via Microsoft Edge WebView2), desktop layer management (`WorkerW`/`Progman` desktop pinning, normal window, and always-on-top), `.chw` packages cryptographically signed with RSA-4096, desktop layout presets (`.chwp`), and an autonomous AI agent development skill (`/chw`).
 
 ---
 

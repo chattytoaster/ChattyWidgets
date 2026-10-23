@@ -174,7 +174,8 @@ public class WidgetManager
         {
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double defaultLeft = Math.Max(50, screenWidth - item.Manifest.DefaultWidth - 40);
-            double defaultTop = 60 + (_activeWindows.Count * 60);
+            int count = Math.Max(_activeWindows.Count, Settings.Widgets.Count);
+        double defaultTop = 60 + (count * 70);
 
             widgetSetting = new WidgetInstanceSettings
             {
@@ -441,7 +442,8 @@ public class WidgetManager
         double defaultW = item.Manifest?.DefaultWidth > 0 ? item.Manifest.DefaultWidth : 300;
         double defaultH = item.Manifest?.DefaultHeight > 0 ? item.Manifest.DefaultHeight : 200;
         double defaultLeft = Math.Max(50, screenWidth - defaultW - 40);
-        double defaultTop = 60 + (_activeWindows.Count * 60);
+        int count = Math.Max(_activeWindows.Count, Settings.Widgets.Count);
+        double defaultTop = 60 + (count * 70);
 
         var widgetSetting = new WidgetInstanceSettings
         {

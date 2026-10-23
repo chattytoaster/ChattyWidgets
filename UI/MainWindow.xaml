@@ -214,8 +214,12 @@
                     Padding="20,10" Visibility="Collapsed">
                 <DockPanel LastChildFill="True">
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                        <Button x:Name="BtnDownloadUpdate" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}"
-                                Padding="14,6" FontSize="12.5" Click="OnDownloadUpdateClick" Margin="0,0,10,0"/>
+                        <Button x:Name="BtnOtaUpdateBanner" Content="⚡ Обновить по воздуху" Style="{StaticResource PrimaryBtn}"
+                                Padding="14,6" FontSize="12.5" FontWeight="Bold" Click="OnOtaUpdateClick" Margin="0,0,8,0"/>
+                        <Button x:Name="BtnRestartBanner" Content="🔄 Перезапустить и применить" Style="{StaticResource PrimaryBtn}"
+                                Background="#10B981" BorderBrush="#059669" Padding="14,6" FontSize="12.5" FontWeight="Bold" Click="OnRestartApplyUpdateClick" Margin="0,0,8,0" Visibility="Collapsed"/>
+                        <Button x:Name="BtnDownloadUpdate" Content="💾 Скачать .exe" Style="{StaticResource SecondaryBtn}"
+                                Padding="12,6" FontSize="12" Click="OnDownloadUpdateClick" Margin="0,0,10,0"/>
                         <Button x:Name="BtnDismissUpdate" Content="✕" Width="28" Height="28" Background="#20FFFFFF"
                                 Foreground="#94A3B8" BorderThickness="0" Cursor="Hand" Click="OnDismissUpdateClick">
                             <Button.Template>
@@ -227,14 +231,19 @@
                             </Button.Template>
                         </Button>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="✨" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtUpdateNotice" Text="Доступна новая версия ChattyWidgets!"
-                                   FontSize="13.5" FontWeight="SemiBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
-                        <Border Background="#2563EB" CornerRadius="6" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="TxtUpdateTag" Text="v1.1.0"
-                                       FontSize="11.5" Foreground="#FFFFFF" FontWeight="Bold"/>
-                        </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="✨" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtUpdateNotice" Text="Доступна новая версия ChattyWidgets!"
+                                       FontSize="13.5" FontWeight="SemiBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                            <Border Background="#2563EB" CornerRadius="6" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="TxtUpdateTag" Text="v1.0.2"
+                                           FontSize="11.5" Foreground="#FFFFFF" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                        <!-- Inline Progress for OTA -->
+                        <ProgressBar x:Name="ProgressOtaBanner" Height="4" Margin="26,6,20,0" Background="#1E293B" Foreground="#38BDF8" BorderThickness="0" Visibility="Collapsed"/>
+                        <TextBlock x:Name="TxtOtaStatusBanner" Text="" Foreground="#94A3B8" FontSize="11" Margin="26,2,0,0" Visibility="Collapsed"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -693,26 +702,36 @@
                             <StackPanel>
                                 <TextBlock x:Name="TxtAboutTitle" Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.1 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.2 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
                                     <Button x:Name="BtnCheckUpdates" Content="🔄 Проверить обновления" Style="{StaticResource SecondaryBtn}" Padding="10,4" Margin="14,0,0,0" FontSize="11" Click="OnCheckUpdatesClick"/>
-                                    <Button x:Name="BtnDownloadUpdateSettings" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}" Padding="12,4" Margin="10,0,0,0" FontSize="11.5" FontWeight="Bold" Visibility="Collapsed" Click="OnDownloadUpdateClick"/>
+                                    <Button x:Name="BtnDownloadUpdateSettings" Content="⚡ Обновить по воздуху" Style="{StaticResource PrimaryBtn}" Padding="12,4" Margin="10,0,0,0" FontSize="11.5" FontWeight="Bold" Visibility="Collapsed" Click="OnOtaUpdateClick"/>
                                 </StackPanel>
 
                                 <!-- Dedicated prominent update card right in Settings -->
-                                <Border x:Name="PanelUpdateFoundSettings" Background="#172554" BorderBrush="#3B82F6" BorderThickness="1.5" CornerRadius="10" Padding="14,10" Margin="0,8,0,10" Visibility="Collapsed">
-                                    <DockPanel LastChildFill="True">
-                                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                                            <Button x:Name="BtnDownloadUpdateCard" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}" Padding="14,6" FontSize="12" FontWeight="Bold" Click="OnDownloadUpdateClick" Margin="0,0,8,0"/>
-                                            <Button x:Name="BtnViewReleaseNotes" Content="📋 Что нового?" Style="{StaticResource SecondaryBtn}" Padding="10,6" FontSize="11.5" Click="OnViewReleaseNotesClick"/>
-                                        </StackPanel>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                <TextBlock Text="🎉" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock x:Name="TxtUpdateFoundTitle" Text="Доступна новая версия!" Foreground="#60A5FA" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Border x:Name="PanelUpdateFoundSettings" Background="#172554" BorderBrush="#3B82F6" BorderThickness="1.5" CornerRadius="10" Padding="16,12" Margin="0,8,0,10" Visibility="Collapsed">
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="True">
+                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                                <Button x:Name="BtnOtaUpdateSettingsCard" Content="⚡ Обновить по воздуху" Style="{StaticResource PrimaryBtn}" Padding="14,7" FontSize="12.5" FontWeight="Bold" Click="OnOtaUpdateClick" Margin="0,0,8,0"/>
+                                                <Button x:Name="BtnRestartSettingsCard" Content="🔄 Перезапустить и применить" Style="{StaticResource PrimaryBtn}" Background="#10B981" BorderBrush="#059669" Padding="14,7" FontSize="12.5" FontWeight="Bold" Click="OnRestartApplyUpdateClick" Margin="0,0,8,0" Visibility="Collapsed"/>
+                                                <Button x:Name="BtnDownloadUpdateCard" Content="💾 Скачать .exe" Style="{StaticResource SecondaryBtn}" Padding="12,7" FontSize="12" Click="OnDownloadUpdateClick" Margin="0,0,8,0"/>
+                                                <Button x:Name="BtnViewReleaseNotes" Content="📋 Что нового?" Style="{StaticResource SecondaryBtn}" Padding="10,7" FontSize="11.5" Click="OnViewReleaseNotesClick"/>
                                             </StackPanel>
-                                            <TextBlock x:Name="TxtUpdateFoundSub" Text="Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик." Foreground="#94A3B8" FontSize="11.5"/>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                    <TextBlock Text="🎉" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="TxtUpdateFoundTitle" Text="Доступна новая версия!" Foreground="#60A5FA" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock x:Name="TxtUpdateFoundSub" Text="Обновление по воздуху скачивается и применяется автоматически без запуска стороннего сетапа." Foreground="#94A3B8" FontSize="11.5"/>
+                                            </StackPanel>
+                                        </DockPanel>
+
+                                        <!-- OTA Progress in Settings Card -->
+                                        <StackPanel x:Name="PanelOtaProgressSettings" Margin="0,10,0,0" Visibility="Collapsed">
+                                            <ProgressBar x:Name="ProgressOtaSettings" Height="6" Background="#1E293B" Foreground="#38BDF8" BorderThickness="0"/>
+                                            <TextBlock x:Name="TxtOtaStatusSettings" Text="Загрузка обновления..." Foreground="#38BDF8" FontSize="11.5" Margin="0,4,0,0"/>
                                         </StackPanel>
-                                    </DockPanel>
+                                    </StackPanel>
                                 </Border>
 
                                 <TextBlock x:Name="TxtUpdateStatus" Text="" Foreground="#34D399" FontSize="11.5" Margin="0,2,0,6" Visibility="Collapsed"/>

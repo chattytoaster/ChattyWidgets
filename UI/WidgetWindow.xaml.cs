@@ -58,12 +58,8 @@ public partial class WidgetWindow : Window
         double virtWidth = SystemParameters.VirtualScreenWidth;
         double virtHeight = SystemParameters.VirtualScreenHeight;
 
-        bool isWithinBounds = (settings.Left >= virtLeft - 20)
-                           && (settings.Left <= virtLeft + virtWidth - 30)
-                           && (settings.Top >= virtTop - 20)
-                           && (settings.Top <= virtTop + virtHeight - 30);
-
-        if (isWithinBounds)
+        // Preserve saved coordinates if available, otherwise place at default top-right location
+        if (!double.IsNaN(settings.Left) && !double.IsNaN(settings.Top) && (settings.Left != 0 || settings.Top != 0))
         {
             Left = settings.Left;
             Top = settings.Top;

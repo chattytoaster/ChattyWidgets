@@ -190,6 +190,22 @@ public partial class App : System.Windows.Application
         {
             try
             {
+                // Capture exact live positions and dimensions of all active widgets before saving
+                foreach (var win in WidgetManager.Instance.GetActiveWindows())
+                {
+                    try
+                    {
+                        if (win.WindowState == WindowState.Normal)
+                        {
+                            win.Settings.Left = win.Left;
+                            win.Settings.Top = win.Top;
+                            win.Settings.Width = win.Width;
+                            win.Settings.Height = win.Height;
+                        }
+                    }
+                    catch { }
+                }
+
                 WidgetManager.Instance.SaveSettings();
             }
             catch (Exception ex)

@@ -45,6 +45,10 @@ public class InstallService
             {
                 ReportProgress(5, Msg("Подготовка к установке...", "Preparing for installation..."));
 
+                // Ensure all running instances of ChattyWidgets are cleanly closed first so no binaries are locked
+                ReportProgress(8, Msg("Закрытие запущенных процессов ChattyWidgets...", "Closing running ChattyWidgets processes..."));
+                KillChattyProcesses();
+
                 string targetDir = options.TargetDirectory;
                 Directory.CreateDirectory(targetDir);
 
@@ -466,7 +470,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             if (key != null)
             {
                 key.SetValue("DisplayName", "ChattyWidgets");
-                key.SetValue("DisplayVersion", "1.0.1");
+                key.SetValue("DisplayVersion", "1.0.2");
                 key.SetValue("Publisher", "ChattyApps");
                 key.SetValue("DisplayIcon", $"{targetExe},0");
                 key.SetValue("InstallLocation", targetDir);
@@ -498,8 +502,35 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
     {
         try
         {
+            int currentPid = Environment.ProcessId;
+            var running = Process.GetProcessesByName("ChattyWidgets")
+                .Where(p => p.Id != currentPid)
+                .ToList();
+
+            if (running.Count == 0) return;
+
+            // 1. Send graceful close first so running instances can save settings and state
+            foreach (var proc in running)
+            {
+                try
+                {
+                    proc.CloseMainWindow();
+                }
+                catch { }
+            }
+
+            // Wait up to 2 seconds for graceful exit
+            for (int i = 0; i < 20; i++)
+            {
+                Thread.Sleep(100);
+                if (!Process.GetProcessesByName("ChattyWidgets").Any(p => p.Id != currentPid))
+                    return;
+            }
+
+            // 2. Force terminate any lingering processes to release file locks completely
             foreach (var proc in Process.GetProcessesByName("ChattyWidgets"))
             {
+                if (proc.Id == currentPid) continue;
                 try
                 {
                     proc.Kill();
