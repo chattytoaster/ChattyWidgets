@@ -266,10 +266,12 @@ public class LocalizationService
         Add("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.", "Engine optimized for 24/7 background operation: native widgets produce 0% CPU overhead and consume minimal memory.");
         Add("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!", "A new version of ChattyWidgets is available!");
         Add("Hub.DownloadUpdate", "🚀 Скачать обновление", "🚀 Download Update");
+        Add("Hub.ViewReleaseNotes", "📋 Что нового?", "📋 What's new?");
+        Add("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.", "Click 'Download Update' to download the installer.");
         Add("Hub.CheckUpdates", "🔄 Проверить обновления", "🔄 Check for Updates");
         Add("Hub.CheckingUpdates", "Проверка обновлений...", "Checking for updates...");
         Add("Hub.LatestVersion", "У вас установлена последняя актуальная версия ✓", "You have the latest version installed ✓");
-        Add("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку выше для скачивания.", "New version {0} available! Click download above.");
+        Add("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку «Скачать обновление».", "New version {0} is available! Click 'Download Update'.");
 
         // Settings Dialog generic
         Add("Settings.WindowTitle", "Настройки виджета", "Widget Settings");

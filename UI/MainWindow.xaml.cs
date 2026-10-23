@@ -1193,6 +1193,12 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                 SliderGridSize.Value = currentGrid;
                 if (TxtGridSizeVal != null) TxtGridSizeVal.Text = $"{currentGrid} px";
             }
+
+            var latest = UpdateService.Instance.LatestRelease;
+            if (latest != null && latest.IsNewer)
+            {
+                ShowUpdateBanner(latest);
+            }
         }
         finally
         {
@@ -1349,23 +1355,63 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
     private void ShowUpdateBanner(GitHubReleaseInfo release)
     {
-        if (TxtUpdateTag != null) TxtUpdateTag.Text = release.TagName;
+        bool isRu = LocalizationService.Instance.IsRussian;
+        string tag = !string.IsNullOrWhiteSpace(release.TagName) ? release.TagName : "v1.0.1";
+
+        if (TxtUpdateTag != null) TxtUpdateTag.Text = tag;
         if (TxtUpdateNotice != null)
         {
-            TxtUpdateNotice.Text = LocalizationService.Instance.IsRussian
+            TxtUpdateNotice.Text = isRu
                 ? "Доступно новое обновление ChattyWidgets!"
                 : "A new version of ChattyWidgets is available!";
         }
         if (BannerNewUpdate != null) BannerNewUpdate.Visibility = Visibility.Visible;
+        if (BtnDownloadUpdate != null)
+        {
+            BtnDownloadUpdate.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+        }
+
+        // Settings tab controls
+        if (BtnDownloadUpdateSettings != null)
+        {
+            BtnDownloadUpdateSettings.Visibility = Visibility.Visible;
+            BtnDownloadUpdateSettings.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+        }
+        if (PanelUpdateFoundSettings != null)
+        {
+            PanelUpdateFoundSettings.Visibility = Visibility.Visible;
+        }
+        if (TxtUpdateFoundTitle != null)
+        {
+            TxtUpdateFoundTitle.Text = isRu ? $"Доступна новая версия {tag}!" : $"New version {tag} is available!";
+        }
+        if (TxtUpdateFoundSub != null)
+        {
+            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.");
+        }
+        if (BtnDownloadUpdateCard != null)
+        {
+            BtnDownloadUpdateCard.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+        }
+        if (BtnViewReleaseNotes != null)
+        {
+            BtnViewReleaseNotes.Content = LocalizationService.Instance.T("Hub.ViewReleaseNotes", "📋 Что нового?");
+        }
+
         if (TxtStatus != null)
         {
-            TxtStatus.Text = LocalizationService.Instance.IsRussian
-                ? $"Доступна новая версия: {release.TagName}"
-                : $"New version available: {release.TagName}";
+            TxtStatus.Text = isRu
+                ? $"Доступна новая версия: {tag}"
+                : $"New version available: {tag}";
         }
     }
 
     private void OnDownloadUpdateClick(object sender, RoutedEventArgs e)
+    {
+        UpdateService.Instance.DownloadLatestInstaller();
+    }
+
+    private void OnViewReleaseNotesClick(object sender, RoutedEventArgs e)
     {
         UpdateService.Instance.OpenReleasePage();
     }
@@ -1390,12 +1436,14 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (release != null && release.IsNewer)
         {
             ShowUpdateBanner(release);
-            string msg = string.Format(LocalizationService.Instance.T("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку выше для скачивания."), release.TagName);
+            string msg = string.Format(LocalizationService.Instance.T("Hub.UpdateFound", "Доступна новая версия {0}! Нажмите кнопку «Скачать обновление»."), release.TagName);
             TxtUpdateStatus.Text = msg;
             TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#38BDF8")!;
         }
         else
         {
+            if (BtnDownloadUpdateSettings != null) BtnDownloadUpdateSettings.Visibility = Visibility.Collapsed;
+            if (PanelUpdateFoundSettings != null) PanelUpdateFoundSettings.Visibility = Visibility.Collapsed;
             TxtUpdateStatus.Text = LocalizationService.Instance.T("Hub.LatestVersion", "У вас установлена последняя актуальная версия ✓");
             TxtUpdateStatus.Foreground = (Brush)new BrushConverter().ConvertFrom("#34D399")!;
         }
@@ -1531,10 +1579,25 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (TxtDefaultOpacityLabel != null) TxtDefaultOpacityLabel.Text = LocalizationService.Instance.T("Hub.OpacityLabel", "Прозрачность фона виджетов по умолчанию:");
         if (BtnImportChw != null) BtnImportChw.Content = LocalizationService.Instance.T("Hub.ImportWidgetBtn", "➕ Импортировать виджет (.chw)");
         if (BtnOpenAppData != null) BtnOpenAppData.Content = LocalizationService.Instance.T("Hub.OpenAppDataBtn", "Открыть папку данных виджетов (%LocalAppData%)");
+        string curVer = UpdateService.Instance.CurrentVersion;
         if (TxtAboutTitle != null) TxtAboutTitle.Text = LocalizationService.Instance.T("Hub.AboutTitle", "О движке ChattyWidgets");
-        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? "Версия: 1.0.1 (.NET 8.0 Windows x64)" : "Version: 1.0.1 (.NET 8.0 Windows x64)";
+        if (TxtAboutVersion != null) TxtAboutVersion.Text = isRu ? $"Версия: {curVer} (.NET 8.0 Windows x64)" : $"Version: {curVer} (.NET 8.0 Windows x64)";
         if (TxtAboutDesc != null) TxtAboutDesc.Text = LocalizationService.Instance.T("Hub.AboutDesc", "Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти.");
         if (BtnDownloadUpdate != null) BtnDownloadUpdate.Content = LocalizationService.Instance.T("Hub.DownloadUpdate", "🚀 Скачать обновление");
+        if (BtnDownloadUpdateSettings != null)
+        {
+            string tag = UpdateService.Instance.LatestRelease?.TagName ?? "v1.0.1";
+            BtnDownloadUpdateSettings.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+        }
+        if (BtnDownloadUpdateCard != null)
+        {
+            string tag = UpdateService.Instance.LatestRelease?.TagName ?? "v1.0.1";
+            BtnDownloadUpdateCard.Content = isRu ? $"🚀 Скачать {tag}" : $"🚀 Download {tag}";
+        }
+        if (BtnViewReleaseNotes != null)
+            BtnViewReleaseNotes.Content = LocalizationService.Instance.T("Hub.ViewReleaseNotes", "📋 Что нового?");
+        if (TxtUpdateFoundSub != null)
+            TxtUpdateFoundSub.Text = LocalizationService.Instance.T("Hub.UpdateFoundSub", "Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик.");
         if (BtnCheckUpdates != null) BtnCheckUpdates.Content = LocalizationService.Instance.T("Hub.CheckUpdates", "🔄 Проверить обновления");
         if (TxtUpdateNotice != null && BannerNewUpdate?.Visibility == Visibility.Visible)
             TxtUpdateNotice.Text = LocalizationService.Instance.T("Hub.UpdateAvailable", "Доступно новое обновление ChattyWidgets!");
@@ -1552,7 +1615,7 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
             InputNewWidgetDesc.Text = isRu ? "Полезный виджет для рабочего стола Windows" : "A useful desktop widget for Windows";
 
         // Bottom status bar
-        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? "Движок ChattyWidgets v1.0.1" : "ChattyWidgets Engine v1.0.1";
+        if (TxtEngineVersion != null) TxtEngineVersion.Text = isRu ? $"Движок ChattyWidgets v{curVer}" : $"ChattyWidgets Engine v{curVer}";
 
         RenderPresetChips();
         RefreshInstalledWidgets();

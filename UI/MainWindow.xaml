@@ -693,9 +693,28 @@
                             <StackPanel>
                                 <TextBlock x:Name="TxtAboutTitle" Text="О движке ChattyWidgets" FontSize="15" FontWeight="Bold" Foreground="#818CF8" Margin="0,0,0,8"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.0 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtAboutVersion" Text="Версия: 1.0.1 (.NET 8.0 Windows x64)" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
                                     <Button x:Name="BtnCheckUpdates" Content="🔄 Проверить обновления" Style="{StaticResource SecondaryBtn}" Padding="10,4" Margin="14,0,0,0" FontSize="11" Click="OnCheckUpdatesClick"/>
+                                    <Button x:Name="BtnDownloadUpdateSettings" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}" Padding="12,4" Margin="10,0,0,0" FontSize="11.5" FontWeight="Bold" Visibility="Collapsed" Click="OnDownloadUpdateClick"/>
                                 </StackPanel>
+
+                                <!-- Dedicated prominent update card right in Settings -->
+                                <Border x:Name="PanelUpdateFoundSettings" Background="#172554" BorderBrush="#3B82F6" BorderThickness="1.5" CornerRadius="10" Padding="14,10" Margin="0,8,0,10" Visibility="Collapsed">
+                                    <DockPanel LastChildFill="True">
+                                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                            <Button x:Name="BtnDownloadUpdateCard" Content="🚀 Скачать обновление" Style="{StaticResource PrimaryBtn}" Padding="14,6" FontSize="12" FontWeight="Bold" Click="OnDownloadUpdateClick" Margin="0,0,8,0"/>
+                                            <Button x:Name="BtnViewReleaseNotes" Content="📋 Что нового?" Style="{StaticResource SecondaryBtn}" Padding="10,6" FontSize="11.5" Click="OnViewReleaseNotesClick"/>
+                                        </StackPanel>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                <TextBlock Text="🎉" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="TxtUpdateFoundTitle" Text="Доступна новая версия!" Foreground="#60A5FA" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock x:Name="TxtUpdateFoundSub" Text="Нажмите кнопку «Скачать обновление», чтобы получить свежий установщик." Foreground="#94A3B8" FontSize="11.5"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
                                 <TextBlock x:Name="TxtUpdateStatus" Text="" Foreground="#34D399" FontSize="11.5" Margin="0,2,0,6" Visibility="Collapsed"/>
                                 <TextBlock x:Name="TxtAboutDesc" Text="Движок оптимизирован для фоновой работы: нативные виджеты не нагружают процессор (0% CPU) и занимают минимум памяти." Foreground="#64748B" FontSize="12" TextWrapping="Wrap"/>
 

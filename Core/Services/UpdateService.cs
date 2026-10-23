@@ -7,6 +7,18 @@ using System.Text.Json.Serialization;
 
 namespace ChattyWidgets.Core.Services;
 
+public class GitHubAssetInfo
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("browser_download_url")]
+    public string BrowserDownloadUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
+}
+
 public class GitHubReleaseInfo
 {
     [JsonPropertyName("tag_name")]
@@ -24,11 +36,17 @@ public class GitHubReleaseInfo
     [JsonPropertyName("published_at")]
     public DateTime? PublishedAt { get; set; }
 
+    [JsonPropertyName("assets")]
+    public List<GitHubAssetInfo>? Assets { get; set; }
+
     [JsonIgnore]
     public bool IsNewer { get; set; }
 
     [JsonIgnore]
     public string DisplayVersion => TagName.TrimStart('v', 'V');
+
+    [JsonIgnore]
+    public string? ExeDownloadUrl => Assets?.FirstOrDefault(a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
 }
 
 public class UpdateService
@@ -128,6 +146,16 @@ public class UpdateService
         try
         {
             string targetUrl = !string.IsNullOrWhiteSpace(url) ? url : (LatestRelease?.HtmlUrl ?? GitHubReleasesPage);
+            Process.Start(new ProcessStartInfo(targetUrl) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    public void DownloadLatestInstaller()
+    {
+        try
+        {
+            string targetUrl = LatestRelease?.ExeDownloadUrl ?? LatestRelease?.HtmlUrl ?? GitHubReleasesPage;
             Process.Start(new ProcessStartInfo(targetUrl) { UseShellExecute = true });
         }
         catch { }
