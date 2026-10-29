@@ -16,6 +16,9 @@ using RadioButton = System.Windows.Controls.RadioButton;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Border = System.Windows.Controls.Border;
 using ColorConverter = System.Windows.Media.ColorConverter;
+using StackPanel = System.Windows.Controls.StackPanel;
+using DockPanel = System.Windows.Controls.DockPanel;
+using Orientation = System.Windows.Controls.Orientation;
 using ChattyWidgets.UI.Controls;
 
 namespace ChattyWidgets.UI;
@@ -226,6 +229,15 @@ public partial class MainWindow : Window
         RefreshInstalledWidgets();
         RefreshStoreCatalog();
         UpdateAgentSkillStatus();
+
+        ChattyWidgets.Core.Services.ThemeService.Instance.ThemeListChanged += () => Dispatcher.Invoke(() =>
+        {
+            ReloadHubThemesCombo();
+            RefreshCustomThemesList();
+        });
+        ReloadHubThemesCombo();
+        RefreshCustomThemesList();
+        UpdateLiveThemePreview();
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
@@ -971,6 +983,10 @@ public partial class MainWindow : Window
                 {
                     ImportPresetFile(file);
                 }
+                else if (Path.GetExtension(file).Equals(".chwtheme", StringComparison.OrdinalIgnoreCase))
+                {
+                    ImportThemeFile(file);
+                }
             }
         }
     }
@@ -1017,10 +1033,26 @@ public partial class MainWindow : Window
 
     // --- TAB: WORKSHOP ---
 
+    private static string[] GetAgentSkillTargetPaths()
+    {
+        string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return new[]
+        {
+            Path.Combine(userDir, ".gemini", "skills", "chw"),
+            Path.Combine(userDir, ".gemini", "config", "skills", "chw"),
+            Path.Combine(userDir, ".claude", "skills", "chw"),
+            Path.Combine(userDir, ".cursor", "skills-cursor", "chw"),
+            Path.Combine(userDir, ".cursor", "skills", "chw"),
+            Path.Combine(userDir, ".codex", "skills", "chw"),
+            Path.Combine(userDir, ".copilot", "skills", "chw"),
+            Path.Combine(userDir, ".agents", "skills", "chw")
+        };
+    }
+
     private static string GetAgentSkillTargetPath()
     {
         string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(userDir, ".agents", "skills", "chw");
+        return Path.Combine(userDir, ".gemini", "skills", "chw");
     }
 
     public void UpdateAgentSkillStatus()
@@ -1029,9 +1061,10 @@ public partial class MainWindow : Window
             return;
 
         bool isRu = LocalizationService.Instance.IsRussian;
-        string targetDir = GetAgentSkillTargetPath();
-        string skillFile = Path.Combine(targetDir, "SKILL.md");
-        bool isInstalled = File.Exists(skillFile);
+        string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string geminiSkill = Path.Combine(userDir, ".gemini", "skills", "chw", "SKILL.md");
+        string agentsSkill = Path.Combine(userDir, ".agents", "skills", "chw", "SKILL.md");
+        bool isInstalled = File.Exists(geminiSkill) || File.Exists(agentsSkill);
 
         if (isInstalled)
         {
@@ -1052,7 +1085,7 @@ public partial class MainWindow : Window
 
         if (TxtSkillPath != null)
         {
-            TxtSkillPath.Text = targetDir;
+            TxtSkillPath.Text = "~/.gemini/skills/chw  |  ~/.claude/skills/chw  |  ~/.agents/skills/chw";
         }
     }
 
@@ -1061,7 +1094,6 @@ public partial class MainWindow : Window
         try
         {
             bool isRu = LocalizationService.Instance.IsRussian;
-            string targetDir = GetAgentSkillTargetPath();
             string userDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
             string[] possibleSources = new[]
@@ -1069,28 +1101,40 @@ public partial class MainWindow : Window
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", "skills", "chw"),
                 Path.Combine(Directory.GetCurrentDirectory(), ".agents", "skills", "chw"),
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".agents", "skills", "chw"),
-                Path.Combine(userDir, "Projects", "chattywidgets", ".agents", "skills", "chw")
+                Path.Combine(userDir, "Projects", "chattywidgets", ".agents", "skills", "chw"),
+                Path.Combine(userDir, ".gemini", "skills", "chw"),
+                Path.Combine(userDir, ".agents", "skills", "chw")
             };
 
             string? foundSource = possibleSources.FirstOrDefault(d => Directory.Exists(d) && File.Exists(Path.Combine(d, "SKILL.md")));
 
-            Directory.CreateDirectory(targetDir);
+            foreach (string targetDir in GetAgentSkillTargetPaths())
+            {
+                try
+                {
+                    Directory.CreateDirectory(targetDir);
 
-            if (foundSource != null)
-            {
-                CopyDirectoryRecursive(foundSource, targetDir);
-            }
-            else
-            {
-                WriteEmbeddedSkillFiles(targetDir);
+                    if (foundSource != null)
+                    {
+                        CopyDirectoryRecursive(foundSource, targetDir);
+                    }
+                    else
+                    {
+                        WriteEmbeddedSkillFiles(targetDir);
+                    }
+                }
+                catch (Exception dirEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MainWindow] Skill copy error for {targetDir}: {dirEx.Message}");
+                }
             }
 
             UpdateAgentSkillStatus();
 
             string title = isRu ? "Скилл /chw установлен" : "Skill /chw Installed";
             string msg = isRu 
-                ? "Скилл для автономной разработки виджетов успешно установлен в ~/.agents/skills/chw!\n\nТеперь любой ИИ-ассистент (Antigravity, Claude Code, Cursor, Codex) умеет создавать виджеты по команде /chw." 
-                : "Widget development skill installed to ~/.agents/skills/chw!\n\nAI assistants can now build widgets via /chw command.";
+                ? "Скилл для автономной разработки виджетов успешно установлен во все поддерживаемые AI-ассистенты:\n\n• Google Antigravity: ~/.gemini/skills/chw\n• Claude Code: ~/.claude/skills/chw\n• Cursor: ~/.cursor/skills-cursor/chw\n• OpenAI Codex: ~/.codex/skills/chw\n• GitHub Copilot: ~/.copilot/skills/chw\n• Open Agent standard: ~/.agents/skills/chw\n\nТеперь любой ИИ-ассистент умеет создавать виджеты по команде /chw." 
+                : "Widget development skill installed for all supported AI assistants:\n\n• Google Antigravity: ~/.gemini/skills/chw\n• Claude Code: ~/.claude/skills/chw\n• Cursor: ~/.cursor/skills-cursor/chw\n• OpenAI Codex: ~/.codex/skills/chw\n• GitHub Copilot: ~/.copilot/skills/chw\n• Open Agent standard: ~/.agents/skills/chw\n\nAI assistants can now build widgets via /chw command.";
 
             _trayIcon?.ShowNotification(title, msg);
             TxtStatus.Text = isRu ? "Скилл для агента /chw успешно установлен!" : "Agent skill /chw successfully installed!";
@@ -1604,8 +1648,11 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         WidgetManager.Instance.ApplyGlobalTheme(nextTheme);
     }
 
+    private bool _isUpdatingThemeCombo = false;
+
     private void OnComboHubThemeChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isUpdatingThemeCombo) return;
         if (ComboHubTheme?.SelectedItem is ComboBoxItem item && item.Tag is string t)
         {
             if (WidgetManager.Instance?.Settings != null && WidgetManager.Instance.Settings.Theme != t)
@@ -1709,6 +1756,29 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         if (BtnBrowseFolderToPack != null) BtnBrowseFolderToPack.Content = isRu ? "Обзор папки..." : "Browse folder...";
         if (BtnExportPackage != null) BtnExportPackage.Content = isRu ? "📦 Собрать пакет .chw" : "📦 Build .chw Package";
 
+        // Theme Designer localization
+        if (TxtBaseThemeDarkTitle != null) TxtBaseThemeDarkTitle.Text = isRu ? "🌙 Базовая Тёмная (Dark)" : "🌙 Base Dark Theme";
+        if (TxtBaseThemeLightTitle != null) TxtBaseThemeLightTitle.Text = isRu ? "☀️ Базовая Светлая (Light)" : "☀️ Base Light Theme";
+        if (BtnLoadDarkTemplate != null) BtnLoadDarkTemplate.Content = isRu ? "Загрузить шаблон" : "Load Template";
+        if (BtnLoadLightTemplate != null) BtnLoadLightTemplate.Content = isRu ? "Загрузить шаблон" : "Load Template";
+        if (TxtThemeNameLabel != null) TxtThemeNameLabel.Text = isRu ? "Название темы:" : "Theme Name:";
+        if (TxtThemeIdLabel != null) TxtThemeIdLabel.Text = isRu ? "ID темы (латиница без пробелов):" : "Theme ID (lowercase, no spaces):";
+        if (TxtThemeAuthorLabel != null) TxtThemeAuthorLabel.Text = isRu ? "Автор темы:" : "Author Name:";
+        if (TxtThemeBaseContrastLabel != null) TxtThemeBaseContrastLabel.Text = isRu ? "Базовый режим контраста:" : "Base Contrast Mode:";
+        if (TxtColorBgLabel != null) TxtColorBgLabel.Text = isRu ? "Фон окна / виджета (Background):" : "Window / Widget Background:";
+        if (TxtColorCardBgLabel != null) TxtColorCardBgLabel.Text = isRu ? "Фон карточек и панелей (Card):" : "Cards & Panels Background:";
+        if (TxtColorBorderLabel != null) TxtColorBorderLabel.Text = isRu ? "Цвет рамок и обводки (Border):" : "Borders & Outlines:";
+        if (TxtColorTextPrimaryLabel != null) TxtColorTextPrimaryLabel.Text = isRu ? "Основной текст и заголовки (Primary):" : "Primary Text & Headers:";
+        if (TxtColorTextSecondaryLabel != null) TxtColorTextSecondaryLabel.Text = isRu ? "Второстепенный текст и подписи (Secondary):" : "Secondary Text & Subtitles:";
+        if (TxtColorAccentLabel != null) TxtColorAccentLabel.Text = isRu ? "Акцентный цвет кнопок/слайдеров (Accent):" : "Accent Color:";
+        if (TxtColorHoverLabel != null) TxtColorHoverLabel.Text = isRu ? "Подсветка при наведении (Hover / Focus):" : "Hover / Focus Highlight:";
+        if (TxtColorDividerLabel != null) TxtColorDividerLabel.Text = isRu ? "Линии и разделители (Divider):" : "Dividers & Lines:";
+        if (TxtLivePreviewTitle != null) TxtLivePreviewTitle.Text = isRu ? "Интерактивный предпросмотр темы (Live Preview):" : "Interactive Theme Live Preview:";
+        if (BtnSaveTheme != null) BtnSaveTheme.Content = isRu ? "✨ Сохранить и применить тему" : "✨ Save & Apply Theme";
+        if (BtnExportTheme != null) BtnExportTheme.Content = isRu ? "📦 Экспортировать в .chwtheme..." : "📦 Export to .chwtheme...";
+        if (BtnImportTheme != null) BtnImportTheme.Content = isRu ? "📂 Импортировать .chwtheme..." : "📂 Import .chwtheme...";
+        if (TxtCustomThemesListTitle != null) TxtCustomThemesListTitle.Text = isRu ? "Установленные пользовательские темы:" : "Installed Custom Themes:";
+
         // Tab 4: Settings items
         if (TxtSettingsTitle != null) TxtSettingsTitle.Text = LocalizationService.Instance.T("Hub.SettingsTitle", "Настройки движка");
         if (CheckAutostart != null) CheckAutostart.Content = LocalizationService.Instance.T("Hub.Autostart");
@@ -1797,7 +1867,8 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
     public void ApplyTheme(string theme)
     {
-        bool isLight = theme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        var themeDef = ThemeService.Instance.GetTheme(theme);
+        bool isLight = themeDef.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
 
         if (BtnThemeToggle != null)
         {
@@ -1807,16 +1878,29 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
         if (ComboHubTheme != null)
         {
-            ComboHubTheme.SelectedIndex = isLight ? 1 : 0;
+            _isUpdatingThemeCombo = true;
+            try
+            {
+                for (int i = 0; i < ComboHubTheme.Items.Count; i++)
+                {
+                    if (ComboHubTheme.Items[i] is ComboBoxItem item && string.Equals(item.Tag as string, themeDef.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ComboHubTheme.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                _isUpdatingThemeCombo = false;
+            }
         }
 
-        var bgBrush = isLight ? new SolidColorBrush(Color.FromRgb(241, 245, 249)) : new SolidColorBrush(Color.FromRgb(15, 17, 26));
-        var borderBrush = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(37, 42, 63));
-        var topBarBrush = isLight ? new SolidColorBrush(Color.FromRgb(255, 255, 255)) : new SolidColorBrush(Color.FromRgb(18, 21, 34));
-        var topBarBorder = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(30, 35, 54));
-        var textPrimary = isLight ? LightTextPrimary : DarkTextPrimary;
-        var statusBg = isLight ? new SolidColorBrush(Color.FromRgb(241, 245, 249)) : new SolidColorBrush(Color.FromRgb(12, 14, 21));
-        var statusBorder = isLight ? new SolidColorBrush(Color.FromRgb(226, 232, 240)) : new SolidColorBrush(Color.FromRgb(26, 30, 44));
+        var bgBrush = ThemeService.ParseBrush(themeDef.Colors.Background, isLight ? new SolidColorBrush(Color.FromRgb(241, 245, 249)) : new SolidColorBrush(Color.FromRgb(15, 17, 26)));
+        var cardBrush = ThemeService.ParseBrush(themeDef.Colors.CardBackground, isLight ? LightCardBg : DarkCardBg);
+        var borderBrush = ThemeService.ParseBrush(themeDef.Colors.Border, isLight ? LightCardBorder : DarkCardBorder);
+        var textPrimary = ThemeService.ParseBrush(themeDef.Colors.TextPrimary, isLight ? LightTextPrimary : DarkTextPrimary);
+        var dividerBrush = ThemeService.ParseBrush(themeDef.Colors.Divider, isLight ? LightCardBorder : DarkCardBorder);
 
         Background = bgBrush;
         if (MainRootBorder != null)
@@ -1827,24 +1911,38 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
         if (TopHeaderBorder != null)
         {
-            TopHeaderBorder.Background = topBarBrush;
-            TopHeaderBorder.BorderBrush = topBarBorder;
+            TopHeaderBorder.Background = cardBrush;
+            TopHeaderBorder.BorderBrush = dividerBrush;
         }
 
         if (TxtAppTitle != null) TxtAppTitle.Foreground = textPrimary;
         if (BottomStatusBar != null)
         {
-            BottomStatusBar.Background = statusBg;
-            BottomStatusBar.BorderBrush = statusBorder;
+            BottomStatusBar.Background = bgBrush;
+            BottomStatusBar.BorderBrush = dividerBrush;
         }
 
-        ApplyHubThemeToTree(this, isLight);
+        ApplyHubThemeToTree(this, themeDef);
         RefreshInstalledWidgets();
     }
 
-    private void ApplyHubThemeToTree(DependencyObject? node, bool isLight)
+    public void ApplyHubThemeToTree(DependencyObject? node, bool isLight)
+    {
+        ApplyHubThemeToTree(node, ThemeService.Instance.GetTheme(isLight ? "light" : "dark"));
+    }
+
+    public void ApplyHubThemeToTree(DependencyObject? node, ThemeDefinition themeDef)
     {
         if (node == null) return;
+        bool isLight = themeDef.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        var textPrimary = ThemeService.ParseBrush(themeDef.Colors.TextPrimary, isLight ? LightTextPrimary : DarkTextPrimary);
+        var textSecondary = ThemeService.ParseBrush(themeDef.Colors.TextSecondary, isLight ? LightTextSecondary : DarkTextSecondary);
+        var cardBg = ThemeService.ParseBrush(themeDef.Colors.CardBackground, isLight ? LightCardBg : DarkCardBg);
+        var cardBorder = ThemeService.ParseBrush(themeDef.Colors.Border, isLight ? LightCardBorder : DarkCardBorder);
+        var accentBrush = ThemeService.ParseBrush(themeDef.Colors.Accent, isLight ? new SolidColorBrush(Color.FromRgb(2, 132, 199)) : new SolidColorBrush(Color.FromRgb(56, 189, 248)));
+        var secBtnBg = ThemeService.ParseBrush(themeDef.Colors.Hover, isLight ? LightSecondaryBtnBg : DarkSecondaryBtnBg);
+        var secBtnBorder = ThemeService.ParseBrush(themeDef.Colors.Border, isLight ? LightSecondaryBtnBorder : DarkSecondaryBtnBorder);
+
         int count = VisualTreeHelper.GetChildrenCount(node);
         for (int i = 0; i < count; i++)
         {
@@ -1852,83 +1950,62 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
             if (child is TextBlock tb)
             {
-                if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                if (tb != LivePreviewTitle && tb != LivePreviewBadgeText && tb != LivePreviewTextPrimary && 
+                    tb != LivePreviewTextSecondary && tb != LivePreviewHoverText && tb != LivePreviewButtonText && 
+                    tb != LivePreviewSecButtonText)
                 {
-                    byte r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
-                    int max = Math.Max(r, Math.Max(g, b));
-                    int min = Math.Min(r, Math.Min(g, b));
-                    bool isAccent = (max - min) > 75; // Preserve colored accents (red, green, cyan)
-                    if (!isAccent)
+                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
                     {
-                        if (isLight)
+                        byte r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                        int max = Math.Max(r, Math.Max(g, b));
+                        int min = Math.Min(r, Math.Min(g, b));
+                        bool isAccent = (max - min) > 75; // Preserve colored accents (red, green, cyan)
+                        if (!isAccent)
                         {
                             if (tb.FontSize >= 14 || tb.FontWeight == FontWeights.Bold || tb.FontWeight == FontWeights.SemiBold)
-                                tb.Foreground = LightTextPrimary;
+                                tb.Foreground = textPrimary;
                             else
-                                tb.Foreground = LightTextSecondary;
-                        }
-                        else
-                        {
-                            if (tb.FontSize >= 14 || tb.FontWeight == FontWeights.Bold || tb.FontWeight == FontWeights.SemiBold)
-                                tb.Foreground = DarkTextPrimary;
-                            else
-                                tb.Foreground = DarkTextSecondary;
+                                tb.Foreground = textSecondary;
                         }
                     }
                 }
             }
             else if (child is ChattyWidgets.UI.Controls.MarqueeText mt)
             {
-                if (isLight)
-                {
-                    if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
-                        mt.Foreground = LightTextPrimary;
-                    else
-                        mt.Foreground = LightTextSecondary;
-                }
+                if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
+                    mt.Foreground = textPrimary;
                 else
-                {
-                    if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
-                        mt.Foreground = DarkTextPrimary;
-                    else
-                        mt.Foreground = DarkTextSecondary;
-                }
+                    mt.Foreground = textSecondary;
             }
             else if (child is Button btn)
             {
                 if (btn != BtnThemeToggle && btn != BtnMaximizeRestore && btn != BtnCloseWindow && btn != BtnMinimizeWindow)
                 {
-                    // Check if primary launch/stop button
-                    bool isPrimaryLaunchStop = false;
+                    // Check if primary launch/stop button or special colored action button
+                    bool isSpecialBtn = false;
                     if (btn.Background is SolidColorBrush bgScb)
                     {
                         if ((bgScb.Color.R > 200 && bgScb.Color.G < 100) || // Red Stop
                             (bgScb.Color.G > 150 && bgScb.Color.R < 100) || // Green Launch
-                            (bgScb.Color.R == 99 && bgScb.Color.G == 102 && bgScb.Color.B == 241)) // Primary Indigo
+                            (bgScb.Color.R == 99 && bgScb.Color.G == 102 && bgScb.Color.B == 241) || // Primary Indigo
+                            (bgScb.Color.R == 139 && bgScb.Color.G == 92 && bgScb.Color.B == 246)) // Purple Save theme
                         {
-                            isPrimaryLaunchStop = true;
+                            isSpecialBtn = true;
                         }
                     }
 
-                    if (!isPrimaryLaunchStop)
+                    if (!isSpecialBtn)
                     {
                         bool isDangerRed = btn.Foreground is SolidColorBrush fgScb && fgScb.Color.R > 220 && fgScb.Color.G < 100;
-                        if (isLight)
-                        {
-                            if (!isDangerRed) btn.Foreground = LightTextPrimary;
-                            btn.Background = LightSecondaryBtnBg;
-                            btn.BorderBrush = LightSecondaryBtnBorder;
-                        }
-                        else
-                        {
-                            if (!isDangerRed) btn.Foreground = DarkTextSecondary;
-                            btn.Background = DarkSecondaryBtnBg;
-                            btn.BorderBrush = DarkSecondaryBtnBorder;
-                        }
+                        if (!isDangerRed) btn.Foreground = textPrimary;
+                        btn.Background = secBtnBg;
+                        btn.BorderBrush = secBtnBorder;
                     }
                 }
             }
-            else if (child is Border b && b != MainRootBorder && b != TopHeaderBorder && b != BottomStatusBar)
+            else if (child is Border b && b != MainRootBorder && b != TopHeaderBorder && b != BottomStatusBar &&
+                     b != LivePreviewOuterBorder && b != LivePreviewInnerCard && b != LivePreviewBadge && 
+                     b != LivePreviewHoverBox && b != LivePreviewButton && b != LivePreviewSecButton && b != LivePreviewDivider)
             {
                 if (b.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                 {
@@ -1938,52 +2015,560 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
                     bool isAccent = (max - min) > 60;
                     if (!isAccent)
                     {
-                        if (isLight)
+                        if (b.CornerRadius.TopLeft >= 10)
                         {
-                            if (b.CornerRadius.TopLeft >= 10)
-                            {
-                                b.Background = LightCardBg;
-                                b.BorderBrush = LightCardBorder;
-                            }
-                            else
-                            {
-                                b.Background = LightSecondaryBtnBg;
-                                b.BorderBrush = LightSecondaryBtnBorder;
-                            }
+                            b.Background = cardBg;
+                            b.BorderBrush = cardBorder;
                         }
                         else
                         {
-                            if (b.CornerRadius.TopLeft >= 10)
-                            {
-                                b.Background = DarkCardBg;
-                                b.BorderBrush = DarkCardBorder;
-                            }
-                            else
-                            {
-                                b.Background = new SolidColorBrush(Color.FromRgb(30, 35, 56));
-                                b.BorderBrush = new SolidColorBrush(Color.FromRgb(42, 49, 70));
-                            }
+                            b.Background = secBtnBg;
+                            b.BorderBrush = secBtnBorder;
                         }
                     }
                 }
             }
             else if (child is RadioButton rb)
             {
-                if (isLight)
-                {
-                    rb.Foreground = rb.IsChecked == true ? new SolidColorBrush(Color.FromRgb(2, 132, 199)) : LightTextSecondary;
-                }
-                else
-                {
-                    rb.Foreground = rb.IsChecked == true ? new SolidColorBrush(Color.FromRgb(56, 189, 248)) : DarkTextSecondary;
-                }
+                rb.Foreground = rb.IsChecked == true ? accentBrush : textSecondary;
             }
             else if (child is CheckBox cb)
             {
-                cb.Foreground = isLight ? LightTextPrimary : DarkTextPrimary;
+                cb.Foreground = textPrimary;
             }
 
-            ApplyHubThemeToTree(child, isLight);
+            ApplyHubThemeToTree(child, themeDef);
+        }
+    }
+
+    private void ReloadHubThemesCombo()
+    {
+        if (ComboHubTheme == null) return;
+        _isUpdatingThemeCombo = true;
+        try
+        {
+            string currentThemeId = WidgetManager.Instance?.Settings?.Theme ?? "dark";
+            ComboHubTheme.Items.Clear();
+
+            var allThemes = ThemeService.Instance.GetAllThemes();
+            int selectedIdx = 0;
+            int idx = 0;
+
+            foreach (var t in allThemes)
+            {
+                string icon = t.Id == "dark" ? "🌙" : (t.Id == "light" ? "☀️" : "🎨");
+                string title = t.DisplayName;
+
+                var item = new ComboBoxItem
+                {
+                    Content = $"{icon} {title}",
+                    Tag = t.Id
+                };
+                ComboHubTheme.Items.Add(item);
+
+                if (string.Equals(t.Id, currentThemeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIdx = idx;
+                }
+                idx++;
+            }
+
+            ComboHubTheme.SelectedIndex = selectedIdx;
+        }
+        finally
+        {
+            _isUpdatingThemeCombo = false;
+        }
+    }
+
+    private void OnLoadDarkTemplateClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Custom Dark";
+        InputThemeId.Text = "custom-dark";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 0;
+        InputThemeBg.Text = ThemeService.DarkTheme.Colors.Background;
+        InputThemeCardBg.Text = ThemeService.DarkTheme.Colors.CardBackground;
+        InputThemeBorder.Text = ThemeService.DarkTheme.Colors.Border;
+        InputThemeTextPrimary.Text = ThemeService.DarkTheme.Colors.TextPrimary;
+        InputThemeTextSecondary.Text = ThemeService.DarkTheme.Colors.TextSecondary;
+        InputThemeAccent.Text = ThemeService.DarkTheme.Colors.Accent;
+        InputThemeHover.Text = ThemeService.DarkTheme.Colors.Hover;
+        InputThemeDivider.Text = ThemeService.DarkTheme.Colors.Divider;
+        UpdateLiveThemePreview();
+    }
+
+    private void OnLoadLightTemplateClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Custom Light";
+        InputThemeId.Text = "custom-light";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 1;
+        InputThemeBg.Text = ThemeService.LightTheme.Colors.Background;
+        InputThemeCardBg.Text = ThemeService.LightTheme.Colors.CardBackground;
+        InputThemeBorder.Text = ThemeService.LightTheme.Colors.Border;
+        InputThemeTextPrimary.Text = ThemeService.LightTheme.Colors.TextPrimary;
+        InputThemeTextSecondary.Text = ThemeService.LightTheme.Colors.TextSecondary;
+        InputThemeAccent.Text = ThemeService.LightTheme.Colors.Accent;
+        InputThemeHover.Text = ThemeService.LightTheme.Colors.Hover;
+        InputThemeDivider.Text = ThemeService.LightTheme.Colors.Divider;
+        UpdateLiveThemePreview();
+    }
+
+    private void OnLoadCyberpunkPresetClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Cyberpunk Neon";
+        InputThemeId.Text = "cyberpunk-neon";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 0;
+        InputThemeBg.Text = "#0d0e1b";
+        InputThemeCardBg.Text = "#17142b";
+        InputThemeBorder.Text = "#40d946ef";
+        InputThemeTextPrimary.Text = "#f5f3ff";
+        InputThemeTextSecondary.Text = "#c084fc";
+        InputThemeAccent.Text = "#ec4899";
+        InputThemeHover.Text = "#2a1b4e";
+        InputThemeDivider.Text = "#3b1e6d";
+        UpdateLiveThemePreview();
+    }
+
+    private void OnLoadEmeraldPresetClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Emerald Forest";
+        InputThemeId.Text = "emerald-forest";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 0;
+        InputThemeBg.Text = "#061a14";
+        InputThemeCardBg.Text = "#0b2920";
+        InputThemeBorder.Text = "#3534d399";
+        InputThemeTextPrimary.Text = "#ecfdf5";
+        InputThemeTextSecondary.Text = "#6ee7b7";
+        InputThemeAccent.Text = "#10b981";
+        InputThemeHover.Text = "#134e3a";
+        InputThemeDivider.Text = "#164e3f";
+        UpdateLiveThemePreview();
+    }
+
+    private void OnLoadSunsetPresetClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Sunset Gold";
+        InputThemeId.Text = "sunset-gold";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 0;
+        InputThemeBg.Text = "#181014";
+        InputThemeCardBg.Text = "#27161b";
+        InputThemeBorder.Text = "#40f59e0b";
+        InputThemeTextPrimary.Text = "#fffbeb";
+        InputThemeTextSecondary.Text = "#fcd34d";
+        InputThemeAccent.Text = "#f59e0b";
+        InputThemeHover.Text = "#3d1f1f";
+        InputThemeDivider.Text = "#4a2420";
+        UpdateLiveThemePreview();
+    }
+
+    private void OnLoadMidnightPresetClick(object sender, RoutedEventArgs e)
+    {
+        InputThemeName.Text = "Midnight Navy";
+        InputThemeId.Text = "midnight-navy";
+        InputThemeAuthor.Text = Environment.UserName;
+        ComboThemeBaseContrast.SelectedIndex = 0;
+        InputThemeBg.Text = "#080c16";
+        InputThemeCardBg.Text = "#0f172a";
+        InputThemeBorder.Text = "#3038bdf8";
+        InputThemeTextPrimary.Text = "#f8fafc";
+        InputThemeTextSecondary.Text = "#94a3b8";
+        InputThemeAccent.Text = "#38bdf8";
+        InputThemeHover.Text = "#1e293b";
+        InputThemeDivider.Text = "#1e293b";
+        UpdateLiveThemePreview();
+    }
+
+    private void OnThemeColorInputChanged(object sender, RoutedEventArgs e)
+    {
+        UpdateLiveThemePreview();
+    }
+
+    private void UpdateLiveThemePreview()
+    {
+        if (InputThemeBg == null || PreviewThemeBg == null) return;
+
+        string bgHex = InputThemeBg.Text?.Trim() ?? "#121622";
+        string cardBgHex = InputThemeCardBg.Text?.Trim() ?? "#161928";
+        string borderHex = InputThemeBorder.Text?.Trim() ?? "#28FFFFFF";
+        string textPriHex = InputThemeTextPrimary.Text?.Trim() ?? "#F8FAFC";
+        string textSecHex = InputThemeTextSecondary.Text?.Trim() ?? "#94A3B8";
+        string accentHex = InputThemeAccent.Text?.Trim() ?? "#38BDF8";
+        string hoverHex = InputThemeHover.Text?.Trim() ?? "#22273D";
+        string dividerHex = InputThemeDivider.Text?.Trim() ?? "#202434";
+
+        var bgBrush = ThemeService.ParseBrush(bgHex, Brushes.Black);
+        var cardBgBrush = ThemeService.ParseBrush(cardBgHex, Brushes.DarkSlateGray);
+        var borderBrush = ThemeService.ParseBrush(borderHex, Brushes.Gray);
+        var textPriBrush = ThemeService.ParseBrush(textPriHex, Brushes.White);
+        var textSecBrush = ThemeService.ParseBrush(textSecHex, Brushes.Silver);
+        var accentBrush = ThemeService.ParseBrush(accentHex, Brushes.SkyBlue);
+        var hoverBrush = ThemeService.ParseBrush(hoverHex, Brushes.DimGray);
+        var dividerBrush = ThemeService.ParseBrush(dividerHex, Brushes.SlateGray);
+
+        PreviewThemeBg.Background = bgBrush;
+        PreviewThemeCardBg.Background = cardBgBrush;
+        PreviewThemeBorder.Background = borderBrush;
+        PreviewThemeTextPrimary.Background = textPriBrush;
+        PreviewThemeTextSecondary.Background = textSecBrush;
+        PreviewThemeAccent.Background = accentBrush;
+        PreviewThemeHover.Background = hoverBrush;
+        PreviewThemeDivider.Background = dividerBrush;
+
+        if (LivePreviewOuterBorder != null)
+        {
+            LivePreviewOuterBorder.Background = bgBrush;
+            LivePreviewOuterBorder.BorderBrush = borderBrush;
+        }
+        if (LivePreviewTitle != null) LivePreviewTitle.Foreground = textPriBrush;
+        if (LivePreviewBadge != null) LivePreviewBadge.Background = accentBrush;
+        if (LivePreviewBadgeText != null)
+        {
+            var accColor = ThemeService.ParseColor(accentHex, Colors.Cyan);
+            int lum = (accColor.R * 299 + accColor.G * 587 + accColor.B * 114) / 1000;
+            LivePreviewBadgeText.Foreground = lum > 140 ? Brushes.Black : Brushes.White;
+        }
+        if (LivePreviewInnerCard != null)
+        {
+            LivePreviewInnerCard.Background = cardBgBrush;
+            LivePreviewInnerCard.BorderBrush = borderBrush;
+        }
+        if (LivePreviewTextPrimary != null) LivePreviewTextPrimary.Foreground = textPriBrush;
+        if (LivePreviewTextSecondary != null) LivePreviewTextSecondary.Foreground = textSecBrush;
+        if (LivePreviewDivider != null) LivePreviewDivider.Background = dividerBrush;
+        if (LivePreviewHoverBox != null) LivePreviewHoverBox.Background = hoverBrush;
+        if (LivePreviewHoverText != null) LivePreviewHoverText.Foreground = textSecBrush;
+        if (LivePreviewButton != null) LivePreviewButton.Background = accentBrush;
+        if (LivePreviewButtonText != null)
+        {
+            var accColor = ThemeService.ParseColor(accentHex, Colors.Cyan);
+            int lum = (accColor.R * 299 + accColor.G * 587 + accColor.B * 114) / 1000;
+            LivePreviewButtonText.Foreground = lum > 140 ? Brushes.Black : Brushes.White;
+        }
+        if (LivePreviewSecButton != null)
+        {
+            LivePreviewSecButton.Background = hoverBrush;
+            LivePreviewSecButton.BorderBrush = borderBrush;
+        }
+        if (LivePreviewSecButtonText != null) LivePreviewSecButtonText.Foreground = textPriBrush;
+    }
+
+    private void OnSaveThemeClick(object sender, RoutedEventArgs e)
+    {
+        string name = InputThemeName.Text.Trim();
+        string id = InputThemeId.Text.Trim().ToLowerInvariant();
+        string author = InputThemeAuthor.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            MessageBox.Show(LocalizationService.Instance.T("Theme.EnterName", "Пожалуйста, введите название темы."), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(id)) id = "theme-" + Guid.NewGuid().ToString("N")[..6];
+        if (id == "dark" || id == "light") id = "custom-" + id;
+
+        string baseTheme = "dark";
+        if (ComboThemeBaseContrast.SelectedItem is ComboBoxItem cbi && cbi.Tag is string tag) baseTheme = tag;
+
+        var theme = new ThemeDefinition
+        {
+            Id = id,
+            Name = name,
+            Author = string.IsNullOrWhiteSpace(author) ? Environment.UserName : author,
+            BaseTheme = baseTheme,
+            Version = "1.0.0",
+            Colors = new ThemeColors
+            {
+                Background = InputThemeBg.Text.Trim(),
+                CardBackground = InputThemeCardBg.Text.Trim(),
+                Border = InputThemeBorder.Text.Trim(),
+                TextPrimary = InputThemeTextPrimary.Text.Trim(),
+                TextSecondary = InputThemeTextSecondary.Text.Trim(),
+                Accent = InputThemeAccent.Text.Trim(),
+                Hover = InputThemeHover.Text.Trim(),
+                Divider = InputThemeDivider.Text.Trim()
+            }
+        };
+
+        ThemeService.Instance.SaveCustomTheme(theme);
+        WidgetManager.Instance.ApplyGlobalTheme(theme.Id);
+        ApplyTheme(theme.Id);
+        MessageBox.Show(LocalizationService.Instance.T("Theme.SavedApplied", $"Тема «{name}» успешно сохранена и применена!"), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OnExportThemeClick(object sender, RoutedEventArgs e)
+    {
+        string id = InputThemeId.Text.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(id)) id = "my-custom-theme";
+
+        var sfd = new SaveFileDialog
+        {
+            Title = LocalizationService.Instance.T("Theme.ExportTitle", "Экспортировать тему в .chwtheme"),
+            Filter = "ChattyWidgets Theme (*.chwtheme)|*.chwtheme",
+            FileName = $"{id}.chwtheme"
+        };
+        if (sfd.ShowDialog(this) == true)
+        {
+            string baseTheme = (ComboThemeBaseContrast.SelectedItem is ComboBoxItem cbi && cbi.Tag is string tag) ? tag : "dark";
+            var theme = new ThemeDefinition
+            {
+                Id = id,
+                Name = InputThemeName.Text.Trim(),
+                Author = InputThemeAuthor.Text.Trim(),
+                BaseTheme = baseTheme,
+                Version = "1.0.0",
+                Colors = new ThemeColors
+                {
+                    Background = InputThemeBg.Text.Trim(),
+                    CardBackground = InputThemeCardBg.Text.Trim(),
+                    Border = InputThemeBorder.Text.Trim(),
+                    TextPrimary = InputThemeTextPrimary.Text.Trim(),
+                    TextSecondary = InputThemeTextSecondary.Text.Trim(),
+                    Accent = InputThemeAccent.Text.Trim(),
+                    Hover = InputThemeHover.Text.Trim(),
+                    Divider = InputThemeDivider.Text.Trim()
+                }
+            };
+            string json = System.Text.Json.JsonSerializer.Serialize(theme, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(sfd.FileName, json);
+            MessageBox.Show(LocalizationService.Instance.T("Theme.ExportSuccess", $"Тема успешно экспортирована в файл:\n{sfd.FileName}"), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void OnImportThemeClick(object sender, RoutedEventArgs e)
+    {
+        var ofd = new OpenFileDialog
+        {
+            Title = LocalizationService.Instance.T("Theme.ImportTitle", "Импорт файла темы .chwtheme"),
+            Filter = "ChattyWidgets Theme (*.chwtheme)|*.chwtheme"
+        };
+        if (ofd.ShowDialog(this) == true)
+        {
+            ImportThemeFile(ofd.FileName);
+        }
+    }
+
+    public void ImportThemeFile(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath)) return;
+            var imported = ThemeService.Instance.ImportThemeFromFile(filePath);
+            if (imported != null)
+            {
+                InputThemeName.Text = imported.Name;
+                InputThemeId.Text = imported.Id;
+                InputThemeAuthor.Text = imported.Author;
+                ComboThemeBaseContrast.SelectedIndex = imported.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                InputThemeBg.Text = imported.Colors.Background;
+                InputThemeCardBg.Text = imported.Colors.CardBackground;
+                InputThemeBorder.Text = imported.Colors.Border;
+                InputThemeTextPrimary.Text = imported.Colors.TextPrimary;
+                InputThemeTextSecondary.Text = imported.Colors.TextSecondary;
+                InputThemeAccent.Text = imported.Colors.Accent;
+                InputThemeHover.Text = imported.Colors.Hover;
+                InputThemeDivider.Text = imported.Colors.Divider;
+                UpdateLiveThemePreview();
+
+                WidgetManager.Instance.ApplyGlobalTheme(imported.Id);
+                ApplyTheme(imported.Id);
+
+                MessageBox.Show(LocalizationService.Instance.T("Theme.ImportSuccess", $"Тема «{imported.Name}» успешно импортирована и применена!"), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(LocalizationService.Instance.T("Theme.ImportError", $"Не удалось импортировать тему: {ex.Message}"), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    public void RefreshCustomThemesList()
+    {
+        if (PanelCustomThemesList == null) return;
+        PanelCustomThemesList.Children.Clear();
+
+        var customThemes = ThemeService.Instance.GetAllThemes().Where(t => !t.IsBuiltIn).ToList();
+        if (customThemes.Count == 0)
+        {
+            var emptyTb = new TextBlock
+            {
+                Text = LocalizationService.Instance.T("Theme.NoCustomThemes", "У вас пока нет созданных пользовательских тем. Настройте цвета выше и нажмите «Сохранить и применить тему»."),
+                Foreground = (Brush)new BrushConverter().ConvertFrom("#64748B")!,
+                FontSize = 11.5,
+                Margin = new Thickness(0, 4, 0, 8),
+                TextWrapping = TextWrapping.Wrap
+            };
+            PanelCustomThemesList.Children.Add(emptyTb);
+            return;
+        }
+
+        foreach (var t in customThemes)
+        {
+            var card = new Border
+            {
+                Background = (Brush)new BrushConverter().ConvertFrom("#141724")!,
+                BorderBrush = (Brush)new BrushConverter().ConvertFrom("#22283D")!,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            var dock = new System.Windows.Controls.DockPanel();
+
+            var actions = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            System.Windows.Controls.DockPanel.SetDock(actions, System.Windows.Controls.Dock.Right);
+
+            var btnApply = new Button
+            {
+                Content = LocalizationService.Instance.T("Theme.ApplyBtn", "Применить"),
+                Style = (Style)FindResource("SecondaryBtn"),
+                Padding = new Thickness(10, 4, 10, 4),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnApply.Click += (s, e) =>
+            {
+                WidgetManager.Instance.ApplyGlobalTheme(t.Id);
+                ApplyTheme(t.Id);
+            };
+            actions.Children.Add(btnApply);
+
+            var btnEdit = new Button
+            {
+                Content = LocalizationService.Instance.T("Theme.EditBtn", "Редактировать"),
+                Style = (Style)FindResource("SecondaryBtn"),
+                Padding = new Thickness(10, 4, 10, 4),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnEdit.Click += (s, e) =>
+            {
+                InputThemeName.Text = t.Name;
+                InputThemeId.Text = t.Id;
+                InputThemeAuthor.Text = t.Author;
+                ComboThemeBaseContrast.SelectedIndex = t.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                InputThemeBg.Text = t.Colors.Background;
+                InputThemeCardBg.Text = t.Colors.CardBackground;
+                InputThemeBorder.Text = t.Colors.Border;
+                InputThemeTextPrimary.Text = t.Colors.TextPrimary;
+                InputThemeTextSecondary.Text = t.Colors.TextSecondary;
+                InputThemeAccent.Text = t.Colors.Accent;
+                InputThemeHover.Text = t.Colors.Hover;
+                InputThemeDivider.Text = t.Colors.Divider;
+                UpdateLiveThemePreview();
+            };
+            actions.Children.Add(btnEdit);
+
+            var btnExport = new Button
+            {
+                Content = "📦",
+                ToolTip = LocalizationService.Instance.T("Theme.ExportBtnTip", "Экспорт темы в .chwtheme"),
+                Style = (Style)FindResource("SecondaryBtn"),
+                Padding = new Thickness(8, 4, 8, 4),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnExport.Click += (s, e) =>
+            {
+                var sfd = new SaveFileDialog
+                {
+                    Title = "Экспорт темы",
+                    Filter = "ChattyWidgets Theme (*.chwtheme)|*.chwtheme",
+                    FileName = $"{t.Id}.chwtheme"
+                };
+                if (sfd.ShowDialog(this) == true)
+                {
+                    ThemeService.Instance.ExportThemeToFile(t.Id, sfd.FileName);
+                    MessageBox.Show(LocalizationService.Instance.T("Theme.ExportSuccess", $"Тема экспортирована:\n{sfd.FileName}"), "ChattyWidgets", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            };
+            actions.Children.Add(btnExport);
+
+            var btnDelete = new Button
+            {
+                Content = "🗑",
+                ToolTip = LocalizationService.Instance.T("Theme.DeleteBtnTip", "Удалить тему"),
+                Style = (Style)FindResource("SecondaryBtn"),
+                Padding = new Thickness(8, 4, 8, 4),
+                FontSize = 11.5,
+                Foreground = (Brush)new BrushConverter().ConvertFrom("#EF4444")!
+            };
+            btnDelete.Click += (s, e) =>
+            {
+                if (MessageBox.Show(LocalizationService.Instance.T("Theme.DeleteConfirm", $"Удалить тему «{t.Name}»?"), "ChattyWidgets", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    ThemeService.Instance.DeleteCustomTheme(t.Id);
+                    if (WidgetManager.Instance.Settings.Theme.Equals(t.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        WidgetManager.Instance.ApplyGlobalTheme("dark");
+                        ApplyTheme("dark");
+                    }
+                }
+            };
+            actions.Children.Add(btnDelete);
+
+            dock.Children.Add(actions);
+
+            var infoStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            var titleWrap = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+            titleWrap.Children.Add(new TextBlock
+            {
+                Text = t.Name,
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)new BrushConverter().ConvertFrom("#F8FAFC")!,
+                Margin = new Thickness(0, 0, 8, 0)
+            });
+            titleWrap.Children.Add(new Border
+            {
+                Background = (Brush)new BrushConverter().ConvertFrom("#22283D")!,
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(6, 1, 6, 1),
+                Margin = new Thickness(0, 0, 8, 0),
+                Child = new TextBlock
+                {
+                    Text = t.Id,
+                    FontSize = 10,
+                    Foreground = (Brush)new BrushConverter().ConvertFrom("#94A3B8")!,
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace")
+                }
+            });
+            infoStack.Children.Add(titleWrap);
+
+            var swatches = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+            string[] hexes = [t.Colors.Background, t.Colors.CardBackground, t.Colors.Border, t.Colors.Accent, t.Colors.TextPrimary];
+            foreach (var hex in hexes)
+            {
+                swatches.Children.Add(new Border
+                {
+                    Width = 14,
+                    Height = 14,
+                    CornerRadius = new CornerRadius(3),
+                    Background = ThemeService.ParseBrush(hex, Brushes.Gray),
+                    BorderBrush = (Brush)new BrushConverter().ConvertFrom("#475569")!,
+                    BorderThickness = new Thickness(1),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    ToolTip = hex
+                });
+            }
+            swatches.Children.Add(new TextBlock
+            {
+                Text = $"от {t.Author} · v{t.Version}",
+                FontSize = 11,
+                Foreground = (Brush)new BrushConverter().ConvertFrom("#64748B")!,
+                Margin = new Thickness(6, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            infoStack.Children.Add(swatches);
+
+            dock.Children.Add(infoStack);
+            card.Child = dock;
+            PanelCustomThemesList.Children.Add(card);
         }
     }
 }

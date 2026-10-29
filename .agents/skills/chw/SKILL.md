@@ -30,7 +30,7 @@ Follow this 6-step sequential pipeline:
 1. Determine the unique widget ID:
    - Official / Bundled widget: `com.chatty.<name>` (e.g. `com.chatty.speedometer`).
    - Community widget: `com.github.<username>.<name>` or `<username>.<name>`.
-2. Create `manifest.json` following [Manifest Specification](file:///C:/Users/ChattyNB/.agents/skills/chw/references/manifest-spec.md):
+2. Create `manifest.json` following [Manifest Specification](./references/manifest-spec.md):
    - Provide English `name` and Russian `name_ru`.
    - Provide English `description` and Russian `description_ru`.
    - **Unified 4:3 Proportional Dimensions**: To ensure all desktop widgets align beautifully in a clean row, standard default dimensions are **320×240**, with a minimum of **240×180**:
@@ -59,14 +59,14 @@ If the widget has native logic, timers, system sensors, or custom settings:
    - Register the factory method in `NativeWidgetContextProvider.CreateContext()`.
 2. **Register Localized Strings** in `Core/Services/LocalizationService.cs`:
    - Add both Russian and English strings with `Add("Key", "RU", "EN")`.
-3. Reference: [Settings & ViewModel Integration](file:///C:/Users/ChattyNB/.agents/skills/chw/references/settings-integration.md).
+3. Reference: [Settings & ViewModel Integration](./references/settings-integration.md).
 
 ---
 
 ### Step 3: Design Widget UI (XAML or Web)
 
 #### Option A: Native Glassmorphic XAML UI
-Create `Widget.xaml` following [XAML Glass Patterns](file:///C:/Users/ChattyNB/.agents/skills/chw/references/xaml-glass-patterns.md):
+Create `Widget.xaml` following [XAML Glass Patterns](./references/xaml-glass-patterns.md):
 1. Root `<Border>` with `CornerRadius="20"`, `Background="#D8121622"`, `BorderBrush="#25FFFFFF"`, `ClipToBounds="True"`.
 2. **Proportional 4:3 Responsive Layout (320×240 Standard)**:
    - All desktop widgets share unified **320×240** default dimensions and **240×180** minimum dimensions. This guarantees that all widgets align seamlessly in a single row on any monitor without jagged offsets.
@@ -87,13 +87,16 @@ Create `Widget.xaml` following [XAML Glass Patterns](file:///C:/Users/ChattyNB/.
          </Grid.OpacityMask>
      ```
    - Any docked bottom controls must specify bottom radii (e.g. `CornerRadius="0,0,19,19"`) to prevent sharp corners on resize.
-4. **Dark & Light Theme Adaptability**: Ensure high contrast in both themes (no white text on white backgrounds).
+4. **Theme Adaptability (Dark, Light, Custom Themes)**:
+   - For native widgets: `NativeViewModelBase` exposes `CurrentTheme` with all 8 colors (`Background`, `CardBackground`, `Border`, `TextPrimary`, `TextSecondary`, `Accent`, `Hover`, `Divider`).
+   - For Web widgets: the engine automatically injects CSS variables into `document.documentElement.style`:
+     `--chatty-bg`, `--chatty-card-bg`, `--chatty-border`, `--chatty-text-primary`, `--chatty-text-secondary`, `--chatty-accent`, `--chatty-hover`, `--chatty-divider`. Use these variables in CSS for dynamic user theme support.
 5. **Running Marquee Text**: Wrap overflow text in a container with `ClipToBounds="True"` and add `controls:MarqueeBehavior.EnableMarquee="True"`.
 6. **Button Templates**: Use flat rounded vector templates instead of default WPF gray buttons.
 7. Save `Widget.xaml` in `ChattyWidgetsLibrary\widgets\<widget-id>\Widget.xaml`.
 
 #### Option B: Web Widgets (`index.html`) & Eliminating Square Backgrounds and Shadows
-Create `index.html` following [Web Widget Patterns](file:///c:/Users/ChattyNB/Projects/chattywidgets/.agents/skills/chw/references/web-widget-patterns.md):
+Create `index.html` following [Web Widget Patterns](./references/web-widget-patterns.md):
 
 **Golden Rules for Transparency & Eliminating Background / Shadow Artifacts:**
 1. **Root Transparency**:
@@ -190,7 +193,7 @@ Once the user replies with approval to publish:
    git commit -m "feat(engine): support settings and localization for <widget-id>"
    git push origin master
    ```
-3. Reference: [Packaging & Publishing Guide](file:///C:/Users/ChattyNB/.agents/skills/chw/references/packaging-and-publishing.md).
+3. Reference: [Packaging & Publishing Guide](./references/packaging-and-publishing.md).
 
 ---
 

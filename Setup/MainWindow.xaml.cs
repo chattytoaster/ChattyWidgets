@@ -176,7 +176,7 @@ public partial class MainWindow : Window
                 TxtFinishedSubtitle.Text = "ChattyWidgets успешно обновлен и готов к работе.";
                 TxtFinishResultsHeader.Text = "Результаты обновления:";
                 TxtFinishAssoc.Text = "Ассоциации пакетов .chw и .chwp обновлены";
-                TxtFinishSkillText.Text = "Скилл /chw обновлен в ~/.agents/skills/chw для всех AI-ассистентов";
+                TxtFinishSkillText.Text = "Скилл /chw обновлен для всех AI-ассистентов (Antigravity, Claude, Cursor, Codex)";
                 BtnFinish.Content = "🚀 Запустить обновленный ChattyWidgets";
             }
             else
@@ -194,7 +194,7 @@ public partial class MainWindow : Window
                 TxtFinishedSubtitle.Text = "ChattyWidgets и все выбранные компоненты настроены и готовы к работе.";
                 TxtFinishResultsHeader.Text = "Результаты установки:";
                 TxtFinishAssoc.Text = "Ассоциации пакетов .chw и .chwp зарегистрированы в реестре";
-                TxtFinishSkillText.Text = "Скилл /chw активирован в ~/.agents/skills/chw для всех AI-ассистентов";
+                TxtFinishSkillText.Text = "Скилл /chw активирован для всех AI-ассистентов (Antigravity, Claude, Cursor, Codex)";
                 BtnFinish.Content = "🚀 Завершить и запустить";
             }
 
@@ -206,7 +206,7 @@ public partial class MainWindow : Window
             CheckStartWithWindows.Content = "Запускать ChattyWidgets автоматически при старте Windows";
             CheckRegisterAssoc.Content = "Ассоциировать пакеты виджетов (.chw) и пресетов (.chwp)";
 
-            CheckInstallSkill.Content = "🤖 Установить скилл для AI-ассистентов (/chw в ~/.agents/skills/chw)";
+            CheckInstallSkill.Content = "🤖 Установить скилл для AI-ассистентов (/chw для Antigravity, Claude, Cursor, Codex)";
             TxtSkillDesc.Text = "Позволяет Antigravity, Claude Code, Cursor и Codex автономно разрабатывать виджеты по команде /chw";
 
             CheckOpenWebsite.Content = "🌐 Открыть официальный сайт chattyapps.dev после завершения";
@@ -229,7 +229,7 @@ public partial class MainWindow : Window
                 TxtUninstallSubtitle.Text = "Вы действительно хотите удалить ChattyWidgets с вашего компьютера?";
                 TxtUninstallPathLabel.Text = "📁 Программа будет удалена из:";
                 TxtUninstallOptionsLabel.Text = "Параметры очистки:";
-                CheckUninstallRemoveSkill.Content = "Удалить скилл /chw для AI-ассистентов (~/.agents/skills/chw)";
+                CheckUninstallRemoveSkill.Content = "Удалить скилл /chw для AI-ассистентов (Antigravity, Claude, Cursor, Codex)";
                 CheckUninstallRemoveUserData.Content = "Удалить пользовательские виджеты и настройки (%LOCALAPPDATA%\\ChattyWidgets)";
                 TxtUninstallDataWarn.Text = "⚠️ Внимание: если вы отметите эту опцию, все ваши скачанные виджеты и персональные настройки будут удалены.";
                 BtnUninstallCancel.Content = "Отмена";
@@ -266,7 +266,7 @@ public partial class MainWindow : Window
                 TxtFinishedSubtitle.Text = "ChattyWidgets has been successfully updated and is ready to use.";
                 TxtFinishResultsHeader.Text = "Update summary:";
                 TxtFinishAssoc.Text = ".chw and .chwp file associations updated";
-                TxtFinishSkillText.Text = "/chw skill updated in ~/.agents/skills/chw for all AI agents";
+                TxtFinishSkillText.Text = "/chw skill updated for all AI agents (Antigravity, Claude, Cursor, Codex)";
                 BtnFinish.Content = "🚀 Launch Updated ChattyWidgets";
             }
             else
@@ -284,7 +284,7 @@ public partial class MainWindow : Window
                 TxtFinishedSubtitle.Text = "ChattyWidgets and all selected components are ready to use.";
                 TxtFinishResultsHeader.Text = "Installation summary:";
                 TxtFinishAssoc.Text = ".chw and .chwp file associations registered in Windows";
-                TxtFinishSkillText.Text = "/chw skill activated in ~/.agents/skills/chw for all AI agents";
+                TxtFinishSkillText.Text = "/chw skill activated for all AI agents (Antigravity, Claude, Cursor, Codex)";
                 BtnFinish.Content = "🚀 Finish & Launch";
             }
 
@@ -296,7 +296,7 @@ public partial class MainWindow : Window
             CheckStartWithWindows.Content = "Start ChattyWidgets on Windows startup";
             CheckRegisterAssoc.Content = "Register file associations (.chw packages and .chwp presets)";
 
-            CheckInstallSkill.Content = "🤖 Install AI Agent Skill (/chw in ~/.agents/skills/chw)";
+            CheckInstallSkill.Content = "🤖 Install AI Agent Skill (/chw for Antigravity, Claude, Cursor, Codex)";
             TxtSkillDesc.Text = "Enables Antigravity, Claude Code, Cursor, and Codex to autonomously build widgets via /chw";
 
             CheckOpenWebsite.Content = "🌐 Open official website chattyapps.dev after installation";
@@ -319,7 +319,7 @@ public partial class MainWindow : Window
                 TxtUninstallSubtitle.Text = "Are you sure you want to uninstall ChattyWidgets from your computer?";
                 TxtUninstallPathLabel.Text = "📁 Application will be removed from:";
                 TxtUninstallOptionsLabel.Text = "Cleanup options:";
-                CheckUninstallRemoveSkill.Content = "Remove /chw skill for AI assistants (~/.agents/skills/chw)";
+                CheckUninstallRemoveSkill.Content = "Remove /chw skill for AI assistants (Antigravity, Claude, Cursor, Codex)";
                 CheckUninstallRemoveUserData.Content = "Remove user widgets and settings (%LOCALAPPDATA%\\ChattyWidgets)";
                 TxtUninstallDataWarn.Text = "⚠️ Warning: if checked, all downloaded widgets and personal settings will be deleted.";
                 BtnUninstallCancel.Content = "Cancel";

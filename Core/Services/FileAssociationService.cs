@@ -15,8 +15,12 @@ public static class FileAssociationService
     private const string ChwpProgId = "ChattyWidgets.Preset";
     private const string ChwpDescription = "Пакет пресета рабочего стола ChattyWidgets (.chwp)";
 
+    private const string ChwThemeExtension = ".chwtheme";
+    private const string ChwThemeProgId = "ChattyWidgets.Theme";
+    private const string ChwThemeDescription = "Тема оформления ChattyWidgets (.chwtheme)";
+
     /// <summary>
-    /// Ensures that .chw and .chwp files are associated with this executable in HKCU.
+    /// Ensures that .chw, .chwp and .chwtheme files are associated with this executable in HKCU.
     /// </summary>
     public static void EnsureFileAssociation()
     {
@@ -28,10 +32,11 @@ public static class FileAssociationService
 
             RegisterExtension(ChwExtension, ChwProgId, ChwDescription, "application/x-chattywidgets-package", exePath);
             RegisterExtension(ChwpExtension, ChwpProgId, ChwpDescription, "application/x-chattywidgets-preset", exePath);
+            RegisterExtension(ChwThemeExtension, ChwThemeProgId, ChwThemeDescription, "application/x-chattywidgets-theme", exePath);
 
             // Notify Windows Explorer that associations have changed
             Win32Native.SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero); // SHCNE_ASSOCCHANGED
-            Debug.WriteLine("[FileAssociationService] .chw and .chwp file associations verified.");
+            Debug.WriteLine("[FileAssociationService] .chw, .chwp and .chwtheme file associations verified.");
         }
         catch (Exception ex)
         {

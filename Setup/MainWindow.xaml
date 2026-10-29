@@ -159,7 +159,7 @@
                             <Border Background="#161B30" BorderBrush="#3A4670" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,6,0,6">
                                 <StackPanel>
                                     <CheckBox x:Name="CheckInstallSkill" IsChecked="True" FontWeight="SemiBold" Foreground="#F8FAFC"
-                                              Content="🤖 Установить скилл для AI-ассистентов (/chw в ~/.agents/skills/chw)"/>
+                                              Content="🤖 Установить скилл для AI-ассистентов (/chw для Antigravity, Claude, Cursor, Codex)"/>
                                     <TextBlock x:Name="TxtSkillDesc" Text="Позволяет Antigravity, Claude Code, Cursor и Codex автономно разрабатывать виджеты по команде /chw"
                                                FontSize="11" Foreground="#818CF8" Margin="30,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -257,7 +257,7 @@
                         </StackPanel>
                         <StackPanel x:Name="ItemFinishSkill" Orientation="Horizontal" Margin="0,3">
                             <TextBlock Text="✓" Foreground="#34D399" FontWeight="Bold" Margin="0,0,8,0"/>
-                            <TextBlock x:Name="TxtFinishSkillText" Text="Скилл /chw активирован в ~/.agents/skills/chw для всех AI-ассистентов" FontSize="12.5" Foreground="#CBD5E1"/>
+                            <TextBlock x:Name="TxtFinishSkillText" Text="Скилл /chw активирован для всех AI-ассистентов (Antigravity, Claude, Cursor, Codex)" FontSize="12.5" Foreground="#CBD5E1"/>
                         </StackPanel>
                         <StackPanel x:Name="ItemFinishWebsite" Orientation="Horizontal" Margin="0,3">
                             <TextBlock Text="✓" Foreground="#34D399" FontWeight="Bold" Margin="0,0,8,0"/>
@@ -313,7 +313,7 @@
                 <Border Grid.Row="2" Background="#101422" BorderBrush="#26314A" BorderThickness="1" CornerRadius="12" Padding="16,14" Margin="0,0,0,16">
                     <StackPanel>
                         <TextBlock x:Name="TxtUninstallOptionsLabel" Text="Параметры очистки:" FontSize="12" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,10"/>
-                        <CheckBox x:Name="CheckUninstallRemoveSkill" IsChecked="True" Content="Удалить скилл /chw для AI-ассистентов (~/.agents/skills/chw)" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="CheckUninstallRemoveSkill" IsChecked="True" Content="Удалить скилл /chw для AI-ассистентов (Antigravity, Claude, Cursor, Codex)" Margin="0,0,0,8"/>
                         <CheckBox x:Name="CheckUninstallRemoveUserData" IsChecked="False" Content="Удалить пользовательские виджеты и настройки (%LOCALAPPDATA%\ChattyWidgets)"/>
                         <TextBlock x:Name="TxtUninstallDataWarn" Text="⚠️ Внимание: если вы отметите эту опцию, все ваши скачанные виджеты и персональные настройки будут удалены." FontSize="11" Foreground="#F59E0B" Margin="30,4,0,0" TextWrapping="Wrap"/>
                     </StackPanel>

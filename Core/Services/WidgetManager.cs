@@ -119,6 +119,7 @@ public class WidgetManager
     {
         Settings.Theme = theme;
         SaveSettings();
+        ThemeService.Instance.NotifyActiveThemeChanged(ThemeService.Instance.GetTheme(theme));
         foreach (var win in _activeWindows.Values)
         {
             try { win.ApplyTheme(); } catch { }

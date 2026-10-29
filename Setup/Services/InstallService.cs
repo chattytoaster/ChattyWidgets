@@ -136,7 +136,7 @@ public class InstallService
                     RegisterFileAssociations(targetExe);
                 }
 
-                // 3. Install Agent Skill for AI assistants (~/.agents/skills/chw)
+                // 3. Install Agent Skill for AI assistants (Antigravity, Claude, Cursor, Codex, Open Agent)
                 if (options.InstallAgentSkill)
                 {
                     ReportProgress(80, Msg("Установка скилла /chw для AI-ассистентов...", "Installing /chw skill for AI assistants..."));
@@ -548,6 +548,24 @@ public class InstallService
                 }
             }
 
+            // Register .chwtheme extension
+            using (var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\.chwtheme"))
+            {
+                key.SetValue("", "ChattyWidgets.Theme");
+            }
+            using (var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\ChattyWidgets.Theme"))
+            {
+                key.SetValue("", "ChattyWidgets Theme Package");
+                using (var iconKey = key.CreateSubKey("DefaultIcon"))
+                {
+                    iconKey.SetValue("", $"{targetExePath},0");
+                }
+                using (var shellKey = key.CreateSubKey(@"shell\open\command"))
+                {
+                    shellKey.SetValue("", $"\"{targetExePath}\" \"%1\"");
+                }
+            }
+
             // Notify Explorer of association change
             SHChangeNotify(0x08000000 /*SHCNE_ASSOCCHANGED*/, 0x0000 /*SHCNF_IDLIST*/, IntPtr.Zero, IntPtr.Zero);
         }
@@ -573,39 +591,62 @@ public class InstallService
         catch { }
     }
 
+    public static string[] GetSkillTargetDirectories(string userHome)
+    {
+        return new[]
+        {
+            Path.Combine(userHome, ".gemini", "skills", "chw"),
+            Path.Combine(userHome, ".gemini", "config", "skills", "chw"),
+            Path.Combine(userHome, ".claude", "skills", "chw"),
+            Path.Combine(userHome, ".cursor", "skills-cursor", "chw"),
+            Path.Combine(userHome, ".cursor", "skills", "chw"),
+            Path.Combine(userHome, ".codex", "skills", "chw"),
+            Path.Combine(userHome, ".copilot", "skills", "chw"),
+            Path.Combine(userHome, ".agents", "skills", "chw")
+        };
+    }
+
     public static void InstallAgentSkillFiles(string sourceRoot)
     {
         try
         {
             string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string targetSkillDir = Path.Combine(userHome, ".agents", "skills", "chw");
-            Directory.CreateDirectory(targetSkillDir);
+            string[] targetSkillDirs = GetSkillTargetDirectories(userHome);
 
-            // Locate .agents/skills/chw in source or fallback
+            // Locate .agents/skills/chw or fallback sources
             string[] possibleSources = new[]
             {
                 Path.Combine(sourceRoot, ".agents", "skills", "chw"),
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", "skills", "chw"),
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".agents", "skills", "chw"),
-                Path.Combine(userHome, "Projects", "chattywidgets", ".agents", "skills", "chw")
+                Path.Combine(userHome, "Projects", "chattywidgets", ".agents", "skills", "chw"),
+                Path.Combine(userHome, ".gemini", "skills", "chw"),
+                Path.Combine(userHome, ".agents", "skills", "chw")
             };
 
             string? found = possibleSources.FirstOrDefault(d => Directory.Exists(d) && File.Exists(Path.Combine(d, "SKILL.md")));
-            if (found != null)
+
+            foreach (string targetSkillDir in targetSkillDirs)
             {
-                foreach (string file in Directory.GetFiles(found, "*.*", SearchOption.AllDirectories))
+                try
                 {
-                    string rel = Path.GetRelativePath(found, file);
-                    string dest = Path.Combine(targetSkillDir, rel);
-                    string? dir = Path.GetDirectoryName(dest);
-                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                    File.Copy(file, dest, true);
-                }
-            }
-            else
-            {
-                // Fallback: write embedded SKILL.md
-                string skillMd = @"---
+                    Directory.CreateDirectory(targetSkillDir);
+
+                    if (found != null)
+                    {
+                        foreach (string file in Directory.GetFiles(found, "*.*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(found, file);
+                            string dest = Path.Combine(targetSkillDir, rel);
+                            string? dir = Path.GetDirectoryName(dest);
+                            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                            File.Copy(file, dest, true);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback: write embedded SKILL.md
+                        string skillMd = @"---
 name: chw
 description: >-
   Create, scaffold, implement, test, and publish desktop widgets for ChattyWidgets.
@@ -618,7 +659,13 @@ description: >-
 
 Use this skill to autonomously scaffold, develop, wire up, locally test, and officially publish desktop widgets for the ChattyWidgets platform.
 ";
-                File.WriteAllText(Path.Combine(targetSkillDir, "SKILL.md"), skillMd);
+                        File.WriteAllText(Path.Combine(targetSkillDir, "SKILL.md"), skillMd);
+                    }
+                }
+                catch (Exception dirEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[InstallService] Error writing skill to {targetSkillDir}: {dirEx.Message}");
+                }
             }
         }
         catch (Exception ex)
@@ -786,10 +833,16 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
         try
         {
             string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string targetSkillDir = Path.Combine(userHome, ".agents", "skills", "chw");
-            if (Directory.Exists(targetSkillDir))
+            foreach (string targetSkillDir in GetSkillTargetDirectories(userHome))
             {
-                Directory.Delete(targetSkillDir, true);
+                try
+                {
+                    if (Directory.Exists(targetSkillDir))
+                    {
+                        Directory.Delete(targetSkillDir, true);
+                    }
+                }
+                catch { }
             }
         }
         catch { }

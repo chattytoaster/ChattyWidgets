@@ -515,7 +515,7 @@
                                     <Border Background="#10121C" BorderBrush="#202434" BorderThickness="1" CornerRadius="8" Padding="10,6">
                                         <DockPanel>
                                             <TextBlock x:Name="TxtSkillPathLabel" Text="📁 Расположение:" FontSize="11" FontWeight="SemiBold" Foreground="#64748B" DockPanel.Dock="Left" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock x:Name="TxtSkillPath" Text="~/.agents/skills/chw" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas, monospace" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="TxtSkillPath" Text="~/.gemini/skills/chw  |  ~/.claude/skills/chw  |  ~/.agents/skills/chw" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas, monospace" VerticalAlignment="Center"/>
                                         </DockPanel>
                                     </Border>
                                 </StackPanel>
@@ -596,6 +596,252 @@
                                 </DockPanel>
 
                                 <Button x:Name="BtnExportPackage" Content="📦 Собрать пакет .chw" Style="{StaticResource PrimaryBtn}" Background="#10B981" HorizontalAlignment="Left" Click="OnExportChwPackageClick"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card: Theme Designer (.chwtheme) -->
+                        <Border Background="#161928" BorderBrush="#252A3F" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,16,0,16">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="🎨" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtThemeDesignerTitle" Text="Конструктор тем оформления (.chwtheme)" FontSize="15" FontWeight="Bold" Foreground="#A78BFA" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <TextBlock x:Name="TxtThemeDesignerDesc" Text="Создавайте уникальные цветовые темы для виджетов и Хаба, настраивайте палитру и делитесь файлами .chwtheme с другими пользователями."
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,14"/>
+
+                                <!-- Base Themes & Colors Reference Panel -->
+                                <Border Background="#10121C" BorderBrush="#202434" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TxtBaseThemesTitle" Text="Базовые темы и их основные цвета:" FontSize="12" FontWeight="SemiBold" Foreground="#38BDF8" Margin="0,0,0,10"/>
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="12"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Base Dark Card -->
+                                            <Border Grid.Column="0" Background="#141724" BorderBrush="#22283D" BorderThickness="1" CornerRadius="8" Padding="10">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,0,0,6">
+                                                        <TextBlock x:Name="TxtBaseThemeDarkTitle" Text="🌙 Базовая Тёмная (Dark)" FontSize="12" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                                        <Button x:Name="BtnLoadDarkTemplate" Content="Загрузить шаблон" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Right" Padding="8,2" FontSize="11" Click="OnLoadDarkTemplateClick"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="Фон: #121622 · Карточки: #161928 · Рамка: #28FFFFFF&#x0a;Текст: #F8FAFC · Подтекст: #94A3B8 · Акцент: #38BDF8&#x0a;Hover: #22273D · Разделитель: #202434"
+                                                               FontSize="10.5" Foreground="#64748B" FontFamily="Consolas, monospace" LineHeight="15"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Base Light Card -->
+                                            <Border Grid.Column="2" Background="#141724" BorderBrush="#22283D" BorderThickness="1" CornerRadius="8" Padding="10">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,0,0,6">
+                                                        <TextBlock x:Name="TxtBaseThemeLightTitle" Text="☀️ Базовая Светлая (Light)" FontSize="12" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                                        <Button x:Name="BtnLoadLightTemplate" Content="Загрузить шаблон" Style="{StaticResource SecondaryBtn}" HorizontalAlignment="Right" Padding="8,2" FontSize="11" Click="OnLoadLightTemplateClick"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="Фон: #F8FAFC · Карточки: #FFFFFF · Рамка: #2D000000&#x0a;Текст: #0F172A · Подтекст: #64748B · Акцент: #0284C7&#x0a;Hover: #E2E8F0 · Разделитель: #CBD5E1"
+                                                               FontSize="10.5" Foreground="#64748B" FontFamily="Consolas, monospace" LineHeight="15"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Quick Presets -->
+                                        <WrapPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Быстрые стили: " FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <Button Content="💜 Cyberpunk" Style="{StaticResource SecondaryBtn}" Padding="8,3" FontSize="11" Margin="0,0,6,0" Click="OnLoadCyberpunkPresetClick"/>
+                                            <Button Content="🌲 Emerald Glass" Style="{StaticResource SecondaryBtn}" Padding="8,3" FontSize="11" Margin="0,0,6,0" Click="OnLoadEmeraldPresetClick"/>
+                                            <Button Content="🌇 Sunset Gold" Style="{StaticResource SecondaryBtn}" Padding="8,3" FontSize="11" Margin="0,0,6,0" Click="OnLoadSunsetPresetClick"/>
+                                            <Button Content="🌌 Midnight Navy" Style="{StaticResource SecondaryBtn}" Padding="8,3" FontSize="11" Click="OnLoadMidnightPresetClick"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Theme Metadata -->
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock x:Name="TxtThemeNameLabel" Text="Название темы:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputThemeName" Text="Моя Тема" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13" TextChanged="OnThemeColorInputChanged"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock x:Name="TxtThemeIdLabel" Text="ID темы (латиница без пробелов):" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputThemeId" Text="my-custom-theme" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock x:Name="TxtThemeAuthorLabel" Text="Автор темы:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="InputThemeAuthor" Text="User" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="8" FontSize="13"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock x:Name="TxtThemeBaseContrastLabel" Text="Базовый режим контраста:" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="ComboThemeBaseContrast" SelectedIndex="0" SelectionChanged="OnThemeColorInputChanged">
+                                            <ComboBoxItem Content="🌙 Тёмный (Dark base — светлый текст на темном фоне)" Tag="dark"/>
+                                            <ComboBoxItem Content="☀️ Светлый (Light base — темный текст на светлом фоне)" Tag="light"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 8 Extended Colors Grid -->
+                                <TextBlock Text="Настройка цветов темы (HEX-формат):" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- 1. Background -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorBgLabel" Text="Фон окна / виджета (Background):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeBg" Width="28" Height="28" CornerRadius="6" Background="#121622" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeBg" Text="#121622" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 2. Card Background -->
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorCardBgLabel" Text="Фон карточек и панелей (Card):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeCardBg" Width="28" Height="28" CornerRadius="6" Background="#161928" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeCardBg" Text="#161928" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 3. Border -->
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorBorderLabel" Text="Цвет рамок и обводки (Border):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeBorder" Width="28" Height="28" CornerRadius="6" Background="#28FFFFFF" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeBorder" Text="#28FFFFFF" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 4. Text Primary -->
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorTextPrimaryLabel" Text="Основной текст и заголовки (Primary):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeTextPrimary" Width="28" Height="28" CornerRadius="6" Background="#F8FAFC" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeTextPrimary" Text="#F8FAFC" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 5. Text Secondary -->
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorTextSecondaryLabel" Text="Второстепенный текст и подписи (Secondary):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeTextSecondary" Width="28" Height="28" CornerRadius="6" Background="#94A3B8" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeTextSecondary" Text="#94A3B8" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 6. Accent -->
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock x:Name="TxtColorAccentLabel" Text="Акцентный цвет кнопок/слайдеров (Accent):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeAccent" Width="28" Height="28" CornerRadius="6" Background="#38BDF8" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeAccent" Text="#38BDF8" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 7. Hover -->
+                                    <StackPanel Grid.Row="3" Grid.Column="0">
+                                        <TextBlock x:Name="TxtColorHoverLabel" Text="Подсветка при наведении (Hover / Focus):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeHover" Width="28" Height="28" CornerRadius="6" Background="#22273D" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeHover" Text="#22273D" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <!-- 8. Divider -->
+                                    <StackPanel Grid.Row="3" Grid.Column="2">
+                                        <TextBlock x:Name="TxtColorDividerLabel" Text="Линии и разделители (Divider):" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Border x:Name="PreviewThemeDivider" Width="28" Height="28" CornerRadius="6" Background="#202434" BorderBrush="#475569" BorderThickness="1" Margin="0,0,8,0" DockPanel.Dock="Left"/>
+                                            <TextBox x:Name="InputThemeDivider" Text="#202434" Background="#10121C" Foreground="#F8FAFC" BorderBrush="#333B52" Padding="6,4" FontSize="12.5" FontFamily="Consolas, monospace" TextChanged="OnThemeColorInputChanged"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Live Interactive Preview Card -->
+                                <TextBlock x:Name="TxtLivePreviewTitle" Text="Интерактивный предпросмотр темы (Live Preview):" FontSize="12.5" FontWeight="SemiBold" Foreground="#38BDF8" Margin="0,0,0,8"/>
+
+                                <Border x:Name="LivePreviewOuterBorder" Background="#121622" BorderBrush="#28FFFFFF" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,10">
+                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                                <TextBlock Text="✦" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="LivePreviewTitle" Text="Заголовок виджета / Виджет-пример" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <Border x:Name="LivePreviewBadge" Background="#38BDF8" CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <TextBlock x:Name="LivePreviewBadgeText" Text="АКЦЕНТ" FontSize="10" FontWeight="Bold" Foreground="#000000"/>
+                                            </Border>
+                                        </DockPanel>
+
+                                        <Border x:Name="LivePreviewInnerCard" Background="#161928" BorderBrush="#202434" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock x:Name="LivePreviewTextPrimary" Text="Основной текст внутри карточки (Primary Text)" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,0,4"/>
+                                                <TextBlock x:Name="LivePreviewTextSecondary" Text="Второстепенное описание и подсказки для пользователя (Secondary Text)" FontSize="11" Foreground="#94A3B8" Margin="0,0,0,8"/>
+                                                <Border x:Name="LivePreviewDivider" Height="1" Background="#202434" Margin="0,0,0,8"/>
+                                                <DockPanel>
+                                                    <TextBlock x:Name="LivePreviewHoverText" Text="Элемент в фокусе" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                                    <Border x:Name="LivePreviewHoverBox" Background="#22273D" CornerRadius="4" Padding="8,3" HorizontalAlignment="Right">
+                                                        <TextBlock Text="Hover State" FontSize="11" Foreground="#F8FAFC"/>
+                                                    </Border>
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border x:Name="LivePreviewButton" Background="#38BDF8" CornerRadius="6" Padding="12,6" Margin="0,0,8,0">
+                                                <TextBlock x:Name="LivePreviewButtonText" Text="Акцентная кнопка" FontSize="11.5" FontWeight="SemiBold" Foreground="#000000"/>
+                                            </Border>
+                                            <Border x:Name="LivePreviewSecButton" Background="#22273D" BorderBrush="#202434" BorderThickness="1" CornerRadius="6" Padding="12,6">
+                                                <TextBlock x:Name="LivePreviewSecButtonText" Text="Вторичная кнопка" FontSize="11.5" Foreground="#F8FAFC"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Action Buttons -->
+                                <WrapPanel Margin="0,0,0,16">
+                                    <Button x:Name="BtnSaveTheme" Content="✨ Сохранить и применить тему" Style="{StaticResource PrimaryBtn}" Background="#8B5CF6" Margin="0,0,10,8" Click="OnSaveThemeClick"/>
+                                    <Button x:Name="BtnExportTheme" Content="📦 Экспортировать в .chwtheme..." Style="{StaticResource SecondaryBtn}" Margin="0,0,10,8" Click="OnExportThemeClick"/>
+                                    <Button x:Name="BtnImportTheme" Content="📂 Импортировать .chwtheme..." Style="{StaticResource SecondaryBtn}" Margin="0,0,0,8" Click="OnImportThemeClick"/>
+                                </WrapPanel>
+
+                                <!-- Custom Themes List -->
+                                <Border Height="1" Background="#202434" Margin="0,0,0,14"/>
+
+                                <TextBlock x:Name="TxtCustomThemesListTitle" Text="Установленные пользовательские темы:" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+                                <StackPanel x:Name="PanelCustomThemesList"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

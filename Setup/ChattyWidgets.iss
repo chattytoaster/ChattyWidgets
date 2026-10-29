@@ -31,11 +31,18 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Запускать ChattyWidgets автоматически при старте Windows"; GroupDescription: "Параметры запуска:"
-Name: "agentskill"; Description: "🤖 Установить скилл для AI-ассистентов (/chw в ~/.agents/skills/chw)"; GroupDescription: "Интеграции для разработчиков:"
+Name: "agentskill"; Description: "🤖 Установить скилл для AI-ассистентов (/chw для Antigravity, Claude, Cursor, Codex)"; GroupDescription: "Интеграции для разработчиков:"
 Name: "openwebsite"; Description: "🌐 Открыть официальный сайт chattyapps.dev"; GroupDescription: "После установки:"
 
 [Files]
 Source: "..\bin\Release\net8.0-windows10.0.19041.0\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.gemini\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.gemini\config\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.claude\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.cursor\skills-cursor\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.cursor\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.codex\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
+Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.copilot\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
 Source: "..\.agents\skills\chw\*"; DestDir: "{userprofile}\.agents\skills\chw"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: agentskill
 
 [Icons]
@@ -54,6 +61,15 @@ Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Package\shell\open\command";
 
 ; File Association .chwp
 Root: HKCU; Subkey: "Software\Classes\.chwp"; ValueType: string; ValueData: "ChattyWidgets.Preset"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset"; ValueType: string; ValueData: "ChattyWidgets Preset Package"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+
+; File Association .chwtheme
+Root: HKCU; Subkey: "Software\Classes\.chwtheme"; ValueType: string; ValueData: "ChattyWidgets.Theme"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Theme"; ValueType: string; ValueData: "ChattyWidgets Theme Package"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Theme\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Theme\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
 Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset"; ValueType: string; ValueData: "ChattyWidgets Preset Package"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName},0"
 Root: HKCU; Subkey: "Software\Classes\ChattyWidgets.Preset\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""

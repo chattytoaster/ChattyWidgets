@@ -1163,7 +1163,8 @@ public partial class WidgetWindow : Window
         {
             activeTheme = WidgetManager.Instance.Settings.Theme;
         }
-        bool isLight = activeTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        var theme = ThemeService.Instance.GetTheme(activeTheme);
+        bool isLight = theme.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
 
         UpdateMenuChecks();
 
@@ -1184,18 +1185,13 @@ public partial class WidgetWindow : Window
                 // Strictly eliminate any DropShadowEffect on the root border to completely eliminate transparent straight corner artifacts
                 rootBorder.Effect = null;
 
-                if (isLight)
-                {
-                    byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 245), 30, 248);
-                    rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 248, 250, 252));
-                    rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(45, 0, 0, 0));
-                }
-                else
-                {
-                    byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * 225), 30, 225);
-                    rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 18, 22, 34));
-                    rootBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-                }
+                Color parsedBg = ThemeService.ParseColor(theme.Colors.Background, isLight ? Color.FromRgb(248, 250, 252) : Color.FromRgb(18, 22, 34));
+                int maxAlpha = isLight ? 248 : 225;
+                byte alpha = (byte)Math.Clamp((int)(Settings.Opacity * maxAlpha), 30, maxAlpha);
+                rootBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, parsedBg.R, parsedBg.G, parsedBg.B));
+
+                Color parsedBorder = ThemeService.ParseColor(theme.Colors.Border, isLight ? Color.FromArgb(45, 0, 0, 0) : Color.FromArgb(40, 255, 255, 255));
+                rootBorder.BorderBrush = new SolidColorBrush(parsedBorder);
                 rootBorder.BorderThickness = new Thickness(1);
             }
         }
@@ -1224,25 +1220,36 @@ public partial class WidgetWindow : Window
 
         if (WidgetContentHost.Content is FrameworkElement hostElem && hostElem.DataContext is NativeViewModelBase nativeViewModel)
         {
-            nativeViewModel.ApplyTheme(isLight);
+            nativeViewModel.ApplyTheme(theme);
             nativeViewModel.ApplyOpacity(Settings.Opacity);
         }
 
         // 3. Traverse visual tree for all native elements (TextBlocks, Buttons, Shapes, inner Borders)
         if (!isWebWidget && WidgetContentHost.Content is DependencyObject depObj)
         {
-            ApplyThemeToVisualTree(depObj, isLight, rootBorder);
+            ApplyThemeToVisualTree(depObj, theme, rootBorder);
         }
 
         // 4. For Web widgets
         if (_webView?.CoreWebView2 != null)
         {
             string alphaStr = Settings.Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            Color parsedCardBg = ThemeService.ParseColor(theme.Colors.CardBackground, isLight ? Color.FromRgb(248, 250, 252) : Color.FromRgb(18, 22, 34));
+            string cardRgba = $"rgba({parsedCardBg.R}, {parsedCardBg.G}, {parsedCardBg.B}, {alphaStr})";
             string js = $@"
                 try {{
                     document.documentElement.style.removeProperty('opacity');
                     document.documentElement.style.setProperty('--chatty-bg-opacity', '{alphaStr}');
                     document.documentElement.style.setProperty('--chatty-opacity', '{alphaStr}');
+                    document.documentElement.style.setProperty('--chatty-bg', '{theme.Colors.Background}');
+                    document.documentElement.style.setProperty('--chatty-card-bg', '{theme.Colors.CardBackground}');
+                    document.documentElement.style.setProperty('--chatty-border', '{theme.Colors.Border}');
+                    document.documentElement.style.setProperty('--chatty-text-primary', '{theme.Colors.TextPrimary}');
+                    document.documentElement.style.setProperty('--chatty-text-secondary', '{theme.Colors.TextSecondary}');
+                    document.documentElement.style.setProperty('--chatty-accent', '{theme.Colors.Accent}');
+                    document.documentElement.style.setProperty('--chatty-hover', '{theme.Colors.Hover}');
+                    document.documentElement.style.setProperty('--chatty-divider', '{theme.Colors.Divider}');
+
                     document.documentElement.classList.toggle('light-theme', {isLight.ToString().ToLower()});
                     document.documentElement.classList.toggle('dark-theme', {(!isLight).ToString().ToLower()});
                     if (document.body) {{
@@ -1252,7 +1259,7 @@ public partial class WidgetWindow : Window
                     const cards = document.querySelectorAll('.widget-card, .player-card, .note-card, .crypto-card, .card-bg');
                     cards.forEach(c => {{
                         if (c.classList.contains('clock-container')) return;
-                        c.style.backgroundColor = '{(isLight ? "rgba(248, 250, 252, " : "rgba(18, 22, 34, ")}' + {alphaStr} + ')';
+                        c.style.backgroundColor = '{cardRgba}';
                     }});
                     const dialFaces = document.querySelectorAll('.dial-glass-face, .clock-dial, .dial-bg');
                     dialFaces.forEach(df => {{
@@ -1269,9 +1276,12 @@ public partial class WidgetWindow : Window
         }
     }
 
-    private void ApplyThemeToVisualTree(DependencyObject? node, bool isLight, Border? rootBorder)
+    private void ApplyThemeToVisualTree(DependencyObject? node, ThemeDefinition theme, Border? rootBorder)
     {
         if (node == null) return;
+        bool isLight = theme.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
+        var primaryBrush = ThemeService.ParseBrush(theme.Colors.TextPrimary, isLight ? new SolidColorBrush(Color.FromRgb(15, 23, 42)) : new SolidColorBrush(Color.FromRgb(248, 250, 252)));
+        var secondaryBrush = ThemeService.ParseBrush(theme.Colors.TextSecondary, isLight ? new SolidColorBrush(Color.FromRgb(71, 85, 105)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)));
 
         int childrenCount = VisualTreeHelper.GetChildrenCount(node);
         for (int i = 0; i < childrenCount; i++)
@@ -1283,43 +1293,28 @@ public partial class WidgetWindow : Window
                 var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(tb, TextBlock.ForegroundProperty);
                 if (fgBinding == null)
                 {
-                    if (isLight)
+                    if (tb.Tag == null) tb.Tag = tb.Foreground;
+                    if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
                     {
-                        if (tb.Tag == null) tb.Tag = tb.Foreground;
-                        if (tb.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
+                        int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
+                        int max = Math.Max(r, Math.Max(g, b));
+                        int min = Math.Min(r, Math.Min(g, b));
+                        bool isAccent = (max - min) > 70;
+                        if (!isAccent)
                         {
-                            int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
-                            int max = Math.Max(r, Math.Max(g, b));
-                            int min = Math.Min(r, Math.Min(g, b));
-                            bool isAccent = (max - min) > 70;
-                            if (!isAccent)
+                            if (tb.FontSize >= 14 || tb.FontWeight == FontWeights.Bold || tb.FontWeight == FontWeights.SemiBold)
                             {
-                                int brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                                if (brightness >= 180)
-                                {
-                                    tb.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // Dark primary / dark icon
-                                }
-                                else if (brightness >= 100)
-                                {
-                                    tb.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)); // Dark secondary
-                                }
+                                tb.Foreground = primaryBrush;
+                            }
+                            else
+                            {
+                                tb.Foreground = secondaryBrush;
                             }
                         }
                     }
                     else
                     {
-                        if (tb.Tag is Brush origBrush)
-                        {
-                            tb.Foreground = origBrush;
-                        }
-                        else if (tb.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
-                        {
-                            tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
-                        }
-                        else if (tb.Foreground == null || tb.Foreground == System.Windows.SystemColors.ControlTextBrush)
-                        {
-                            tb.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
-                        }
+                        tb.Foreground = primaryBrush;
                     }
                 }
             }
@@ -1328,39 +1323,14 @@ public partial class WidgetWindow : Window
                 var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(mt, ChattyWidgets.UI.Controls.MarqueeText.ForegroundProperty);
                 if (fgBinding == null)
                 {
-                    if (isLight)
+                    if (mt.Tag == null) mt.Tag = mt.Foreground;
+                    if (mt.FontSize >= 14 || mt.FontWeight == FontWeights.Bold || mt.FontWeight == FontWeights.SemiBold)
                     {
-                        if (mt.Tag == null) mt.Tag = mt.Foreground;
-                        if (mt.Foreground is SolidColorBrush scb && scb.Color != Colors.Transparent)
-                        {
-                            int r = scb.Color.R, g = scb.Color.G, b = scb.Color.B;
-                            int max = Math.Max(r, Math.Max(g, b));
-                            int min = Math.Min(r, Math.Min(g, b));
-                            bool isAccent = (max - min) > 70;
-                            if (!isAccent)
-                            {
-                                int brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                                if (brightness >= 180)
-                                {
-                                    mt.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
-                                }
-                                else if (brightness >= 100)
-                                {
-                                    mt.Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105));
-                                }
-                            }
-                        }
+                        mt.Foreground = primaryBrush;
                     }
                     else
                     {
-                        if (mt.Tag is Brush origBrush)
-                        {
-                            mt.Foreground = origBrush;
-                        }
-                        else if (mt.Foreground is SolidColorBrush scb && scb.Color.R < 80 && scb.Color.G < 80 && scb.Color.B < 80)
-                        {
-                            mt.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
-                        }
+                        mt.Foreground = secondaryBrush;
                     }
                 }
             }
@@ -1368,30 +1338,25 @@ public partial class WidgetWindow : Window
             {
                 var fgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(txtBox, System.Windows.Controls.TextBox.ForegroundProperty);
                 var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(txtBox, System.Windows.Controls.TextBox.BackgroundProperty);
-                if (isLight)
+                if (fgBinding == null)
                 {
-                    if (txtBox.Tag == null) txtBox.Tag = (txtBox.Foreground, txtBox.Background, txtBox.BorderBrush, txtBox.CaretBrush);
-                    if (fgBinding == null)
-                    {
-                        txtBox.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
-                        txtBox.CaretBrush = new SolidColorBrush(Color.FromRgb(15, 23, 42));
-                    }
-                    if (bgBinding == null && txtBox.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
-                    {
-                        if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
-                        {
-                            txtBox.Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0));
-                        }
-                    }
+                    txtBox.Foreground = primaryBrush;
+                    txtBox.CaretBrush = primaryBrush;
                 }
-                else
+                if (bgBinding == null)
                 {
-                    if (txtBox.Tag is ValueTuple<Brush, Brush, Brush, Brush> tuple)
+                    txtBox.Background = ThemeService.ParseBrush(theme.Colors.CardBackground, new SolidColorBrush(Color.FromArgb(30, 0, 0, 0)));
+                }
+                txtBox.BorderBrush = ThemeService.ParseBrush(theme.Colors.Border, new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
+            }
+            else if (child is Border innerBorder && innerBorder != rootBorder)
+            {
+                if (innerBorder.CornerRadius.TopLeft > 0 && innerBorder.Background is SolidColorBrush bScb && bScb.Color.A > 0)
+                {
+                    innerBorder.Background = ThemeService.ParseBrush(theme.Colors.CardBackground, bScb);
+                    if (innerBorder.BorderBrush is SolidColorBrush bbScb)
                     {
-                        if (fgBinding == null) txtBox.Foreground = tuple.Item1;
-                        if (bgBinding == null) txtBox.Background = tuple.Item2;
-                        txtBox.BorderBrush = tuple.Item3;
-                        txtBox.CaretBrush = tuple.Item4;
+                        innerBorder.BorderBrush = ThemeService.ParseBrush(theme.Colors.Border, bbScb);
                     }
                 }
             }
@@ -1405,7 +1370,7 @@ public partial class WidgetWindow : Window
                     if (btn.Tag == null) btn.Tag = (btn.Foreground, btn.Background, btn.BorderBrush);
                     if (fgBinding == null)
                     {
-                        btn.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // DARK ICONS!
+                        btn.Foreground = primaryBrush; // Dark icons/text
                     }
                     if (bgBinding == null && btn.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
                     {
@@ -1429,70 +1394,15 @@ public partial class WidgetWindow : Window
                     }
                 }
             }
-            else if (child is Border innerB && innerB != rootBorder)
-            {
-                var bgBinding = System.Windows.Data.BindingOperations.GetBindingExpression(innerB, Border.BackgroundProperty);
-                var bbBinding = System.Windows.Data.BindingOperations.GetBindingExpression(innerB, Border.BorderBrushProperty);
-
-                if (isLight)
-                {
-                    if (innerB.Tag == null) innerB.Tag = (innerB.Background, innerB.BorderBrush);
-                    if (bgBinding == null)
-                    {
-                        if (innerB.Background is SolidColorBrush bgScb && bgScb.Color != Colors.Transparent)
-                        {
-                            if (bgScb.Color.R > 200 && bgScb.Color.G > 200 && bgScb.Color.B > 200)
-                            {
-                                innerB.Background = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bgScb.Color.A), 0, 0, 0));
-                            }
-                        }
-                        else if (innerB.Background is LinearGradientBrush lgb)
-                        {
-                            bool isDarkGradient = false;
-                            foreach (var stop in lgb.GradientStops)
-                            {
-                                int brightness = (stop.Color.R * 299 + stop.Color.G * 587 + stop.Color.B * 114) / 1000;
-                                if (brightness < 80) isDarkGradient = true;
-                            }
-                            if (isDarkGradient)
-                            {
-                                var lightGrad = new LinearGradientBrush
-                                {
-                                    StartPoint = lgb.StartPoint,
-                                    EndPoint = lgb.EndPoint
-                                };
-                                lightGrad.GradientStops.Add(new GradientStop(Color.FromArgb(28, 2, 132, 199), 0.0));
-                                lightGrad.GradientStops.Add(new GradientStop(Color.FromArgb(40, 56, 189, 248), 1.0));
-                                innerB.Background = lightGrad;
-                            }
-                        }
-                    }
-                    if (bbBinding == null && innerB.BorderBrush is SolidColorBrush bbScb && bbScb.Color != Colors.Transparent)
-                    {
-                        if (bbScb.Color.R > 200 && bbScb.Color.G > 200 && bbScb.Color.B > 200)
-                        {
-                            innerB.BorderBrush = new SolidColorBrush(Color.FromArgb(Math.Min((byte)35, bbScb.Color.A), 0, 0, 0));
-                        }
-                    }
-                }
-                else
-                {
-                    if (innerB.Tag is ValueTuple<Brush, Brush> orig)
-                    {
-                        if (bgBinding == null) innerB.Background = orig.Item1;
-                        if (bbBinding == null) innerB.BorderBrush = orig.Item2;
-                    }
-                }
-            }
             else if (child is System.Windows.Shapes.Shape shape)
             {
                 if (isLight)
                 {
                     if (shape.Tag == null) shape.Tag = (shape.Fill, shape.Stroke);
                     if (shape.Fill is SolidColorBrush f && f.Color.R > 200 && f.Color.G > 200 && f.Color.B > 200)
-                        shape.Fill = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                        shape.Fill = primaryBrush;
                     if (shape.Stroke is SolidColorBrush s && s.Color.R > 200 && s.Color.G > 200 && s.Color.B > 200)
-                        shape.Stroke = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                        shape.Stroke = primaryBrush;
                 }
                 else
                 {
@@ -1504,7 +1414,7 @@ public partial class WidgetWindow : Window
                 }
             }
 
-            ApplyThemeToVisualTree(child, isLight, rootBorder);
+            ApplyThemeToVisualTree(child, theme, rootBorder);
         }
     }
 
@@ -1578,6 +1488,16 @@ public partial class WidgetWindow : Window
         if (MenuThemeAuto != null) MenuThemeAuto.IsChecked = Settings.Theme == "auto";
         if (MenuThemeDark != null) MenuThemeDark.IsChecked = Settings.Theme == "dark";
         if (MenuThemeLight != null) MenuThemeLight.IsChecked = Settings.Theme == "light";
+        if (MenuGroupTheme != null)
+        {
+            foreach (var item in MenuGroupTheme.Items.OfType<MenuItem>())
+            {
+                if (item != MenuThemeAuto && item != MenuThemeDark && item != MenuThemeLight && item.Tag is string thId)
+                {
+                    item.IsChecked = Settings.Theme.Equals(thId, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+        }
 
         if (MenuOpacity100 != null) MenuOpacity100.IsChecked = Math.Abs(Settings.Opacity - 1.0) < 0.05;
         if (MenuOpacity85 != null) MenuOpacity85.IsChecked = Math.Abs(Settings.Opacity - 0.75) < 0.05;
@@ -1712,6 +1632,39 @@ public partial class WidgetWindow : Window
                 WidgetManager.Instance.MoveWidgetToMonitor(InstanceId, idx);
             };
             MenuMonitors.Items.Add(item);
+        }
+
+        // Populate Custom Themes Submenu
+        if (MenuGroupTheme != null)
+        {
+            var toRemove = MenuGroupTheme.Items.OfType<MenuItem>().Where(m => m != MenuThemeAuto && m != MenuThemeDark && m != MenuThemeLight).ToList();
+            var customSep = MenuGroupTheme.Items.OfType<Separator>().FirstOrDefault();
+            if (customSep != null) MenuGroupTheme.Items.Remove(customSep);
+            foreach (var r in toRemove) MenuGroupTheme.Items.Remove(r);
+
+            var customThemes = ThemeService.Instance.GetAllThemes().Where(t => !t.IsBuiltIn).ToList();
+            if (customThemes.Count > 0)
+            {
+                MenuGroupTheme.Items.Add(new Separator());
+                foreach (var th in customThemes)
+                {
+                    var mItem = new MenuItem
+                    {
+                        Header = $"🎨 {th.DisplayName}",
+                        Tag = th.Id,
+                        IsCheckable = true,
+                        IsChecked = Settings.Theme.Equals(th.Id, StringComparison.OrdinalIgnoreCase)
+                    };
+                    string thId = th.Id;
+                    mItem.Click += (s, ev) =>
+                    {
+                        Settings.Theme = thId;
+                        ApplyTheme();
+                        SettingsChanged?.Invoke(this);
+                    };
+                    MenuGroupTheme.Items.Add(mItem);
+                }
+            }
         }
 
         if (BaseWidgetId == "com.chatty.system-gauges")

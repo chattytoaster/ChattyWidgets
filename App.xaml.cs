@@ -80,8 +80,9 @@ public partial class App : System.Windows.Application
         // Register .chw file association in Windows Registry so double-clicking installs widgets
         try { FileAssociationService.EnsureFileAssociation(); } catch (Exception ex) { Log($"FileAssociation error: {ex.Message}"); }
 
-        // 1. Initialize WidgetManager
-        Log("Initializing WidgetManager");
+        // 1. Initialize ThemeService and WidgetManager
+        Log("Initializing ThemeService and WidgetManager");
+        try { ThemeService.Instance.Initialize(); } catch (Exception ex) { Log($"ThemeService error: {ex.Message}"); }
         try { WidgetManager.Instance.Initialize(); } catch (Exception ex) { Log($"WidgetManager error: {ex.Message}"); }
 
         // 3. Create Main Hub Window
@@ -104,6 +105,10 @@ public partial class App : System.Windows.Application
             else if (arg.EndsWith(".chwp", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(arg))
             {
                 mainWindow.ImportPresetFile(arg);
+            }
+            else if (arg.EndsWith(".chwtheme", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(arg))
+            {
+                mainWindow.ImportThemeFile(arg);
             }
         }
 
@@ -181,6 +186,16 @@ public partial class App : System.Windows.Application
                             mw.WindowState = WindowState.Normal;
                             mw.Activate();
                             mw.ImportPresetFile(path);
+                        }
+                    }
+                    else if (path.EndsWith(".chwtheme", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+                    {
+                        if (MainWindow is MainWindow mw)
+                        {
+                            mw.Show();
+                            mw.WindowState = WindowState.Normal;
+                            mw.Activate();
+                            mw.ImportThemeFile(path);
                         }
                     }
                 }

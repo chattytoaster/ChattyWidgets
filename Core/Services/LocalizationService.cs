@@ -781,5 +781,60 @@ public class LocalizationService
         Add("Rss.CategoryKommersant", "КОММЕРСАНТЪ", "KOMMERSANT");
         Add("Rss.CategoryEuronews", "EURONEWS", "EURONEWS");
         Add("Rss.CategoryWorld", "МИРОВЫЕ НОВОСТИ", "WORLD NEWS");
+
+        // 13. Cyber-Pet Widget
+        Add("CyberPet.Title", "Настройки Кибер-Питомца", "Cyber-Pet Settings");
+        Add("CyberPet.Header", "🐾 Параметры питомца", "🐾 Companion Settings");
+        Add("CyberPet.HeaderSub", "Выбор персонажа, режима сна и отображения датчиков", "Choose character, sleep schedule, and hardware sensors");
+        Add("CyberPet.PetTypeLabel", "Персонаж питомца:", "Pet Character:");
+        Add("CyberPet.Capybara", "🦫 Капибара (Спокойная и чилловая)", "🦫 Capybara (Chill & Relaxed)");
+        Add("CyberPet.Cat", "🐱 Пиксельный Котик (Игривый)", "🐱 Pixel Cat (Playful)");
+        Add("CyberPet.Bot", "🤖 Кибер-Бот (Ретро-робот)", "🤖 Cyber Bot (Retro robot)");
+        Add("CyberPet.PetNameLabel", "Кличка питомца:", "Pet Name:");
+        Add("CyberPet.AutoSleep", "Ночной режим сна (23:00 - 07:00)", "Night Sleep Mode (23:00 - 07:00)");
+        Add("CyberPet.ShowStats", "Отображать нагрузку CPU/GPU в шапке", "Show CPU/GPU workload badge in header");
+        Add("CyberPet.FeedBtn", "🍎 Покормить", "🍎 Feed");
+        Add("CyberPet.PetBtn", "🐾 Погладить", "🐾 Pet");
+        Add("CyberPet.SleepBtn", "💤 Спать", "💤 Sleep");
+        Add("CyberPet.WakeBtn", "☀️ Проснуться", "☀️ Wake up");
+        Add("CyberPet.Happiness", "Счастье", "Happiness");
+        Add("CyberPet.Energy", "Энергия", "Energy");
+        Add("CyberPet.StatusIdle", "Исследует рабочий стол...", "Exploring the desktop...");
+        Add("CyberPet.StatusSleeping", "Сладкий сон... Zzz 💤", "Sweet dreams... Zzz 💤");
+        Add("CyberPet.StatusMusic", "Качает в такт музыке 🎧🎵", "Grooving to the beat 🎧🎵");
+        Add("CyberPet.StatusOverheat", "Уф, жарко! Железо пыхтит! 🔥", "Phew, so hot! Hardware is melting! 🔥");
+        Add("CyberPet.StatusPetted", "Мурр! Спасибо за заботу! ❤️", "Purr! Thank you for the love! ❤️");
+        Add("CyberPet.StatusFed", "Ням! Очень вкусно! 😋⚡", "Yum! That was delicious! 😋⚡");
+
+        // 14. Theme Designer & Custom Themes
+        Add("Workshop.ThemeDesignerTitle", "Конструктор тем оформления (.chwtheme)", "Theme Designer (.chwtheme)");
+        Add("Workshop.ThemeDesignerDesc", "Создавайте уникальные цветовые темы для виджетов и Хаба, настраивайте палитру и делитесь файлами .chwtheme.", "Create unique color themes for widgets and Hub, customize the palette, and share .chwtheme files.");
+        Add("Workshop.BaseThemesTitle", "Базовые темы и их основные цвета:", "Base Themes & Core Colors:");
+        Add("Workshop.BaseThemeDarkTitle", "🌙 Базовая Тёмная (Dark)", "🌙 Base Dark Theme");
+        Add("Workshop.BaseThemeLightTitle", "☀️ Базовая Светлая (Light)", "☀️ Base Light Theme");
+        Add("Workshop.UseAsTemplate", "Загрузить как шаблон", "Use as Template");
+        Add("Workshop.ThemeNameLabel", "Название темы:", "Theme Name:");
+        Add("Workshop.ThemeIdLabel", "ID темы (латиница без пробелов):", "Theme ID (alphanumeric, no spaces):");
+        Add("Workshop.ThemeAuthorLabel", "Автор темы:", "Theme Author:");
+        Add("Workshop.ThemeBaseContrastLabel", "Базовый режим контраста:", "Base Contrast Mode:");
+        Add("Workshop.ThemeBaseContrastDark", "Тёмный (светлый текст на темном фоне)", "Dark (light text on dark background)");
+        Add("Workshop.ThemeBaseContrastLight", "Светлый (темный текст на светлом фоне)", "Light (dark text on light background)");
+        Add("Workshop.ColorBackground", "Фон окна и виджета (Background):", "Window & Widget Background:");
+        Add("Workshop.ColorCardBackground", "Фон карточек и панелей (Card):", "Card & Panel Background:");
+        Add("Workshop.ColorBorder", "Цвет рамок и обводки (Border):", "Border & Stroke Color:");
+        Add("Workshop.ColorTextPrimary", "Основной текст и иконки (Text Primary):", "Primary Text & Icons:");
+        Add("Workshop.ColorTextSecondary", "Второстепенный текст (Text Secondary):", "Secondary Text & Hints:");
+        Add("Workshop.ColorAccent", "Акцентный цвет кнопок/слайдеров (Accent):", "Accent Color (Buttons, Toggles):");
+        Add("Workshop.ColorHover", "Подсветка при наведении (Hover / Focus):", "Hover & Focus Highlight:");
+        Add("Workshop.ColorDivider", "Линии и разделители (Divider):", "Dividers & Separator Lines:");
+        Add("Workshop.LivePreviewTitle", "Интерактивный предпросмотр темы:", "Interactive Theme Live Preview:");
+        Add("Workshop.SaveAndApplyTheme", "✨ Сохранить и применить тему", "✨ Save & Apply Theme");
+        Add("Workshop.ExportThemeFile", "📦 Экспортировать в .chwtheme...", "📦 Export to .chwtheme...");
+        Add("Workshop.ImportThemeFile", "📂 Импортировать .chwtheme...", "📂 Import .chwtheme...");
+        Add("Workshop.CustomThemesListTitle", "Установленные пользовательские темы:", "Installed Custom Themes:");
+        Add("Workshop.NoCustomThemes", "Пока нет созданных тем. Настройте цвета выше и нажмите «Сохранить и применить тему».", "No custom themes created yet. Configure colors above and click 'Save & Apply Theme'.");
+        Add("Workshop.ThemeSaved", "Тема успешно сохранена и применена!", "Theme successfully saved and applied!");
+        Add("Workshop.ThemeExported", "Файл темы .chwtheme успешно экспортирован!", "Theme file .chwtheme successfully exported!");
+        Add("Workshop.DeleteThemeConfirm", "Вы действительно хотите удалить тему «{0}»?", "Are you sure you want to delete theme '{0}'?");
     }
 }

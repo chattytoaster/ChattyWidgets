@@ -133,6 +133,9 @@ public partial class WidgetSettingsWindow : Window
             case "com.chatty.quick-dock":
                 BuildQuickDockSettings();
                 break;
+            case "com.chatty.cyber-pet":
+                BuildCyberPetSettings();
+                break;
             default:
                 BuildGenericSettings();
                 break;
@@ -179,14 +182,24 @@ public partial class WidgetSettingsWindow : Window
         cb.Items.Add(new ComboBoxItem { Content = loc.T("Settings.ThemeDark", "🌙 Тёмная тема (Dark)"), Tag = "dark" });
         cb.Items.Add(new ComboBoxItem { Content = loc.T("Settings.ThemeLight", "☀️ Светлая тема (Light)"), Tag = "light" });
 
+        var customThemes = ChattyWidgets.Core.Services.ThemeService.Instance.GetAllThemes().Where(t => !t.IsBuiltIn);
+        foreach (var th in customThemes)
+        {
+            cb.Items.Add(new ComboBoxItem { Content = $"🎨 {th.DisplayName}", Tag = th.Id });
+        }
+
         var win = WidgetManager.Instance.GetActiveWindow(_instanceId);
         string curTheme = win?.Settings.Theme ?? "auto";
-        cb.SelectedIndex = curTheme switch
+        int selIndex = 0;
+        for (int i = 0; i < cb.Items.Count; i++)
         {
-            "dark" => 1,
-            "light" => 2,
-            _ => 0
-        };
+            if (cb.Items[i] is ComboBoxItem cbi && cbi.Tag is string tag && tag.Equals(curTheme, StringComparison.OrdinalIgnoreCase))
+            {
+                selIndex = i;
+                break;
+            }
+        }
+        cb.SelectedIndex = selIndex;
 
         cb.SelectionChanged += (s, e) =>
         {
@@ -3683,6 +3696,192 @@ public partial class WidgetSettingsWindow : Window
 
         cardReset.Child = spReset;
         SettingsPanel.Children.Add(cardReset);
+    }
+
+    private void BuildCyberPetSettings()
+    {
+        var loc = LocalizationService.Instance;
+        TxtWindowTitle.Text = loc.T("CyberPet.Title", "Настройки Кибер-Питомца");
+        AddSectionHeader(
+            loc.T("CyberPet.Header", "🐾 Параметры питомца"),
+            loc.T("CyberPet.HeaderSub", "Выбор персонажа, режима сна и отображения датчиков"));
+
+        var vm = _viewModel as CyberPetWidgetViewModel;
+        var customSettings = GetWidgetCustomSettings();
+
+        // Card 1: Pet Character Selector
+        var cardPet = CreateCard();
+        var spPet = new StackPanel();
+
+        spPet.Children.Add(new TextBlock
+        {
+            Text = loc.T("CyberPet.PetTypeLabel", "Персонаж питомца:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        var comboPet = new ComboBox
+        {
+            Height = 34,
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White
+        };
+        comboPet.Items.Add(new ComboBoxItem { Content = loc.T("CyberPet.Capybara", "🦫 Капибара (Спокойная и чилловая)"), Tag = "capybara" });
+        comboPet.Items.Add(new ComboBoxItem { Content = loc.T("CyberPet.Cat", "🐱 Пиксельный Котик (Игривый)"), Tag = "cat" });
+        comboPet.Items.Add(new ComboBoxItem { Content = loc.T("CyberPet.Bot", "🤖 Кибер-Бот (Ретро-робот)"), Tag = "bot" });
+
+        string currentPet = vm?.PetType ?? (customSettings.TryGetValue("petType", out var pt) ? pt : "capybara");
+        comboPet.SelectedIndex = currentPet switch
+        {
+            "cat" => 1,
+            "bot" => 2,
+            _ => 0
+        };
+
+        comboPet.SelectionChanged += (s, e) =>
+        {
+            if (comboPet.SelectedItem is ComboBoxItem item && item.Tag is string newType)
+            {
+                SaveWidgetCustomSetting("petType", newType);
+                if (vm != null) vm.PetType = newType;
+                _onSettingsChanged?.Invoke();
+            }
+        };
+        spPet.Children.Add(comboPet);
+        cardPet.Child = spPet;
+        SettingsPanel.Children.Add(cardPet);
+
+        // Card 2: Pet Name
+        var cardName = CreateCard();
+        var spName = new StackPanel();
+        spName.Children.Add(new TextBlock
+        {
+            Text = loc.T("CyberPet.PetNameLabel", "Кличка питомца:"),
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        var txtName = new TextBox
+        {
+            Text = vm?.PetName ?? (customSettings.TryGetValue("petName", out var pn) ? pn : "Капи"),
+            Height = 32,
+            Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+            Padding = new Thickness(8, 4, 8, 4),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        txtName.TextChanged += (s, e) =>
+        {
+            SaveWidgetCustomSetting("petName", txtName.Text);
+            if (vm != null) vm.PetName = txtName.Text;
+            _onSettingsChanged?.Invoke();
+        };
+        spName.Children.Add(txtName);
+        cardName.Child = spName;
+        SettingsPanel.Children.Add(cardName);
+
+        // Card 3: Modes & Toggles
+        var cardToggles = CreateCard();
+        var spToggles = new StackPanel();
+
+        var chkSleep = new CheckBox
+        {
+            Content = loc.T("CyberPet.AutoSleep", "Ночной режим сна (23:00 - 07:00)"),
+            Foreground = Brushes.White,
+            FontSize = 12,
+            Margin = new Thickness(0, 0, 0, 10),
+            IsChecked = vm?.AutoSleep ?? (!customSettings.TryGetValue("autoSleep", out var asStr) || asStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+        };
+        chkSleep.Checked += (s, e) =>
+        {
+            SaveWidgetCustomSetting("autoSleep", "true");
+            if (vm != null) vm.AutoSleep = true;
+            _onSettingsChanged?.Invoke();
+        };
+        chkSleep.Unchecked += (s, e) =>
+        {
+            SaveWidgetCustomSetting("autoSleep", "false");
+            if (vm != null) vm.AutoSleep = false;
+            _onSettingsChanged?.Invoke();
+        };
+        spToggles.Children.Add(chkSleep);
+
+        var chkStats = new CheckBox
+        {
+            Content = loc.T("CyberPet.ShowStats", "Отображать нагрузку CPU/GPU в шапке"),
+            Foreground = Brushes.White,
+            FontSize = 12,
+            IsChecked = vm?.ShowStats ?? (!customSettings.TryGetValue("showStats", out var ssStr) || ssStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+        };
+        chkStats.Checked += (s, e) =>
+        {
+            SaveWidgetCustomSetting("showStats", "true");
+            if (vm != null) vm.ShowStats = true;
+            _onSettingsChanged?.Invoke();
+        };
+        chkStats.Unchecked += (s, e) =>
+        {
+            SaveWidgetCustomSetting("showStats", "false");
+            if (vm != null) vm.ShowStats = false;
+            _onSettingsChanged?.Invoke();
+        };
+        spToggles.Children.Add(chkStats);
+
+        cardToggles.Child = spToggles;
+        SettingsPanel.Children.Add(cardToggles);
+
+        // Card 4: Quick Interactive Petting & Feeding Test
+        if (vm != null)
+        {
+            var cardActions = CreateCard();
+            var spActions = new StackPanel();
+
+            spActions.Children.Add(new TextBlock
+            {
+                Text = loc.IsRussian ? "Интерактив с питомцем:" : "Interact with Pet:",
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            var btnPanel = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
+
+            var btnPet = new Button
+            {
+                Content = loc.T("CyberPet.PetBtn", "🐾 Погладить"),
+                Height = 32,
+                Margin = new Thickness(0, 0, 4, 0),
+                Background = new SolidColorBrush(Color.FromArgb(40, 236, 72, 153)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(90, 236, 72, 153)),
+                Cursor = Cursors.Hand
+            };
+            btnPet.Click += (s, e) => vm.DoPet();
+            btnPanel.Children.Add(btnPet);
+
+            var btnFeed = new Button
+            {
+                Content = loc.T("CyberPet.FeedBtn", "🍎 Покормить"),
+                Height = 32,
+                Margin = new Thickness(4, 0, 0, 0),
+                Background = new SolidColorBrush(Color.FromArgb(40, 56, 189, 248)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(90, 56, 189, 248)),
+                Cursor = Cursors.Hand
+            };
+            btnFeed.Click += (s, e) => vm.DoFeed();
+            btnPanel.Children.Add(btnFeed);
+
+            spActions.Children.Add(btnPanel);
+            cardActions.Child = spActions;
+            SettingsPanel.Children.Add(cardActions);
+        }
     }
 
     private void BuildGenericSettings()

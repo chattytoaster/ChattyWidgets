@@ -33,9 +33,10 @@
   - Automatically pauses on mouse hover.
 - **Automatic GitHub Update Checks**:
   - Silent background release checks with an unobtrusive banner in the Hub and manual checking in the About settings section.
-- **Bilingual Interface & Adaptive Themes**:
+- **Bilingual Interface & Custom Themes**:
   - Instant on-the-fly switching between **English 🇬🇧** and **Russian 🇷🇺** across the Hub, settings windows, and widgets without restarting.
-  - Dark 🌙 and Light ☀️ themes with automatic contrast and icon adaptation.
+  - Built-in Dark 🌙 and Light ☀️ themes with explicit display of base color values.
+  - **Theme Designer & `.chwtheme` Packages**: create custom themes directly in the Workshop (8 customizable HEX colors: background, card background, border, primary and secondary text, accent, hover, divider), real-time interactive Live Preview, quick style presets (Cyberpunk, Emerald Glass, Sunset Gold, Midnight Navy), export and share `.chwtheme` files, Drag & Drop onto the Hub, and native Windows shell file association.
 - **Security & Signed `.chw` Packages**:
   - Secure zip containers with strict manifest validation (`manifest.json`).
   - All official widgets are signed with RSA-4096 cryptographic signatures (`✦ Official` badge).
@@ -100,8 +101,14 @@ dotnet run -- --test
 
 ## 🤖 AI Agent Skill (`/chw`)
 
-ChattyWidgets features built-in pair programming support for agentic AI tools (Google Antigravity, Claude Code, Cursor, Windsurf, etc.):
-- Installed automatically by `ChattyWidgetsSetup.exe` into `~/.agents/skills/chw/`.
+ChattyWidgets features built-in pair programming support for agentic AI tools (Google Antigravity, Claude Code, Cursor, OpenAI Codex, Copilot, etc.):
+- Installed automatically by `ChattyWidgetsSetup.exe` into all supported agent global locations:
+  - **Google Antigravity**: `~/.gemini/skills/chw/`
+  - **Claude Code**: `~/.claude/skills/chw/`
+  - **Cursor**: `~/.cursor/skills-cursor/chw/`
+  - **OpenAI Codex**: `~/.codex/skills/chw/`
+  - **GitHub Copilot**: `~/.copilot/skills/chw/`
+  - **Open Agent standard**: `~/.agents/skills/chw/`
 - Triggered with **`/chw`** in chat to let AI agents autonomously:
   1. Scaffold widget packages (`manifest.json`, `Widget.xaml`).
   2. Implement ViewModels and register localization keys (EN/RU).

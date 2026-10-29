@@ -62,9 +62,17 @@ public abstract class NativeViewModelBase : INotifyPropertyChanged
         }
     }
 
+    public ChattyWidgets.Core.Models.ThemeDefinition? CurrentTheme { get; private set; }
+
     public virtual void ApplyTheme(bool isLight)
     {
         IsLight = isLight;
+    }
+
+    public virtual void ApplyTheme(ChattyWidgets.Core.Models.ThemeDefinition theme)
+    {
+        CurrentTheme = theme;
+        IsLight = theme.BaseTheme.Equals("light", StringComparison.OrdinalIgnoreCase);
     }
 
     protected virtual void OnThemeChanged() { }
@@ -132,6 +140,7 @@ public static class NativeWidgetContextProvider
             "com.chatty.sticky-notes" => new StickyNotesWidgetViewModel(instanceId, rootElement),
             "com.chatty.weather-card" => new WeatherWidgetViewModel(instanceId),
             "com.chatty.system-gauges" => new SystemGaugesWidgetViewModel(instanceId),
+            "com.chatty.cyber-pet" => new CyberPetWidgetViewModel(instanceId),
             _ => SystemMonitorService.Instance
         };
     }
@@ -4936,3 +4945,594 @@ public class WeatherWidgetViewModel : NativeViewModelBase
         };
     }
 }
+
+// 13. Cyber-Pet ViewModel
+public class CyberPetWidgetViewModel : NativeViewModelBase
+{
+    private static readonly Dictionary<string, BitmapImage> _spriteCache = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly string? _instanceId;
+    private readonly DispatcherTimer _animTimer;
+    private readonly DispatcherTimer _stateResetTimer;
+    private readonly Random _random = new();
+
+    private ImageSource? _currentSprite;
+    public ImageSource? CurrentSprite
+    {
+        get => _currentSprite;
+        private set { _currentSprite = value; OnPropertyChanged(); }
+    }
+
+    private string _petType = "capybara"; // "capybara", "cat", "bot"
+    private string _petName = "Капи";
+    private bool _autoSleep = true;
+    private bool _showStats = true;
+    private bool _isSleeping = false;
+    private bool _isPetting = false;
+    private bool _isFeeding = false;
+    private string _feedItemEmoji = "🍎";
+    private string _actionBubbleText = "";
+    private bool _isActionBubbleVisible = false;
+
+    private int _happiness = 85;
+    private int _energy = 90;
+    private int _animationStep = 0;
+    private double _petPositionX = 0;
+    private bool _isFacingRight = true;
+    private double _cpuPercent = 0;
+    private double _gpuPercent = 0;
+    private bool _isOverloaded = false;
+    private bool _isListeningMusic = false;
+    private string _trackTitle = "";
+    private int _tickCount = 0;
+
+    public string PetType
+    {
+        get => _petType;
+        set
+        {
+            if (_petType != value)
+            {
+                _petType = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsCapybara));
+                OnPropertyChanged(nameof(IsCat));
+                OnPropertyChanged(nameof(IsBot));
+                OnPropertyChanged(nameof(CapybaraVisibility));
+                OnPropertyChanged(nameof(CatVisibility));
+                OnPropertyChanged(nameof(BotVisibility));
+                OnPropertyChanged(nameof(PetDisplayName));
+                SaveCustomSettings();
+                UpdateStatus();
+                UpdateSprite();
+            }
+        }
+    }
+
+    public bool IsCapybara => _petType == "capybara";
+    public bool IsCat => _petType == "cat";
+    public bool IsBot => _petType == "bot";
+
+    public Visibility CapybaraVisibility => IsCapybara ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility CatVisibility => IsCat ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility BotVisibility => IsBot ? Visibility.Visible : Visibility.Collapsed;
+
+    public string PetName
+    {
+        get => _petName;
+        set
+        {
+            if (_petName != value)
+            {
+                _petName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PetDisplayName));
+                SaveCustomSettings();
+            }
+        }
+    }
+
+    public string PetDisplayName => !string.IsNullOrWhiteSpace(_petName) ? _petName :
+        (_petType switch { "cat" => "Барсик", "bot" => "Кибер-Бот", _ => "Капи" });
+
+    public bool AutoSleep
+    {
+        get => _autoSleep;
+        set { if (_autoSleep != value) { _autoSleep = value; OnPropertyChanged(); SaveCustomSettings(); CheckNightTime(); } }
+    }
+
+    public bool ShowStats
+    {
+        get => _showStats;
+        set { if (_showStats != value) { _showStats = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatsVisibility)); SaveCustomSettings(); } }
+    }
+
+    public Visibility StatsVisibility => _showStats ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsSleeping
+    {
+        get => _isSleeping;
+        set
+        {
+            if (_isSleeping != value)
+            {
+                _isSleeping = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SleepVisibility));
+                OnPropertyChanged(nameof(AwakeVisibility));
+                OnPropertyChanged(nameof(SleepToggleText));
+                OnPropertyChanged(nameof(PetStateBadge));
+                OnPropertyChanged(nameof(NightSkyVisibility));
+                UpdateStatus();
+                UpdateSprite();
+            }
+        }
+    }
+
+    public Visibility SleepVisibility => _isSleeping ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility AwakeVisibility => !_isSleeping ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsPetting
+    {
+        get => _isPetting;
+        set { if (_isPetting != value) { _isPetting = value; OnPropertyChanged(); OnPropertyChanged(nameof(PettingVisibility)); } }
+    }
+
+    public Visibility PettingVisibility => _isPetting ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsFeeding
+    {
+        get => _isFeeding;
+        set { if (_isFeeding != value) { _isFeeding = value; OnPropertyChanged(); OnPropertyChanged(nameof(FeedingVisibility)); } }
+    }
+
+    public Visibility FeedingVisibility => _isFeeding ? Visibility.Visible : Visibility.Collapsed;
+
+    public string FeedItemEmoji
+    {
+        get => _feedItemEmoji;
+        set { if (_feedItemEmoji != value) { _feedItemEmoji = value; OnPropertyChanged(); } }
+    }
+
+    public string ActionBubbleText
+    {
+        get => _actionBubbleText;
+        set { if (_actionBubbleText != value) { _actionBubbleText = value; OnPropertyChanged(); } }
+    }
+
+    public bool IsActionBubbleVisible
+    {
+        get => _isActionBubbleVisible;
+        set { if (_isActionBubbleVisible != value) { _isActionBubbleVisible = value; OnPropertyChanged(); OnPropertyChanged(nameof(BubbleVisibility)); } }
+    }
+
+    public Visibility BubbleVisibility => _isActionBubbleVisible ? Visibility.Visible : Visibility.Collapsed;
+
+    public int Happiness
+    {
+        get => _happiness;
+        set { if (_happiness != value) { _happiness = Math.Clamp(value, 0, 100); OnPropertyChanged(); OnPropertyChanged(nameof(HappinessDisplay)); } }
+    }
+
+    public string HappinessDisplay => $"{_happiness}%";
+
+    public int Energy
+    {
+        get => _energy;
+        set { if (_energy != value) { _energy = Math.Clamp(value, 0, 100); OnPropertyChanged(); OnPropertyChanged(nameof(EnergyDisplay)); } }
+    }
+
+    public string EnergyDisplay => $"{_energy}%";
+
+    public int AnimationStep
+    {
+        get => _animationStep;
+        set
+        {
+            if (_animationStep != value)
+            {
+                _animationStep = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HeadBobOffset));
+                OnPropertyChanged(nameof(TailAngle));
+                OnPropertyChanged(nameof(EarWiggleOffset));
+                OnPropertyChanged(nameof(SweatDropOffset));
+                OnPropertyChanged(nameof(NoteBobOffset));
+                OnPropertyChanged(nameof(HeartBobOffset));
+                OnPropertyChanged(nameof(ZzzOffset));
+            }
+        }
+    }
+
+    public double HeadBobOffset => (_isListeningMusic && _animationStep == 1) ? 5.0 : (_animationStep == 1 ? 2.0 : 0.0);
+    public double TailAngle => (_animationStep == 1) ? 14.0 : -10.0;
+    public double EarWiggleOffset => (_animationStep == 1) ? -2.0 : 1.0;
+    public double SweatDropOffset => (_animationStep == 1) ? 4.0 : 0.0;
+    public double NoteBobOffset => (_animationStep == 1) ? -6.0 : 0.0;
+    public double HeartBobOffset => (_animationStep == 1) ? -8.0 : -2.0;
+    public double ZzzOffset => (_animationStep == 1) ? -6.0 : 0.0;
+
+    public double PetPositionX
+    {
+        get => _petPositionX;
+        set { if (Math.Abs(_petPositionX - value) > 0.1) { _petPositionX = value; OnPropertyChanged(); } }
+    }
+
+    public bool IsFacingRight
+    {
+        get => _isFacingRight;
+        set { if (_isFacingRight != value) { _isFacingRight = value; OnPropertyChanged(); OnPropertyChanged(nameof(PetScaleX)); } }
+    }
+
+    public double PetScaleX => _isFacingRight ? 1.0 : -1.0;
+
+    public double CpuPercent
+    {
+        get => _cpuPercent;
+        set { if (Math.Abs(_cpuPercent - value) > 0.5) { _cpuPercent = value; OnPropertyChanged(); OnPropertyChanged(nameof(HardwareBadgeText)); } }
+    }
+
+    public double GpuPercent
+    {
+        get => _gpuPercent;
+        set { if (Math.Abs(_gpuPercent - value) > 0.5) { _gpuPercent = value; OnPropertyChanged(); OnPropertyChanged(nameof(HardwareBadgeText)); } }
+    }
+
+    public bool IsOverloaded
+    {
+        get => _isOverloaded;
+        set
+        {
+            if (_isOverloaded != value)
+            {
+                _isOverloaded = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(OverloadVisibility));
+                OnPropertyChanged(nameof(PetStateBadge));
+                UpdateStatus();
+                UpdateSprite();
+            }
+        }
+    }
+
+    public Visibility OverloadVisibility => (_isOverloaded && !_isSleeping) ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsListeningMusic
+    {
+        get => _isListeningMusic;
+        set
+        {
+            if (_isListeningMusic != value)
+            {
+                _isListeningMusic = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(MusicVisibility));
+                OnPropertyChanged(nameof(PetStateBadge));
+                UpdateStatus();
+                UpdateSprite();
+            }
+        }
+    }
+
+    public Visibility MusicVisibility => (_isListeningMusic && !_isSleeping) ? Visibility.Visible : Visibility.Collapsed;
+
+    public string TrackTitle
+    {
+        get => _trackTitle;
+        set { if (_trackTitle != value) { _trackTitle = value; OnPropertyChanged(); UpdateStatus(); } }
+    }
+
+    public string HardwareBadgeText => $"CPU {(int)_cpuPercent}% | GPU {(int)_gpuPercent}%";
+
+    public string PetStateBadge
+    {
+        get
+        {
+            if (_isSleeping) return "💤 Zzz";
+            if (_isOverloaded) return "🔥 CPU 80%+";
+            if (_isListeningMusic) return "🎧 Beats";
+            return "✨ Active";
+        }
+    }
+
+    public Visibility NightSkyVisibility
+    {
+        get
+        {
+            int hour = DateTime.Now.Hour;
+            bool isNight = hour >= 22 || hour < 7;
+            return (_isSleeping || isNight) ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    public string SleepToggleText => _isSleeping
+        ? LocalizationService.Instance.T("CyberPet.WakeBtn", "☀️ Проснуться")
+        : LocalizationService.Instance.T("CyberPet.SleepBtn", "💤 Спать");
+
+    private string _statusText = "";
+    public string StatusText
+    {
+        get => _statusText;
+        set { if (_statusText != value) { _statusText = value; OnPropertyChanged(); } }
+    }
+
+    public ICommand PetCommand { get; }
+    public ICommand FeedCommand { get; }
+    public ICommand ToggleSleepCommand { get; }
+    public ICommand SwitchPetTypeCommand { get; }
+
+    public CyberPetWidgetViewModel(string? instanceId = null)
+    {
+        _instanceId = instanceId;
+        LoadCustomSettings();
+
+        PetCommand = new NativeRelayCommand(DoPet);
+        FeedCommand = new NativeRelayCommand(DoFeed);
+        ToggleSleepCommand = new NativeRelayCommand(() => IsSleeping = !IsSleeping);
+        SwitchPetTypeCommand = new NativeRelayCommand(CyclePetType);
+
+        // System Monitor hook (CPU / GPU load)
+        try
+        {
+            SystemMonitorService.Instance.MetricsUpdated += (m) =>
+            {
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    CpuPercent = m.CpuPercent;
+                    GpuPercent = m.GpuPercent;
+                    bool overloaded = m.CpuPercent >= 80 || m.GpuPercent >= 80;
+                    if (IsOverloaded != overloaded)
+                    {
+                        IsOverloaded = overloaded;
+                    }
+                });
+            };
+            var curM = SystemMonitorService.Instance.CurrentMetrics;
+            if (curM != null)
+            {
+                CpuPercent = curM.CpuPercent;
+                GpuPercent = curM.GpuPercent;
+                IsOverloaded = curM.CpuPercent >= 80 || curM.GpuPercent >= 80;
+            }
+        }
+        catch { }
+
+        // Media Monitor hook (GSMTC Music playback)
+        try
+        {
+            MediaMonitorService.Instance.MediaUpdated += (info) =>
+            {
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    IsListeningMusic = info.IsPlaying;
+                    TrackTitle = info.Title;
+                });
+            };
+            var curMedia = MediaMonitorService.Instance.CurrentMedia;
+            if (curMedia != null)
+            {
+                IsListeningMusic = curMedia.IsPlaying;
+                TrackTitle = curMedia.Title;
+            }
+        }
+        catch { }
+
+        LocalizationService.Instance.LanguageChanged += () =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(SleepToggleText));
+                UpdateStatus();
+            });
+        };
+
+        // Animation and behavior timer (every 500ms)
+        _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _animTimer.Tick += OnAnimTimerTick;
+        _animTimer.Start();
+
+        // State reset timer (for bubbles and temporary animations)
+        _stateResetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
+        _stateResetTimer.Tick += (s, e) =>
+        {
+            _stateResetTimer.Stop();
+            IsActionBubbleVisible = false;
+            IsPetting = false;
+            IsFeeding = false;
+            UpdateStatus();
+        };
+
+        CheckNightTime();
+        UpdateStatus();
+        UpdateSprite();
+    }
+
+    private static void EnsureSpritesLoaded()
+    {
+        if (_spriteCache.Count > 0) return;
+
+        string[] possibleDirs = new[]
+        {
+            Path.Combine(ChwPackageService.WidgetsDir, "com.chatty.cyber-pet", "assets"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", "com.chatty.cyber-pet", "assets"),
+            @"C:\Users\ChattyNB\Projects\ChattyWidgetsLibrary\widgets\com.chatty.cyber-pet\assets"
+        };
+
+        string? assetsDir = possibleDirs.FirstOrDefault(Directory.Exists);
+        if (assetsDir == null) return;
+
+        try
+        {
+            foreach (var file in Directory.GetFiles(assetsDir, "*.png"))
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                if (name.EndsWith("_x3", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.UriSource = new Uri(file, UriKind.Absolute);
+                bi.EndInit();
+                bi.Freeze();
+
+                _spriteCache[name] = bi;
+            }
+        }
+        catch { }
+    }
+
+    public void UpdateSprite()
+    {
+        EnsureSpritesLoaded();
+        string petPrefix = _petType switch { "cat" => "cat", "bot" => "bot", _ => "capy" };
+        string state = "idle";
+        if (_isSleeping) state = "sleep";
+        else if (_isOverloaded) state = "hot";
+        else if (_isListeningMusic) state = "music";
+
+        string spriteKey = $"{petPrefix}_{state}_{_animationStep}";
+        if (_spriteCache.TryGetValue(spriteKey, out var img))
+        {
+            CurrentSprite = img;
+        }
+        else if (_spriteCache.TryGetValue($"{petPrefix}_idle_{_animationStep}", out var fallbackImg))
+        {
+            CurrentSprite = fallbackImg;
+        }
+    }
+
+    public void DoPet()
+    {
+        Happiness += 15;
+        IsPetting = true;
+        IsFeeding = false;
+        ActionBubbleText = LocalizationService.Instance.T("CyberPet.StatusPetted", "Мурр! Спасибо за заботу! ❤️");
+        IsActionBubbleVisible = true;
+        _stateResetTimer.Stop();
+        _stateResetTimer.Start();
+        UpdateStatus();
+    }
+
+    public void DoFeed()
+    {
+        Energy += 25;
+        Happiness += 10;
+        string[] snacks = { "🍎", "🍕", "🍓", "⚡", "🍩", "🍙", "🥕" };
+        FeedItemEmoji = snacks[_random.Next(snacks.Length)];
+        IsFeeding = true;
+        IsPetting = false;
+        ActionBubbleText = LocalizationService.Instance.T("CyberPet.StatusFed", "Ням! Очень вкусно! 😋⚡");
+        IsActionBubbleVisible = true;
+        _stateResetTimer.Stop();
+        _stateResetTimer.Start();
+        UpdateStatus();
+    }
+
+    public void CyclePetType()
+    {
+        PetType = PetType switch
+        {
+            "capybara" => "cat",
+            "cat" => "bot",
+            _ => "capybara"
+        };
+    }
+
+    private void OnAnimTimerTick(object? sender, EventArgs e)
+    {
+        _tickCount++;
+        AnimationStep = (AnimationStep + 1) % 2;
+        UpdateSprite();
+
+        // Auto sleep check every ~30 seconds (60 ticks * 0.5s)
+        if (_tickCount % 60 == 0)
+        {
+            CheckNightTime();
+            // Slow natural decay of energy / happiness
+            if (Energy > 10) Energy -= 1;
+            if (Happiness > 10) Happiness -= 1;
+        }
+
+        // Pet wandering behavior (only when awake and not overloaded)
+        // Kept strictly between -30 and +30 to prevent touching or exceeding borders
+        if (!IsSleeping && !IsOverloaded && !IsPetting && !IsFeeding)
+        {
+            // Random chance to move
+            if (_random.Next(0, 100) < 25)
+            {
+                double targetX = _random.Next(-30, 30);
+                IsFacingRight = targetX >= PetPositionX;
+                PetPositionX = targetX;
+            }
+        }
+    }
+
+    private void CheckNightTime()
+    {
+        if (!_autoSleep) return;
+        int hour = DateTime.Now.Hour;
+        bool shouldSleep = hour >= 23 || hour < 7;
+        if (shouldSleep != IsSleeping)
+        {
+            IsSleeping = shouldSleep;
+        }
+    }
+
+    private void UpdateStatus()
+    {
+        var loc = LocalizationService.Instance;
+        if (IsActionBubbleVisible && !string.IsNullOrEmpty(ActionBubbleText))
+        {
+            StatusText = ActionBubbleText;
+            return;
+        }
+
+        if (IsSleeping)
+        {
+            StatusText = loc.T("CyberPet.StatusSleeping", "Сладкий сон... Zzz 💤");
+        }
+        else if (IsOverloaded)
+        {
+            StatusText = loc.T("CyberPet.StatusOverheat", "Уф, жарко! Железо пыхтит! 🔥") + $" (CPU {(int)CpuPercent}%)";
+        }
+        else if (IsListeningMusic)
+        {
+            string track = !string.IsNullOrEmpty(TrackTitle) ? TrackTitle : "музыку";
+            StatusText = $"🎧 {track}";
+        }
+        else
+        {
+            StatusText = loc.T("CyberPet.StatusIdle", "Исследует рабочий стол...");
+        }
+    }
+
+    private void LoadCustomSettings()
+    {
+        if (string.IsNullOrEmpty(_instanceId)) return;
+        if (WidgetManager.Instance?.Settings?.Widgets != null &&
+            WidgetManager.Instance.Settings.Widgets.TryGetValue(_instanceId, out var s) &&
+            s.CustomSettings != null)
+        {
+            if (s.CustomSettings.TryGetValue("petType", out var pt) && !string.IsNullOrWhiteSpace(pt)) _petType = pt;
+            if (s.CustomSettings.TryGetValue("petName", out var pn) && !string.IsNullOrWhiteSpace(pn)) _petName = pn;
+            if (s.CustomSettings.TryGetValue("autoSleep", out var asStr) && bool.TryParse(asStr, out var asVal)) _autoSleep = asVal;
+            if (s.CustomSettings.TryGetValue("showStats", out var ssStr) && bool.TryParse(ssStr, out var ssVal)) _showStats = ssVal;
+            if (s.CustomSettings.TryGetValue("happiness", out var hStr) && int.TryParse(hStr, out var hVal)) _happiness = hVal;
+            if (s.CustomSettings.TryGetValue("energy", out var eStr) && int.TryParse(eStr, out var eVal)) _energy = eVal;
+        }
+    }
+
+    public void SaveCustomSettings()
+    {
+        if (string.IsNullOrEmpty(_instanceId)) return;
+        var s = WidgetManager.Instance.GetOrCreateWidgetSettings(_instanceId);
+        s.CustomSettings["petType"] = _petType;
+        s.CustomSettings["petName"] = _petName;
+        s.CustomSettings["autoSleep"] = _autoSleep.ToString().ToLowerInvariant();
+        s.CustomSettings["showStats"] = _showStats.ToString().ToLowerInvariant();
+        s.CustomSettings["happiness"] = _happiness.ToString();
+        s.CustomSettings["energy"] = _energy.ToString();
+        WidgetManager.Instance.SaveSettings();
+    }
+}
+
