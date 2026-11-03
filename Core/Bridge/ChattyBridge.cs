@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Windows;
 using ChattyWidgets.Core.Services;
 using ChattyWidgets.Core.Win32;
 
@@ -33,8 +37,14 @@ public class ChattyBridge
     private readonly Action? _openDevToolsAction;
     private readonly Action? _reloadAction;
     private readonly Action<bool>? _hoverAction;
+    private readonly Action? _centerAction;
+    private readonly Action<int>? _shakeAction;
+    private readonly Func<Rect>? _getBoundsFunc;
+    private readonly Action<double, double>? _setPositionAction;
     private readonly string _storageFilePath;
     private readonly string _dataStorageFilePath;
+
+    private static string? _cachedCpuModel;
 
     public ChattyBridge(
         string widgetId,
@@ -59,7 +69,11 @@ public class ChattyBridge
         Func<bool>? isAutoHideDotFunc = null,
         Action? openDevToolsAction = null,
         Action? reloadAction = null,
-        Action<bool>? hoverAction = null)
+        Action<bool>? hoverAction = null,
+        Action? centerAction = null,
+        Action<int>? shakeAction = null,
+        Func<Rect>? getBoundsFunc = null,
+        Action<double, double>? setPositionAction = null)
     {
         _widgetId = widgetId;
         _instanceId = !string.IsNullOrEmpty(instanceId) ? instanceId : widgetId;
@@ -84,6 +98,10 @@ public class ChattyBridge
         _openDevToolsAction = openDevToolsAction;
         _reloadAction = reloadAction;
         _hoverAction = hoverAction;
+        _centerAction = centerAction;
+        _shakeAction = shakeAction;
+        _getBoundsFunc = getBoundsFunc;
+        _setPositionAction = setPositionAction;
 
         string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, widgetId);
         Directory.CreateDirectory(widgetDir);
@@ -108,23 +126,104 @@ public class ChattyBridge
         }
     }
 
-    // --- SYSTEM API ---
+    // =========================================================================
+    // SYSTEM & HARDWARE METRICS API
+    // =========================================================================
 
     public double getCpu() => SystemMonitorService.Instance.CurrentMetrics.CpuPercent;
     public double getMemoryPercent() => SystemMonitorService.Instance.CurrentMetrics.MemoryPercent;
     public double getMemoryUsed() => SystemMonitorService.Instance.CurrentMetrics.UsedMemoryGb;
     public double getMemoryTotal() => SystemMonitorService.Instance.CurrentMetrics.TotalMemoryGb;
+    public double getMemoryFree() => SystemMonitorService.Instance.CurrentMetrics.FreeMemoryGb;
     public double getDiskPercent() => SystemMonitorService.Instance.CurrentMetrics.DiskPercent;
     public double getDiskFree() => SystemMonitorService.Instance.CurrentMetrics.FreeDiskGb;
+    public double getDiskTotal() => SystemMonitorService.Instance.CurrentMetrics.TotalDiskGb;
     public double getNetDownload() => SystemMonitorService.Instance.CurrentMetrics.NetworkDownloadKbps;
     public double getNetUpload() => SystemMonitorService.Instance.CurrentMetrics.NetworkUploadKbps;
+
+    public double getGpuPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuPercent;
+    public double getGpuMemoryPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuMemoryPercent;
+    public double getGpuMemoryTotal() => SystemMonitorService.Instance.CurrentMetrics.TotalGpuMemoryGb;
+    public double getGpuMemoryUsed() => SystemMonitorService.Instance.CurrentMetrics.UsedGpuMemoryGb;
+    public double getGpuTemperature() => SystemMonitorService.Instance.CurrentMetrics.GpuTemperature;
+    public string getGpuName() => SystemMonitorService.Instance.CurrentMetrics.GpuName;
+
+    public bool isHardwareOverloaded() => isHardwareOverloaded(80.0);
+    public bool isHardwareOverloaded(double threshold)
+    {
+        var m = SystemMonitorService.Instance.CurrentMetrics;
+        return m.CpuPercent >= threshold || m.GpuPercent >= threshold;
+    }
+
+    public string getCpuModel()
+    {
+        if (_cachedCpuModel != null) return _cachedCpuModel;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
+            var val = key?.GetValue("ProcessorNameString") as string;
+            _cachedCpuModel = !string.IsNullOrWhiteSpace(val) ? val.Trim() : "Processor";
+        }
+        catch
+        {
+            _cachedCpuModel = "Processor";
+        }
+        return _cachedCpuModel;
+    }
+
+    public string getOsVersion()
+    {
+        var ver = Environment.OSVersion.Version;
+        if (ver.Major == 10 && ver.Build >= 22000) return $"Windows 11 (Build {ver.Build})";
+        if (ver.Major == 10) return $"Windows 10 (Build {ver.Build})";
+        return Environment.OSVersion.VersionString;
+    }
+
+    public double getSystemUptimeSeconds() => Environment.TickCount64 / 1000.0;
+
+    public double getUserIdleSeconds() => Win32Native.GetIdleTimeMs() / 1000.0;
+
+    public bool isUserIdle() => isUserIdle(60.0);
+    public bool isUserIdle(double thresholdSeconds) => getUserIdleSeconds() >= thresholdSeconds;
 
     public string getSystemMetricsJson()
     {
         return JsonSerializer.Serialize(SystemMonitorService.Instance.CurrentMetrics);
     }
 
-    // --- MEDIA API ---
+    // =========================================================================
+    // TIME & SCHEDULE API
+    // =========================================================================
+
+    public bool isNightTime()
+    {
+        int hour = DateTime.Now.Hour;
+        return hour >= 22 || hour < 7;
+    }
+
+    public string getTimeInfoJson()
+    {
+        var now = DateTime.Now;
+        return JsonSerializer.Serialize(new
+        {
+            year = now.Year,
+            month = now.Month,
+            day = now.Day,
+            dayOfWeek = (int)now.DayOfWeek,
+            dayName = now.ToString("dddd", System.Globalization.CultureInfo.CurrentCulture),
+            hour = now.Hour,
+            minute = now.Minute,
+            second = now.Second,
+            millisecond = now.Millisecond,
+            isNightTime = isNightTime(),
+            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            iso = now.ToString("o")
+        });
+    }
+
+    // =========================================================================
+    // MEDIA API (GSMTC & Windows Playback)
+    // =========================================================================
 
     public void playPause() => MediaMonitorService.Instance.PlayPause();
     public void nextTrack() => MediaMonitorService.Instance.Next();
@@ -133,18 +232,242 @@ public class ChattyBridge
     public void volumeDown() => MediaMonitorService.Instance.VolumeDown();
     public void mute() => MediaMonitorService.Instance.Mute();
 
+    public bool isMusicPlaying() => MediaMonitorService.Instance.CurrentMedia.IsPlaying;
+    public string getTrackTitle() => MediaMonitorService.Instance.CurrentMedia.Title ?? string.Empty;
+    public string getTrackArtist() => MediaMonitorService.Instance.CurrentMedia.Artist ?? string.Empty;
+    public string getTrackAlbum() => MediaMonitorService.Instance.CurrentMedia.Album ?? string.Empty;
+    public string getTrackThumbnail() => MediaMonitorService.Instance.CurrentMedia.ThumbnailBase64 ?? string.Empty;
+    public int getVolume() => MediaMonitorService.Instance.CurrentMedia.Volume;
+
     public string getMediaJson()
     {
         return JsonSerializer.Serialize(MediaMonitorService.Instance.CurrentMedia);
     }
 
-    // --- STORAGE API ---
+    // =========================================================================
+    // AUDIO, SOUND EFFECTS & TTS
+    // =========================================================================
+
+    public void beep()
+    {
+        try { System.Media.SystemSounds.Beep.Play(); } catch { }
+    }
+
+    public void playSound(string soundNameOrPath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(soundNameOrPath))
+            {
+                System.Media.SystemSounds.Beep.Play();
+                return;
+            }
+
+            string s = soundNameOrPath.Trim().ToLowerInvariant();
+            switch (s)
+            {
+                case "beep":
+                case "default":
+                    System.Media.SystemSounds.Beep.Play();
+                    return;
+                case "asterisk":
+                case "info":
+                    System.Media.SystemSounds.Asterisk.Play();
+                    return;
+                case "exclamation":
+                case "warning":
+                case "warn":
+                    System.Media.SystemSounds.Exclamation.Play();
+                    return;
+                case "hand":
+                case "error":
+                case "stop":
+                    System.Media.SystemSounds.Hand.Play();
+                    return;
+                case "question":
+                    System.Media.SystemSounds.Question.Play();
+                    return;
+            }
+
+            // Check instance data directory
+            string dataDir = Path.Combine(ChwPackageService.DataDir, _instanceId);
+            string fileInData = Path.Combine(dataDir, soundNameOrPath);
+            if (File.Exists(fileInData))
+            {
+                using var player = new System.Media.SoundPlayer(fileInData);
+                player.Play();
+                return;
+            }
+
+            // Check widget directory
+            string widgetDir = Path.Combine(ChwPackageService.WidgetsDir, _widgetId);
+            string fileInWidget = Path.Combine(widgetDir, soundNameOrPath);
+            if (File.Exists(fileInWidget))
+            {
+                using var player = new System.Media.SoundPlayer(fileInWidget);
+                player.Play();
+                return;
+            }
+
+            if (File.Exists(soundNameOrPath))
+            {
+                using var player = new System.Media.SoundPlayer(soundNameOrPath);
+                player.Play();
+                return;
+            }
+
+            System.Media.SystemSounds.Beep.Play();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChattyBridge] playSound error: {ex.Message}");
+        }
+    }
+
+    public void ttsSpeak(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        Task.Run(() =>
+        {
+            try
+            {
+                var voiceType = Type.GetTypeFromProgID("SAPI.SpVoice");
+                if (voiceType != null)
+                {
+                    object? voice = Activator.CreateInstance(voiceType);
+                    voiceType.InvokeMember("Speak", BindingFlags.InvokeMethod, null, voice, new object[] { text, 1 /* SVSFlagsAsync */ });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ChattyBridge] ttsSpeak error: {ex.Message}");
+            }
+        });
+    }
+
+    // =========================================================================
+    // GEOMETRY, SCREEN & ANIMATIONS API
+    // =========================================================================
+
+    public string getWidgetBoundsJson()
+    {
+        try
+        {
+            Rect r = _getBoundsFunc?.Invoke() ?? new Rect(0, 0, 200, 200);
+            return JsonSerializer.Serialize(new
+            {
+                x = r.X,
+                y = r.Y,
+                width = r.Width,
+                height = r.Height
+            });
+        }
+        catch
+        {
+            return "{\"x\":0,\"y\":0,\"width\":200,\"height\":200}";
+        }
+    }
+
+    public string getScreenInfoJson()
+    {
+        try
+        {
+            var primary = System.Windows.Forms.Screen.PrimaryScreen;
+            var screens = System.Windows.Forms.Screen.AllScreens;
+            var current = primary;
+            if (_getBoundsFunc != null)
+            {
+                var r = _getBoundsFunc();
+                current = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)r.X, (int)r.Y)) ?? primary;
+            }
+
+            return JsonSerializer.Serialize(new
+            {
+                primaryWidth = primary?.Bounds.Width ?? 1920,
+                primaryHeight = primary?.Bounds.Height ?? 1080,
+                currentWidth = current?.Bounds.Width ?? 1920,
+                currentHeight = current?.Bounds.Height ?? 1080,
+                workAreaWidth = current?.WorkingArea.Width ?? 1920,
+                workAreaHeight = current?.WorkingArea.Height ?? 1080,
+                workAreaX = current?.WorkingArea.X ?? 0,
+                workAreaY = current?.WorkingArea.Y ?? 0,
+                screenCount = screens.Length
+            });
+        }
+        catch
+        {
+            return "{\"primaryWidth\":1920,\"primaryHeight\":1080,\"currentWidth\":1920,\"currentHeight\":1080}";
+        }
+    }
+
+    public void centerOnScreen()
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _centerAction?.Invoke()));
+    }
+
+    public void shake() => shake(400);
+    public void shake(int durationMs)
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _shakeAction?.Invoke(durationMs)));
+    }
+
+    public void setPosition(double x, double y)
+    {
+        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _setPositionAction?.Invoke(x, y)));
+    }
+
+    // =========================================================================
+    // ARBITRARY DATA FILE I/O API (Scoped to widget instance directory)
+    // =========================================================================
+
+    private string? ResolveSafeDataPath(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return null;
+        string safeName = Path.GetFileName(relativePath);
+        string dataDir = Path.Combine(ChwPackageService.DataDir, _instanceId);
+        Directory.CreateDirectory(dataDir);
+        return Path.Combine(dataDir, safeName);
+    }
+
+    public string readDataText(string relativeFileName) => readDataText(relativeFileName, string.Empty);
+    public string readDataText(string relativeFileName, string fallback)
+    {
+        try
+        {
+            string? path = ResolveSafeDataPath(relativeFileName);
+            if (path != null && File.Exists(path))
+            {
+                return File.ReadAllText(path);
+            }
+        }
+        catch { }
+        return fallback ?? string.Empty;
+    }
+
+    public bool writeDataText(string relativeFileName, string content)
+    {
+        try
+        {
+            string? path = ResolveSafeDataPath(relativeFileName);
+            if (path != null)
+            {
+                File.WriteAllText(path, content ?? string.Empty);
+                return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    // =========================================================================
+    // STORAGE API (Key-Value)
+    // =========================================================================
 
     public string storageGet(string key, string defaultValue)
     {
         try
         {
-            string path = File.Exists(_storageFilePath) ? _storageFilePath : _dataStorageFilePath;
+            string path = File.Exists(_dataStorageFilePath) ? _dataStorageFilePath : _storageFilePath;
             if (!File.Exists(path))
                 return defaultValue;
 
@@ -209,7 +532,39 @@ public class ChattyBridge
         catch { }
     }
 
-    // --- MEDIA FILE API ---
+    public string storageGetAllJson()
+    {
+        try
+        {
+            string readPath = File.Exists(_dataStorageFilePath) ? _dataStorageFilePath : _storageFilePath;
+            if (File.Exists(readPath))
+            {
+                return File.ReadAllText(readPath);
+            }
+        }
+        catch { }
+        return "{}";
+    }
+
+    public void storageClear()
+    {
+        try
+        {
+            if (File.Exists(_dataStorageFilePath))
+            {
+                File.WriteAllText(_dataStorageFilePath, "{}");
+            }
+            if (_instanceId == _widgetId && File.Exists(_storageFilePath))
+            {
+                File.WriteAllText(_storageFilePath, "{}");
+            }
+        }
+        catch { }
+    }
+
+    // =========================================================================
+    // MEDIA FILE API
+    // =========================================================================
 
     public string selectMediaFile()
     {
@@ -279,7 +634,9 @@ public class ChattyBridge
         return result;
     }
 
-    // --- WINDOW & INSTANCE API ---
+    // =========================================================================
+    // WINDOW & INSTANCE API
+    // =========================================================================
 
     public string getInstanceId() => _instanceId;
     public string getWidgetId() => _widgetId;
@@ -373,6 +730,10 @@ public class ChattyBridge
         Application.Current.Dispatcher.Invoke(() => _resizeAction?.Invoke(width, height));
     }
 
+    // =========================================================================
+    // SETTINGS API
+    // =========================================================================
+
     public string getSetting(string key)
     {
         var win = WidgetManager.Instance?.GetWindow(_instanceId);
@@ -393,7 +754,44 @@ public class ChattyBridge
         }
     }
 
-    // --- EXTENDED APIS ---
+    public string getAllSettingsJson()
+    {
+        try
+        {
+            var win = WidgetManager.Instance?.GetWindow(_instanceId);
+            if (win != null && win.Settings?.CustomSettings != null)
+            {
+                return JsonSerializer.Serialize(win.Settings.CustomSettings);
+            }
+        }
+        catch { }
+        return "{}";
+    }
+
+    public void setMultipleSettingsJson(string json)
+    {
+        try
+        {
+            var win = WidgetManager.Instance?.GetWindow(_instanceId);
+            if (win != null && !string.IsNullOrWhiteSpace(json))
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        win.Settings.CustomSettings[kvp.Key] = kvp.Value;
+                    }
+                    WidgetManager.Instance?.SaveSettings();
+                }
+            }
+        }
+        catch { }
+    }
+
+    // =========================================================================
+    // SYSTEM NOTIFICATIONS, CLIPBOARD & SHELL
+    // =========================================================================
 
     public void notify(string title, string message)
     {
@@ -474,6 +872,8 @@ public class ChattyBridge
         }
     }
 
+    public void openUrl(string url) => launchApp(url);
+
     public void openDevTools()
     {
         Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _openDevToolsAction?.Invoke()));
@@ -484,12 +884,8 @@ public class ChattyBridge
         Application.Current?.Dispatcher?.BeginInvoke(new Action(() => _reloadAction?.Invoke()));
     }
 
-    public double getGpuPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuPercent;
-    public double getGpuMemoryPercent() => SystemMonitorService.Instance.CurrentMetrics.GpuMemoryPercent;
-    public double getGpuMemoryTotal() => SystemMonitorService.Instance.CurrentMetrics.TotalGpuMemoryGb;
-    public double getGpuMemoryUsed() => SystemMonitorService.Instance.CurrentMetrics.UsedGpuMemoryGb;
-    public double getGpuTemperature() => SystemMonitorService.Instance.CurrentMetrics.GpuTemperature;
-    public string getGpuName() => SystemMonitorService.Instance.CurrentMetrics.GpuName;
+    public string getLanguage() => LocalizationService.Instance.CurrentLanguage;
+    public bool isRussian() => LocalizationService.Instance.CurrentLanguage.Equals("ru", StringComparison.OrdinalIgnoreCase);
 
     public void log(string message)
     {

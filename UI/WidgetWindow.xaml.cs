@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -32,6 +33,8 @@ public partial class WidgetWindow : Window
     public IntPtr Hwnd => _hwnd;
     private WebView2? _webView;
     private AnchorDotOverlayWindow? _overlayDotWindow;
+    private Action<SystemMetrics>? _webMetricsHandler;
+    private Action<MediaInfo>? _webMediaHandler;
 
     private static Microsoft.Web.WebView2.Core.CoreWebView2Environment? _sharedWebViewEnvironment;
     private static readonly SemaphoreSlim _webViewEnvLock = new(1, 1);
@@ -169,6 +172,16 @@ public partial class WidgetWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
+        if (_webMetricsHandler != null)
+        {
+            SystemMonitorService.Instance.MetricsUpdated -= _webMetricsHandler;
+            _webMetricsHandler = null;
+        }
+        if (_webMediaHandler != null)
+        {
+            MediaMonitorService.Instance.MediaUpdated -= _webMediaHandler;
+            _webMediaHandler = null;
+        }
         _overlayDotWindow?.Close();
         _overlayDotWindow = null;
         LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
@@ -593,13 +606,89 @@ public partial class WidgetWindow : Window
                 isAutoHideDotFunc: () => Settings.AutoHideAnchorDot,
                 openDevToolsAction: () => OpenDevTools(),
                 reloadAction: () => ReloadWidget(),
-                hoverAction: (h) => _overlayDotWindow?.NotifyWidgetHover(h)
+                hoverAction: (h) => _overlayDotWindow?.NotifyWidgetHover(h),
+                centerAction: () => CenterOnScreen(),
+                shakeAction: (duration) => ShakeWidget(duration),
+                getBoundsFunc: () => new Rect(Left, Top, ActualWidth > 0 ? ActualWidth : Width, ActualHeight > 0 ? ActualHeight : Height),
+                setPositionAction: (x, y) => SetWidgetPosition(x, y)
             );
 
             _webView.CoreWebView2.AddHostObjectToScript("chatty", bridge);
 
+            // Hook up real-time event forwarding from background services to WebView2
+            _webMetricsHandler = (metrics) =>
+            {
+                _ = Dispatcher.InvokeAsync(async () =>
+                {
+                    if (_webView?.CoreWebView2 != null)
+                    {
+                        try
+                        {
+                            string json = JsonSerializer.Serialize(metrics);
+                            await _webView.CoreWebView2.ExecuteScriptAsync($"window.dispatchEvent(new CustomEvent('chatty:metrics', {{ detail: {json} }}));");
+                        }
+                        catch { }
+                    }
+                });
+            };
+            SystemMonitorService.Instance.MetricsUpdated += _webMetricsHandler;
+
+            _webMediaHandler = (media) =>
+            {
+                _ = Dispatcher.InvokeAsync(async () =>
+                {
+                    if (_webView?.CoreWebView2 != null)
+                    {
+                        try
+                        {
+                            string json = JsonSerializer.Serialize(media);
+                            await _webView.CoreWebView2.ExecuteScriptAsync($"window.dispatchEvent(new CustomEvent('chatty:media', {{ detail: {json} }}));");
+                        }
+                        catch { }
+                    }
+                });
+            };
+            MediaMonitorService.Instance.MediaUpdated += _webMediaHandler;
+
             string initScript = @"
                 window.chatty = chrome.webview.hostObjects.sync.chatty;
+
+                // Event listener helpers: chatty.on('metrics', cb), chatty.on('media', cb), chatty.off(...)
+                window.chatty.on = function(event, callback) {
+                    var ev = event.indexOf(':') === -1 ? ('chatty:' + event) : event;
+                    var handler = function(e) { callback(e.detail); };
+                    callback._chattyHandler = handler;
+                    window.addEventListener(ev, handler);
+                    return handler;
+                };
+                window.chatty.off = function(event, callback) {
+                    var ev = event.indexOf(':') === -1 ? ('chatty:' + event) : event;
+                    var handler = callback._chattyHandler || callback;
+                    window.removeEventListener(ev, handler);
+                };
+
+                // Ergonomic JSON getters
+                window.chatty.getMetrics = function() {
+                    try { return JSON.parse(window.chatty.getSystemMetricsJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getMedia = function() {
+                    try { return JSON.parse(window.chatty.getMediaJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getSettings = function() {
+                    try { return JSON.parse(window.chatty.getAllSettingsJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getTime = function() {
+                    try { return JSON.parse(window.chatty.getTimeInfoJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getBounds = function() {
+                    try { return JSON.parse(window.chatty.getWidgetBoundsJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getScreen = function() {
+                    try { return JSON.parse(window.chatty.getScreenInfoJson()); } catch(e) { return {}; }
+                };
+                window.chatty.getStorageAll = function() {
+                    try { return JSON.parse(window.chatty.storageGetAllJson()); } catch(e) { return {}; }
+                };
 
                 // Sync background opacity (never whole widget opacity)
                 try {
@@ -1015,6 +1104,60 @@ public partial class WidgetWindow : Window
         Settings.Left = Left;
         Settings.Top = Top;
         SettingsChanged?.Invoke(this);
+    }
+
+    public void SetWidgetPosition(double x, double y)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            Left = x;
+            Top = y;
+            Settings.Left = x;
+            Settings.Top = y;
+            SettingsChanged?.Invoke(this);
+            _overlayDotWindow?.UpdatePositionDirect();
+        });
+    }
+
+    public void CenterOnScreen()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var screen = _hwnd != IntPtr.Zero ? System.Windows.Forms.Screen.FromHandle(_hwnd) : System.Windows.Forms.Screen.PrimaryScreen;
+            var bounds = screen?.WorkingArea ?? new System.Drawing.Rectangle(0, 0, 1920, 1080);
+            double w = ActualWidth > 0 ? ActualWidth : (Width > 0 ? Width : 200);
+            double h = ActualHeight > 0 ? ActualHeight : (Height > 0 ? Height : 200);
+            Left = bounds.Left + (bounds.Width - w) / 2.0;
+            Top = bounds.Top + (bounds.Height - h) / 2.0;
+            Settings.Left = Left;
+            Settings.Top = Top;
+            SettingsChanged?.Invoke(this);
+            _overlayDotWindow?.UpdatePositionDirect();
+        });
+    }
+
+    public void ShakeWidget(int durationMs = 400)
+    {
+        Dispatcher.BeginInvoke(async () =>
+        {
+            double origLeft = Left;
+            double origTop = Top;
+            var rand = new Random();
+            int steps = Math.Clamp(durationMs / 25, 4, 30);
+            int magnitude = 8;
+            for (int i = 0; i < steps; i++)
+            {
+                double dx = (rand.NextDouble() * 2 - 1) * magnitude;
+                double dy = (rand.NextDouble() * 2 - 1) * (magnitude / 2);
+                Left = origLeft + dx;
+                Top = origTop + dy;
+                await Task.Delay(25);
+                magnitude = Math.Max(1, magnitude - 1);
+            }
+            Left = origLeft;
+            Top = origTop;
+            _overlayDotWindow?.UpdatePositionDirect();
+        });
     }
 
     private void SnapToScreen()

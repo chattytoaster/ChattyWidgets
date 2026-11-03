@@ -2190,7 +2190,14 @@ Use this skill to autonomously scaffold, develop, wire up, locally test, and off
 
     private void UpdateLiveThemePreview()
     {
-        if (InputThemeBg == null || PreviewThemeBg == null) return;
+        if (InputThemeBg == null || PreviewThemeBg == null ||
+            InputThemeCardBg == null || PreviewThemeCardBg == null ||
+            InputThemeBorder == null || PreviewThemeBorder == null ||
+            InputThemeTextPrimary == null || PreviewThemeTextPrimary == null ||
+            InputThemeTextSecondary == null || PreviewThemeTextSecondary == null ||
+            InputThemeAccent == null || PreviewThemeAccent == null ||
+            InputThemeHover == null || PreviewThemeHover == null ||
+            InputThemeDivider == null || PreviewThemeDivider == null) return;
 
         string bgHex = InputThemeBg.Text?.Trim() ?? "#121622";
         string cardBgHex = InputThemeCardBg.Text?.Trim() ?? "#161928";
